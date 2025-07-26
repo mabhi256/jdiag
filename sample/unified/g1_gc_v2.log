@@ -1,0 +1,1208 @@
+[0.011s][info][gc,heap] Heap region size: 1M
+[0.012s][debug][gc,heap] Minimum heap 8388608  Initial heap 268435456  Maximum heap 268435456
+[0.015s][info ][gc     ] Using G1
+[0.015s][info ][gc,heap,coops] Heap address: 0x00000007b0000000, size: 256 MB, Compressed Oops mode: Zero based, Oop shift amount: 3
+[15.316s][debug][gc,heap      ] GC(0) Heap before GC invocations=0 (full 0):
+[15.316s][debug][gc,heap      ] GC(0)  garbage-first heap   total 262144K, used 24576K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.316s][debug][gc,heap      ] GC(0)   region size 1024K, 24 young (24576K), 0 survivors (0K)
+[15.316s][debug][gc,heap      ] GC(0)  Metaspace       used 16151K, capacity 17082K, committed 17408K, reserved 1064960K
+[15.316s][debug][gc,heap      ] GC(0)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.316s][info ][gc,start     ] GC(0) Pause Young (G1 Evacuation Pause)
+[15.316s][info ][gc,task      ] GC(0) Using 8 workers of 8 for evacuation
+[15.316s][debug][gc,age       ] GC(0) Desired survivor size 1572864 bytes, new threshold 15 (max threshold 15)
+[15.321s][debug][gc,ref       ] GC(0) SoftReference 0.009ms
+[15.321s][debug][gc,ref       ] GC(0) WeakReference 0.160ms
+[15.322s][debug][gc,ref       ] GC(0) FinalReference 0.270ms
+[15.322s][debug][gc,ref       ] GC(0) PhantomReference 0.017ms
+[15.322s][debug][gc,ref       ] GC(0) JNI Weak Reference 0.096ms
+[15.322s][debug][gc,ref       ] GC(0) Ref Counts: Soft: 0 Weak: 994 Final: 1074 Phantom: 211
+[15.322s][trace][gc,age       ] GC(0) Age table with threshold 15 (max threshold 15)
+[15.322s][trace][gc,age       ] GC(0) - age   1:    3062328 bytes,    3062328 total
+[15.322s][info ][gc,phases    ] GC(0)   Pre Evacuate Collection Set: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Choose Collection Set: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Humongous Register: 0.0ms
+[15.322s][info ][gc,phases    ] GC(0)   Evacuate Collection Set: 4.9ms
+[15.322s][debug][gc,phases    ] GC(0)     Ext Root Scanning (ms):   Min:  0.3, Avg:  0.8, Max:  2.5, Diff:  2.2, Sum:  6.3, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)     Update RS (ms):           Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)       Processed Buffers:        Min: 0, Avg:  0.0, Max: 0, Diff: 0, Sum: 0, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  0.4, Diff:  0.4, Sum:  1.7, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)     Object Copy (ms):         Min:  1.8, Avg:  3.4, Max:  4.3, Diff:  2.5, Sum: 27.0, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)     Termination (ms):         Min:  0.0, Avg:  0.4, Max:  0.6, Diff:  0.6, Sum:  3.4, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)       Termination Attempts:     Min: 1, Avg: 17.4, Max: 34, Diff: 33, Sum: 139, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[15.322s][debug][gc,phases    ] GC(0)     GC Worker Total (ms):     Min:  4.8, Avg:  4.8, Max:  4.8, Diff:  0.0, Sum: 38.6, Workers: 8
+[15.322s][info ][gc,phases    ] GC(0)   Post Evacuate Collection Set: 1.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Code Roots Fixup: 0.1ms
+[15.322s][debug][gc,phases    ] GC(0)     Preserve CM Refs: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Reference Processing: 0.7ms
+[15.322s][debug][gc,phases    ] GC(0)     Clear Card Table: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Reference Enqueuing: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Merge Per-Thread State: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Code Roots Purge: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Redirty Cards: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Free Collection Set: 0.2ms
+[15.322s][debug][gc,phases    ] GC(0)     Humongous Reclaim: 0.0ms
+[15.322s][debug][gc,phases    ] GC(0)     Expand Heap After Collection: 0.0ms
+[15.322s][info ][gc,phases    ] GC(0)   Other: 0.2ms
+[15.322s][info ][gc,heap      ] GC(0) Eden regions: 24->0(150)
+[15.322s][info ][gc,heap      ] GC(0) Survivor regions: 0->3(3)
+[15.322s][info ][gc,heap      ] GC(0) Old regions: 0->2
+[15.322s][info ][gc,heap      ] GC(0) Humongous regions: 0->0
+[15.322s][info ][gc,metaspace ] GC(0) Metaspace: 16151K->16151K(1064960K)
+[15.322s][debug][gc,heap      ] GC(0) Heap after GC invocations=1 (full 0):
+[15.322s][debug][gc,heap      ] GC(0)  garbage-first heap   total 262144K, used 4190K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.322s][debug][gc,heap      ] GC(0)   region size 1024K, 3 young (3072K), 3 survivors (3072K)
+[15.322s][debug][gc,heap      ] GC(0)  Metaspace       used 16151K, capacity 17082K, committed 17408K, reserved 1064960K
+[15.322s][debug][gc,heap      ] GC(0)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.322s][info ][gc           ] GC(0) Pause Young (G1 Evacuation Pause) 24M->4M(256M) 6.183ms
+[15.322s][info ][gc,cpu       ] GC(0) User=0.04s Sys=0.00s Real=0.00s
+[15.483s][debug][gc,heap      ] GC(1) Heap before GC invocations=1 (full 0):
+[15.483s][debug][gc,heap      ] GC(1)  garbage-first heap   total 262144K, used 73822K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.483s][debug][gc,heap      ] GC(1)   region size 1024K, 71 young (72704K), 3 survivors (3072K)
+[15.483s][debug][gc,heap      ] GC(1)  Metaspace       used 16268K, capacity 17210K, committed 17408K, reserved 1064960K
+[15.483s][debug][gc,heap      ] GC(1)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.483s][info ][gc,start     ] GC(1) Pause Young (G1 Evacuation Pause)
+[15.483s][info ][gc,task      ] GC(1) Using 8 workers of 8 for evacuation
+[15.483s][debug][gc,age       ] GC(1) Desired survivor size 4718592 bytes, new threshold 15 (max threshold 15)
+[15.488s][debug][gc,ref       ] GC(1) SoftReference 0.002ms
+[15.488s][debug][gc,ref       ] GC(1) WeakReference 0.076ms
+[15.488s][debug][gc,ref       ] GC(1) FinalReference 0.006ms
+[15.488s][debug][gc,ref       ] GC(1) PhantomReference 0.001ms
+[15.488s][debug][gc,ref       ] GC(1) JNI Weak Reference 0.034ms
+[15.488s][debug][gc,ref       ] GC(1) Ref Counts: Soft: 0 Weak: 1202 Final: 51 Phantom: 2
+[15.488s][trace][gc,age       ] GC(1) Age table with threshold 15 (max threshold 15)
+[15.488s][trace][gc,age       ] GC(1) - age   1:    1243728 bytes,    1243728 total
+[15.488s][trace][gc,age       ] GC(1) - age   2:    2866632 bytes,    4110360 total
+[15.489s][info ][gc,phases    ] GC(1)   Pre Evacuate Collection Set: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Choose Collection Set: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Humongous Register: 0.0ms
+[15.489s][info ][gc,phases    ] GC(1)   Evacuate Collection Set: 4.9ms
+[15.489s][debug][gc,phases    ] GC(1)     Ext Root Scanning (ms):   Min:  0.1, Avg:  0.3, Max:  1.2, Diff:  1.1, Sum:  2.2, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)     Update RS (ms):           Min:  0.0, Avg:  0.1, Max:  0.3, Diff:  0.3, Sum:  1.0, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)       Processed Buffers:        Min: 0, Avg:  1.1, Max: 3, Diff: 3, Sum: 9, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)     Scan RS (ms):             Min:  0.0, Avg:  0.3, Max:  0.5, Diff:  0.5, Sum:  2.4, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.5, Diff:  1.5, Sum:  1.5, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)     Object Copy (ms):         Min:  2.6, Avg:  3.8, Max:  4.1, Diff:  1.5, Sum: 30.7, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)     Termination (ms):         Min:  0.1, Avg:  0.1, Max:  0.2, Diff:  0.0, Sum:  1.1, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)       Termination Attempts:     Min: 78, Avg: 96.9, Max: 111, Diff: 33, Sum: 775, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[15.489s][debug][gc,phases    ] GC(1)     GC Worker Total (ms):     Min:  4.9, Avg:  4.9, Max:  4.9, Diff:  0.0, Sum: 39.0, Workers: 8
+[15.489s][info ][gc,phases    ] GC(1)   Post Evacuate Collection Set: 0.4ms
+[15.489s][debug][gc,phases    ] GC(1)     Code Roots Fixup: 0.1ms
+[15.489s][debug][gc,phases    ] GC(1)     Preserve CM Refs: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Reference Processing: 0.2ms
+[15.489s][debug][gc,phases    ] GC(1)     Clear Card Table: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Reference Enqueuing: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Merge Per-Thread State: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Code Roots Purge: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Redirty Cards: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Free Collection Set: 0.1ms
+[15.489s][debug][gc,phases    ] GC(1)     Humongous Reclaim: 0.0ms
+[15.489s][debug][gc,phases    ] GC(1)     Expand Heap After Collection: 0.0ms
+[15.489s][info ][gc,phases    ] GC(1)   Other: 0.2ms
+[15.489s][info ][gc,heap      ] GC(1) Eden regions: 68->0(81)
+[15.489s][info ][gc,heap      ] GC(1) Survivor regions: 3->5(9)
+[15.489s][info ][gc,heap      ] GC(1) Old regions: 2->2
+[15.489s][info ][gc,heap      ] GC(1) Humongous regions: 0->0
+[15.489s][info ][gc,metaspace ] GC(1) Metaspace: 16268K->16268K(1064960K)
+[15.489s][debug][gc,heap      ] GC(1) Heap after GC invocations=2 (full 0):
+[15.489s][debug][gc,heap      ] GC(1)  garbage-first heap   total 262144K, used 5319K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.489s][debug][gc,heap      ] GC(1)   region size 1024K, 5 young (5120K), 5 survivors (5120K)
+[15.489s][debug][gc,heap      ] GC(1)  Metaspace       used 16268K, capacity 17210K, committed 17408K, reserved 1064960K
+[15.489s][debug][gc,heap      ] GC(1)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.489s][info ][gc           ] GC(1) Pause Young (G1 Evacuation Pause) 72M->5M(256M) 5.649ms
+[15.489s][info ][gc,cpu       ] GC(1) User=0.03s Sys=0.00s Real=0.00s
+[15.553s][debug][gc,heap      ] GC(2) Heap before GC invocations=2 (full 0):
+[15.553s][debug][gc,heap      ] GC(2)  garbage-first heap   total 262144K, used 88263K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.553s][debug][gc,heap      ] GC(2)   region size 1024K, 86 young (88064K), 5 survivors (5120K)
+[15.553s][debug][gc,heap      ] GC(2)  Metaspace       used 16308K, capacity 17274K, committed 17408K, reserved 1064960K
+[15.553s][debug][gc,heap      ] GC(2)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.553s][info ][gc,start     ] GC(2) Pause Young (G1 Evacuation Pause)
+[15.553s][info ][gc,task      ] GC(2) Using 8 workers of 8 for evacuation
+[15.553s][debug][gc,age       ] GC(2) Desired survivor size 5767168 bytes, new threshold 15 (max threshold 15)
+[15.560s][debug][gc,ref       ] GC(2) SoftReference 0.002ms
+[15.560s][debug][gc,ref       ] GC(2) WeakReference 0.089ms
+[15.560s][debug][gc,ref       ] GC(2) FinalReference 0.000ms
+[15.560s][debug][gc,ref       ] GC(2) PhantomReference 0.001ms
+[15.560s][debug][gc,ref       ] GC(2) JNI Weak Reference 0.035ms
+[15.560s][debug][gc,ref       ] GC(2) Ref Counts: Soft: 0 Weak: 1429 Final: 0 Phantom: 1
+[15.560s][trace][gc,age       ] GC(2) Age table with threshold 15 (max threshold 15)
+[15.560s][trace][gc,age       ] GC(2) - age   1:     726232 bytes,     726232 total
+[15.560s][trace][gc,age       ] GC(2) - age   2:    1149264 bytes,    1875496 total
+[15.560s][trace][gc,age       ] GC(2) - age   3:    2866632 bytes,    4742128 total
+[15.560s][info ][gc,phases    ] GC(2)   Pre Evacuate Collection Set: 0.0ms
+[15.560s][debug][gc,phases    ] GC(2)     Choose Collection Set: 0.0ms
+[15.560s][debug][gc,phases    ] GC(2)     Humongous Register: 0.0ms
+[15.561s][info ][gc,phases    ] GC(2)   Evacuate Collection Set: 7.3ms
+[15.561s][debug][gc,phases    ] GC(2)     Ext Root Scanning (ms):   Min:  0.1, Avg:  0.5, Max:  2.3, Diff:  2.2, Sum:  3.8, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)     Update RS (ms):           Min:  0.0, Avg:  0.1, Max:  0.5, Diff:  0.5, Sum:  1.0, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)       Processed Buffers:        Min: 0, Avg:  1.1, Max: 6, Diff: 6, Sum: 9, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)     Scan RS (ms):             Min:  0.0, Avg:  0.1, Max:  0.4, Diff:  0.4, Sum:  0.8, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.3, Diff:  1.3, Sum:  1.4, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)     Object Copy (ms):         Min:  4.2, Avg:  6.1, Max:  7.2, Diff:  2.9, Sum: 49.1, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)     Termination (ms):         Min:  0.0, Avg:  0.2, Max:  0.6, Diff:  0.6, Sum:  1.9, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)       Termination Attempts:     Min: 1, Avg:  1.2, Max: 2, Diff: 1, Sum: 10, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[15.561s][debug][gc,phases    ] GC(2)     GC Worker Total (ms):     Min:  7.3, Avg:  7.3, Max:  7.3, Diff:  0.0, Sum: 58.1, Workers: 8
+[15.561s][info ][gc,phases    ] GC(2)   Post Evacuate Collection Set: 0.5ms
+[15.561s][debug][gc,phases    ] GC(2)     Code Roots Fixup: 0.1ms
+[15.561s][debug][gc,phases    ] GC(2)     Preserve CM Refs: 0.0ms
+[15.561s][debug][gc,phases    ] GC(2)     Reference Processing: 0.2ms
+[15.561s][debug][gc,phases    ] GC(2)     Clear Card Table: 0.1ms
+[15.561s][debug][gc,phases    ] GC(2)     Reference Enqueuing: 0.0ms
+[15.561s][debug][gc,phases    ] GC(2)     Merge Per-Thread State: 0.0ms
+[15.561s][debug][gc,phases    ] GC(2)     Code Roots Purge: 0.0ms
+[15.561s][debug][gc,phases    ] GC(2)     Redirty Cards: 0.0ms
+[15.561s][debug][gc,phases    ] GC(2)     Free Collection Set: 0.1ms
+[15.561s][debug][gc,phases    ] GC(2)     Humongous Reclaim: 0.0ms
+[15.561s][debug][gc,phases    ] GC(2)     Expand Heap After Collection: 0.0ms
+[15.561s][info ][gc,phases    ] GC(2)   Other: 0.2ms
+[15.561s][info ][gc,heap      ] GC(2) Eden regions: 81->0(148)
+[15.561s][info ][gc,heap      ] GC(2) Survivor regions: 5->5(11)
+[15.561s][info ][gc,heap      ] GC(2) Old regions: 2->2
+[15.561s][info ][gc,heap      ] GC(2) Humongous regions: 0->0
+[15.561s][info ][gc,metaspace ] GC(2) Metaspace: 16308K->16308K(1064960K)
+[15.561s][debug][gc,heap      ] GC(2) Heap after GC invocations=3 (full 0):
+[15.561s][debug][gc,heap      ] GC(2)  garbage-first heap   total 262144K, used 6096K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.561s][debug][gc,heap      ] GC(2)   region size 1024K, 5 young (5120K), 5 survivors (5120K)
+[15.561s][debug][gc,heap      ] GC(2)  Metaspace       used 16308K, capacity 17274K, committed 17408K, reserved 1064960K
+[15.561s][debug][gc,heap      ] GC(2)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.561s][info ][gc           ] GC(2) Pause Young (G1 Evacuation Pause) 86M->5M(256M) 8.056ms
+[15.561s][info ][gc,cpu       ] GC(2) User=0.03s Sys=0.00s Real=0.01s
+[15.706s][debug][gc,heap      ] GC(3) Heap before GC invocations=3 (full 0):
+[15.706s][debug][gc,heap      ] GC(3)  garbage-first heap   total 262144K, used 157648K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.706s][debug][gc,heap      ] GC(3)   region size 1024K, 153 young (156672K), 5 survivors (5120K)
+[15.706s][debug][gc,heap      ] GC(3)  Metaspace       used 16356K, capacity 17274K, committed 17408K, reserved 1064960K
+[15.706s][debug][gc,heap      ] GC(3)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.706s][info ][gc,start     ] GC(3) Pause Young (G1 Evacuation Pause)
+[15.706s][info ][gc,task      ] GC(3) Using 8 workers of 8 for evacuation
+[15.706s][debug][gc,age       ] GC(3) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[15.715s][debug][gc,ref       ] GC(3) SoftReference 0.002ms
+[15.715s][debug][gc,ref       ] GC(3) WeakReference 0.292ms
+[15.715s][debug][gc,ref       ] GC(3) FinalReference 0.001ms
+[15.715s][debug][gc,ref       ] GC(3) PhantomReference 0.002ms
+[15.715s][debug][gc,ref       ] GC(3) JNI Weak Reference 0.033ms
+[15.715s][debug][gc,ref       ] GC(3) Ref Counts: Soft: 0 Weak: 4129 Final: 2 Phantom: 17
+[15.715s][trace][gc,age       ] GC(3) Age table with threshold 15 (max threshold 15)
+[15.715s][trace][gc,age       ] GC(3) - age   1:    1717736 bytes,    1717736 total
+[15.715s][trace][gc,age       ] GC(3) - age   2:     683872 bytes,    2401608 total
+[15.715s][trace][gc,age       ] GC(3) - age   3:     761792 bytes,    3163400 total
+[15.715s][trace][gc,age       ] GC(3) - age   4:    2866632 bytes,    6030032 total
+[15.715s][info ][gc,phases    ] GC(3)   Pre Evacuate Collection Set: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Choose Collection Set: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Humongous Register: 0.0ms
+[15.715s][info ][gc,phases    ] GC(3)   Evacuate Collection Set: 8.2ms
+[15.715s][debug][gc,phases    ] GC(3)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.8, Max:  5.7, Diff:  5.6, Sum:  6.3, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)     Update RS (ms):           Min:  0.0, Avg:  0.3, Max:  0.5, Diff:  0.5, Sum:  2.4, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)       Processed Buffers:        Min: 0, Avg:  1.4, Max: 3, Diff: 3, Sum: 11, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.7, Diff:  1.7, Sum:  1.8, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)     Object Copy (ms):         Min:  1.9, Avg:  6.5, Max:  8.1, Diff:  6.2, Sum: 51.8, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)     Termination (ms):         Min:  0.0, Avg:  0.3, Max:  0.7, Diff:  0.7, Sum:  2.7, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)       Termination Attempts:     Min: 1, Avg: 29.0, Max: 62, Diff: 61, Sum: 232, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[15.715s][debug][gc,phases    ] GC(3)     GC Worker Total (ms):     Min:  8.0, Avg:  8.2, Max:  8.2, Diff:  0.2, Sum: 65.2, Workers: 8
+[15.715s][info ][gc,phases    ] GC(3)   Post Evacuate Collection Set: 0.7ms
+[15.715s][debug][gc,phases    ] GC(3)     Code Roots Fixup: 0.1ms
+[15.715s][debug][gc,phases    ] GC(3)     Preserve CM Refs: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Reference Processing: 0.4ms
+[15.715s][debug][gc,phases    ] GC(3)     Clear Card Table: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Reference Enqueuing: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Merge Per-Thread State: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Code Roots Purge: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Redirty Cards: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Free Collection Set: 0.1ms
+[15.715s][debug][gc,phases    ] GC(3)     Humongous Reclaim: 0.0ms
+[15.715s][debug][gc,phases    ] GC(3)     Expand Heap After Collection: 0.0ms
+[15.715s][info ][gc,phases    ] GC(3)   Other: 0.2ms
+[15.715s][info ][gc,heap      ] GC(3) Eden regions: 148->0(146)
+[15.715s][info ][gc,heap      ] GC(3) Survivor regions: 5->7(20)
+[15.715s][info ][gc,heap      ] GC(3) Old regions: 2->2
+[15.715s][info ][gc,heap      ] GC(3) Humongous regions: 0->0
+[15.715s][info ][gc,metaspace ] GC(3) Metaspace: 16356K->16356K(1064960K)
+[15.716s][debug][gc,heap      ] GC(3) Heap after GC invocations=4 (full 0):
+[15.716s][debug][gc,heap      ] GC(3)  garbage-first heap   total 262144K, used 7355K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.716s][debug][gc,heap      ] GC(3)   region size 1024K, 7 young (7168K), 7 survivors (7168K)
+[15.716s][debug][gc,heap      ] GC(3)  Metaspace       used 16356K, capacity 17274K, committed 17408K, reserved 1064960K
+[15.716s][debug][gc,heap      ] GC(3)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.716s][info ][gc           ] GC(3) Pause Young (G1 Evacuation Pause) 153M->7M(256M) 9.214ms
+[15.716s][info ][gc,cpu       ] GC(3) User=0.05s Sys=0.00s Real=0.01s
+[15.818s][debug][gc,heap      ] GC(4) Heap before GC invocations=4 (full 0):
+[15.818s][debug][gc,heap      ] GC(4)  garbage-first heap   total 262144K, used 156859K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.818s][debug][gc,heap      ] GC(4)   region size 1024K, 153 young (156672K), 7 survivors (7168K)
+[15.818s][debug][gc,heap      ] GC(4)  Metaspace       used 16392K, capacity 17338K, committed 17664K, reserved 1064960K
+[15.818s][debug][gc,heap      ] GC(4)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.818s][info ][gc,start     ] GC(4) Pause Young (G1 Evacuation Pause)
+[15.818s][info ][gc,task      ] GC(4) Using 8 workers of 8 for evacuation
+[15.818s][debug][gc,age       ] GC(4) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[15.826s][debug][gc,ref       ] GC(4) SoftReference 0.002ms
+[15.826s][debug][gc,ref       ] GC(4) WeakReference 0.340ms
+[15.826s][debug][gc,ref       ] GC(4) FinalReference 0.000ms
+[15.826s][debug][gc,ref       ] GC(4) PhantomReference 0.001ms
+[15.826s][debug][gc,ref       ] GC(4) JNI Weak Reference 0.034ms
+[15.826s][debug][gc,ref       ] GC(4) Ref Counts: Soft: 0 Weak: 5553 Final: 0 Phantom: 2
+[15.826s][trace][gc,age       ] GC(4) Age table with threshold 15 (max threshold 15)
+[15.826s][trace][gc,age       ] GC(4) - age   1:    1077696 bytes,    1077696 total
+[15.826s][trace][gc,age       ] GC(4) - age   2:    1653104 bytes,    2730800 total
+[15.826s][trace][gc,age       ] GC(4) - age   3:     683872 bytes,    3414672 total
+[15.826s][trace][gc,age       ] GC(4) - age   4:     554912 bytes,    3969584 total
+[15.826s][trace][gc,age       ] GC(4) - age   5:    2866600 bytes,    6836184 total
+[15.826s][info ][gc,phases    ] GC(4)   Pre Evacuate Collection Set: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Choose Collection Set: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Humongous Register: 0.0ms
+[15.826s][info ][gc,phases    ] GC(4)   Evacuate Collection Set: 7.1ms
+[15.826s][debug][gc,phases    ] GC(4)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.2, Max:  1.0, Diff:  1.0, Sum:  1.5, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)     Update RS (ms):           Min:  0.0, Avg:  0.2, Max:  0.6, Diff:  0.6, Sum:  2.0, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)       Processed Buffers:        Min: 0, Avg:  1.2, Max: 3, Diff: 3, Sum: 10, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.3, Max:  1.3, Diff:  1.3, Sum:  2.0, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)     Object Copy (ms):         Min:  5.2, Avg:  6.1, Max:  6.5, Diff:  1.3, Sum: 48.6, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)     Termination (ms):         Min:  0.1, Avg:  0.1, Max:  0.1, Diff:  0.1, Sum:  0.8, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)       Termination Attempts:     Min: 96, Avg: 132.1, Max: 168, Diff: 72, Sum: 1057, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[15.826s][debug][gc,phases    ] GC(4)     GC Worker Total (ms):     Min:  6.4, Avg:  6.9, Max:  7.0, Diff:  0.7, Sum: 55.0, Workers: 8
+[15.826s][info ][gc,phases    ] GC(4)   Post Evacuate Collection Set: 0.7ms
+[15.826s][debug][gc,phases    ] GC(4)     Code Roots Fixup: 0.1ms
+[15.826s][debug][gc,phases    ] GC(4)     Preserve CM Refs: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Reference Processing: 0.4ms
+[15.826s][debug][gc,phases    ] GC(4)     Clear Card Table: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Reference Enqueuing: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Merge Per-Thread State: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Code Roots Purge: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Redirty Cards: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Free Collection Set: 0.1ms
+[15.826s][debug][gc,phases    ] GC(4)     Humongous Reclaim: 0.0ms
+[15.826s][debug][gc,phases    ] GC(4)     Expand Heap After Collection: 0.0ms
+[15.826s][info ][gc,phases    ] GC(4)   Other: 0.2ms
+[15.826s][info ][gc,heap      ] GC(4) Eden regions: 146->0(146)
+[15.826s][info ][gc,heap      ] GC(4) Survivor regions: 7->7(20)
+[15.826s][info ][gc,heap      ] GC(4) Old regions: 2->2
+[15.826s][info ][gc,heap      ] GC(4) Humongous regions: 0->0
+[15.826s][info ][gc,metaspace ] GC(4) Metaspace: 16392K->16392K(1064960K)
+[15.826s][debug][gc,heap      ] GC(4) Heap after GC invocations=5 (full 0):
+[15.826s][debug][gc,heap      ] GC(4)  garbage-first heap   total 262144K, used 8201K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.826s][debug][gc,heap      ] GC(4)   region size 1024K, 7 young (7168K), 7 survivors (7168K)
+[15.826s][debug][gc,heap      ] GC(4)  Metaspace       used 16392K, capacity 17338K, committed 17664K, reserved 1064960K
+[15.826s][debug][gc,heap      ] GC(4)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.826s][info ][gc           ] GC(4) Pause Young (G1 Evacuation Pause) 153M->8M(256M) 8.059ms
+[15.826s][info ][gc,cpu       ] GC(4) User=0.05s Sys=0.00s Real=0.01s
+[15.926s][debug][gc,heap      ] GC(5) Heap before GC invocations=5 (full 0):
+[15.926s][debug][gc,heap      ] GC(5)  garbage-first heap   total 262144K, used 157705K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.926s][debug][gc,heap      ] GC(5)   region size 1024K, 153 young (156672K), 7 survivors (7168K)
+[15.926s][debug][gc,heap      ] GC(5)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[15.926s][debug][gc,heap      ] GC(5)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.926s][info ][gc,start     ] GC(5) Pause Young (G1 Evacuation Pause)
+[15.926s][info ][gc,task      ] GC(5) Using 8 workers of 8 for evacuation
+[15.926s][debug][gc,age       ] GC(5) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[15.935s][debug][gc,ref       ] GC(5) SoftReference 0.002ms
+[15.936s][debug][gc,ref       ] GC(5) WeakReference 0.492ms
+[15.936s][debug][gc,ref       ] GC(5) FinalReference 0.001ms
+[15.936s][debug][gc,ref       ] GC(5) PhantomReference 0.001ms
+[15.936s][debug][gc,ref       ] GC(5) JNI Weak Reference 0.040ms
+[15.936s][debug][gc,ref       ] GC(5) Ref Counts: Soft: 0 Weak: 6948 Final: 2 Phantom: 1
+[15.936s][trace][gc,age       ] GC(5) Age table with threshold 15 (max threshold 15)
+[15.936s][trace][gc,age       ] GC(5) - age   1:    1637592 bytes,    1637592 total
+[15.936s][trace][gc,age       ] GC(5) - age   2:    1018808 bytes,    2656400 total
+[15.936s][trace][gc,age       ] GC(5) - age   3:    1382760 bytes,    4039160 total
+[15.936s][trace][gc,age       ] GC(5) - age   4:     407768 bytes,    4446928 total
+[15.936s][trace][gc,age       ] GC(5) - age   5:     542328 bytes,    4989256 total
+[15.936s][trace][gc,age       ] GC(5) - age   6:    2866600 bytes,    7855856 total
+[15.936s][info ][gc,phases    ] GC(5)   Pre Evacuate Collection Set: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Choose Collection Set: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Humongous Register: 0.0ms
+[15.936s][info ][gc,phases    ] GC(5)   Evacuate Collection Set: 9.2ms
+[15.936s][debug][gc,phases    ] GC(5)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.4, Max:  2.6, Diff:  2.5, Sum:  3.2, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)     Update RS (ms):           Min:  0.0, Avg:  0.2, Max:  0.3, Diff:  0.3, Sum:  1.5, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)       Processed Buffers:        Min: 0, Avg:  1.2, Max: 2, Diff: 2, Sum: 10, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)     Scan RS (ms):             Min:  0.0, Avg:  0.2, Max:  0.3, Diff:  0.3, Sum:  1.4, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.7, Diff:  1.7, Sum:  1.8, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)     Object Copy (ms):         Min:  5.7, Avg:  7.4, Max:  8.4, Diff:  2.6, Sum: 59.6, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)     Termination (ms):         Min:  0.1, Avg:  0.6, Max:  0.8, Diff:  0.8, Sum:  5.1, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)       Termination Attempts:     Min: 36, Avg: 178.6, Max: 260, Diff: 224, Sum: 1429, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[15.936s][debug][gc,phases    ] GC(5)     GC Worker Total (ms):     Min:  8.8, Avg:  9.1, Max:  9.1, Diff:  0.4, Sum: 72.5, Workers: 8
+[15.936s][info ][gc,phases    ] GC(5)   Post Evacuate Collection Set: 0.9ms
+[15.936s][debug][gc,phases    ] GC(5)     Code Roots Fixup: 0.1ms
+[15.936s][debug][gc,phases    ] GC(5)     Preserve CM Refs: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Reference Processing: 0.6ms
+[15.936s][debug][gc,phases    ] GC(5)     Clear Card Table: 0.1ms
+[15.936s][debug][gc,phases    ] GC(5)     Reference Enqueuing: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Merge Per-Thread State: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Code Roots Purge: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Redirty Cards: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Free Collection Set: 0.1ms
+[15.936s][debug][gc,phases    ] GC(5)     Humongous Reclaim: 0.0ms
+[15.936s][debug][gc,phases    ] GC(5)     Expand Heap After Collection: 0.0ms
+[15.936s][info ][gc,phases    ] GC(5)   Other: 0.2ms
+[15.936s][info ][gc,heap      ] GC(5) Eden regions: 146->0(145)
+[15.936s][info ][gc,heap      ] GC(5) Survivor regions: 7->8(20)
+[15.936s][info ][gc,heap      ] GC(5) Old regions: 2->2
+[15.936s][info ][gc,heap      ] GC(5) Humongous regions: 0->0
+[15.936s][info ][gc,metaspace ] GC(5) Metaspace: 16393K->16393K(1064960K)
+[15.936s][debug][gc,heap      ] GC(5) Heap after GC invocations=6 (full 0):
+[15.936s][debug][gc,heap      ] GC(5)  garbage-first heap   total 262144K, used 9310K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[15.936s][debug][gc,heap      ] GC(5)   region size 1024K, 8 young (8192K), 8 survivors (8192K)
+[15.936s][debug][gc,heap      ] GC(5)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[15.936s][debug][gc,heap      ] GC(5)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[15.936s][info ][gc           ] GC(5) Pause Young (G1 Evacuation Pause) 154M->9M(256M) 10.379ms
+[15.936s][info ][gc,cpu       ] GC(5) User=0.08s Sys=0.00s Real=0.01s
+[16.032s][debug][gc,heap      ] GC(6) Heap before GC invocations=6 (full 0):
+[16.032s][debug][gc,heap      ] GC(6)  garbage-first heap   total 262144K, used 157790K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.032s][debug][gc,heap      ] GC(6)   region size 1024K, 153 young (156672K), 8 survivors (8192K)
+[16.032s][debug][gc,heap      ] GC(6)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.032s][debug][gc,heap      ] GC(6)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.032s][info ][gc,start     ] GC(6) Pause Young (G1 Evacuation Pause)
+[16.032s][info ][gc,task      ] GC(6) Using 8 workers of 8 for evacuation
+[16.032s][debug][gc,age       ] GC(6) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.041s][debug][gc,ref       ] GC(6) SoftReference 0.002ms
+[16.042s][debug][gc,ref       ] GC(6) WeakReference 0.644ms
+[16.042s][debug][gc,ref       ] GC(6) FinalReference 0.026ms
+[16.042s][debug][gc,ref       ] GC(6) PhantomReference 0.003ms
+[16.042s][debug][gc,ref       ] GC(6) JNI Weak Reference 0.053ms
+[16.042s][debug][gc,ref       ] GC(6) Ref Counts: Soft: 0 Weak: 9605 Final: 85 Phantom: 21
+[16.042s][trace][gc,age       ] GC(6) Age table with threshold 15 (max threshold 15)
+[16.042s][trace][gc,age       ] GC(6) - age   1:    1044048 bytes,    1044048 total
+[16.042s][trace][gc,age       ] GC(6) - age   2:    1569672 bytes,    2613720 total
+[16.042s][trace][gc,age       ] GC(6) - age   3:     986024 bytes,    3599744 total
+[16.042s][trace][gc,age       ] GC(6) - age   4:    1220880 bytes,    4820624 total
+[16.042s][trace][gc,age       ] GC(6) - age   5:     300616 bytes,    5121240 total
+[16.042s][trace][gc,age       ] GC(6) - age   6:     542328 bytes,    5663568 total
+[16.042s][trace][gc,age       ] GC(6) - age   7:    2866600 bytes,    8530168 total
+[16.042s][info ][gc,phases    ] GC(6)   Pre Evacuate Collection Set: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Choose Collection Set: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Humongous Register: 0.0ms
+[16.042s][info ][gc,phases    ] GC(6)   Evacuate Collection Set: 8.5ms
+[16.042s][debug][gc,phases    ] GC(6)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.2, Max:  0.9, Diff:  0.9, Sum:  1.4, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)     Update RS (ms):           Min:  0.0, Avg:  0.2, Max:  0.6, Diff:  0.6, Sum:  1.9, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)       Processed Buffers:        Min: 0, Avg:  1.5, Max: 4, Diff: 4, Sum: 12, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  0.7, Diff:  0.7, Sum:  1.5, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)     Object Copy (ms):         Min:  3.9, Avg:  6.4, Max:  7.6, Diff:  3.7, Sum: 51.4, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)     Termination (ms):         Min:  0.2, Avg:  0.2, Max:  0.2, Diff:  0.1, Sum:  1.5, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)       Termination Attempts:     Min: 175, Avg: 212.1, Max: 250, Diff: 75, Sum: 1697, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.042s][debug][gc,phases    ] GC(6)     GC Worker Total (ms):     Min:  4.1, Avg:  7.2, Max:  8.4, Diff:  4.3, Sum: 57.7, Workers: 8
+[16.042s][info ][gc,phases    ] GC(6)   Post Evacuate Collection Set: 1.1ms
+[16.042s][debug][gc,phases    ] GC(6)     Code Roots Fixup: 0.1ms
+[16.042s][debug][gc,phases    ] GC(6)     Preserve CM Refs: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Reference Processing: 0.8ms
+[16.042s][debug][gc,phases    ] GC(6)     Clear Card Table: 0.1ms
+[16.042s][debug][gc,phases    ] GC(6)     Reference Enqueuing: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Merge Per-Thread State: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Code Roots Purge: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Redirty Cards: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Free Collection Set: 0.1ms
+[16.042s][debug][gc,phases    ] GC(6)     Humongous Reclaim: 0.0ms
+[16.042s][debug][gc,phases    ] GC(6)     Expand Heap After Collection: 0.0ms
+[16.042s][info ][gc,phases    ] GC(6)   Other: 0.2ms
+[16.042s][info ][gc,heap      ] GC(6) Eden regions: 145->0(144)
+[16.042s][info ][gc,heap      ] GC(6) Survivor regions: 8->9(20)
+[16.042s][info ][gc,heap      ] GC(6) Old regions: 2->2
+[16.042s][info ][gc,heap      ] GC(6) Humongous regions: 0->0
+[16.042s][info ][gc,metaspace ] GC(6) Metaspace: 16393K->16393K(1064960K)
+[16.042s][debug][gc,heap      ] GC(6) Heap after GC invocations=7 (full 0):
+[16.042s][debug][gc,heap      ] GC(6)  garbage-first heap   total 262144K, used 10092K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.042s][debug][gc,heap      ] GC(6)   region size 1024K, 9 young (9216K), 9 survivors (9216K)
+[16.042s][debug][gc,heap      ] GC(6)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.042s][debug][gc,heap      ] GC(6)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.042s][info ][gc           ] GC(6) Pause Young (G1 Evacuation Pause) 154M->9M(256M) 9.916ms
+[16.042s][info ][gc,cpu       ] GC(6) User=0.06s Sys=0.00s Real=0.01s
+[16.124s][debug][gc,heap      ] GC(7) Heap before GC invocations=7 (full 0):
+[16.124s][debug][gc,heap      ] GC(7)  garbage-first heap   total 262144K, used 157548K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.124s][debug][gc,heap      ] GC(7)   region size 1024K, 153 young (156672K), 9 survivors (9216K)
+[16.124s][debug][gc,heap      ] GC(7)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.124s][debug][gc,heap      ] GC(7)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.124s][info ][gc,start     ] GC(7) Pause Young (G1 Evacuation Pause)
+[16.124s][info ][gc,task      ] GC(7) Using 8 workers of 8 for evacuation
+[16.124s][debug][gc,age       ] GC(7) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.133s][debug][gc,ref       ] GC(7) SoftReference 0.003ms
+[16.134s][debug][gc,ref       ] GC(7) WeakReference 0.605ms
+[16.134s][debug][gc,ref       ] GC(7) FinalReference 0.017ms
+[16.134s][debug][gc,ref       ] GC(7) PhantomReference 0.001ms
+[16.134s][debug][gc,ref       ] GC(7) JNI Weak Reference 0.037ms
+[16.134s][debug][gc,ref       ] GC(7) Ref Counts: Soft: 0 Weak: 10537 Final: 145 Phantom: 3
+[16.134s][trace][gc,age       ] GC(7) Age table with threshold 15 (max threshold 15)
+[16.134s][trace][gc,age       ] GC(7) - age   1:     833936 bytes,     833936 total
+[16.134s][trace][gc,age       ] GC(7) - age   2:     967976 bytes,    1801912 total
+[16.134s][trace][gc,age       ] GC(7) - age   3:    1569672 bytes,    3371584 total
+[16.134s][trace][gc,age       ] GC(7) - age   4:     986024 bytes,    4357608 total
+[16.134s][trace][gc,age       ] GC(7) - age   5:     946608 bytes,    5304216 total
+[16.134s][trace][gc,age       ] GC(7) - age   6:     300616 bytes,    5604832 total
+[16.134s][trace][gc,age       ] GC(7) - age   7:     542328 bytes,    6147160 total
+[16.134s][trace][gc,age       ] GC(7) - age   8:    2866600 bytes,    9013760 total
+[16.135s][info ][gc,phases    ] GC(7)   Pre Evacuate Collection Set: 0.0ms
+[16.135s][debug][gc,phases    ] GC(7)     Choose Collection Set: 0.0ms
+[16.135s][debug][gc,phases    ] GC(7)     Humongous Register: 0.0ms
+[16.135s][info ][gc,phases    ] GC(7)   Evacuate Collection Set: 9.4ms
+[16.135s][debug][gc,phases    ] GC(7)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.2, Max:  1.0, Diff:  1.0, Sum:  1.5, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)     Update RS (ms):           Min:  0.0, Avg:  0.3, Max:  0.6, Diff:  0.6, Sum:  2.3, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)       Processed Buffers:        Min: 0, Avg:  1.1, Max: 3, Diff: 3, Sum: 9, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.8, Diff:  1.8, Sum:  1.8, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)     Object Copy (ms):         Min:  6.7, Avg:  7.9, Max:  8.4, Diff:  1.7, Sum: 63.4, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)     Termination (ms):         Min:  0.2, Avg:  0.2, Max:  0.3, Diff:  0.1, Sum:  1.8, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)       Termination Attempts:     Min: 218, Avg: 275.9, Max: 329, Diff: 111, Sum: 2207, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.135s][debug][gc,phases    ] GC(7)     GC Worker Total (ms):     Min:  7.7, Avg:  8.9, Max:  9.4, Diff:  1.7, Sum: 70.9, Workers: 8
+[16.135s][info ][gc,phases    ] GC(7)   Post Evacuate Collection Set: 1.2ms
+[16.135s][debug][gc,phases    ] GC(7)     Code Roots Fixup: 0.1ms
+[16.135s][debug][gc,phases    ] GC(7)     Preserve CM Refs: 0.0ms
+[16.135s][debug][gc,phases    ] GC(7)     Reference Processing: 0.7ms
+[16.135s][debug][gc,phases    ] GC(7)     Clear Card Table: 0.1ms
+[16.135s][debug][gc,phases    ] GC(7)     Reference Enqueuing: 0.0ms
+[16.135s][debug][gc,phases    ] GC(7)     Merge Per-Thread State: 0.0ms
+[16.135s][debug][gc,phases    ] GC(7)     Code Roots Purge: 0.0ms
+[16.135s][debug][gc,phases    ] GC(7)     Redirty Cards: 0.1ms
+[16.135s][debug][gc,phases    ] GC(7)     Free Collection Set: 0.1ms
+[16.135s][debug][gc,phases    ] GC(7)     Humongous Reclaim: 0.0ms
+[16.135s][debug][gc,phases    ] GC(7)     Expand Heap After Collection: 0.0ms
+[16.135s][info ][gc,phases    ] GC(7)   Other: 0.3ms
+[16.135s][info ][gc,heap      ] GC(7) Eden regions: 144->0(143)
+[16.135s][info ][gc,heap      ] GC(7) Survivor regions: 9->10(20)
+[16.135s][info ][gc,heap      ] GC(7) Old regions: 2->2
+[16.135s][info ][gc,heap      ] GC(7) Humongous regions: 0->0
+[16.135s][info ][gc,metaspace ] GC(7) Metaspace: 16393K->16393K(1064960K)
+[16.135s][debug][gc,heap      ] GC(7) Heap after GC invocations=8 (full 0):
+[16.135s][debug][gc,heap      ] GC(7)  garbage-first heap   total 262144K, used 10688K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.135s][debug][gc,heap      ] GC(7)   region size 1024K, 10 young (10240K), 10 survivors (10240K)
+[16.135s][debug][gc,heap      ] GC(7)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.135s][debug][gc,heap      ] GC(7)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.135s][info ][gc           ] GC(7) Pause Young (G1 Evacuation Pause) 153M->10M(256M) 10.920ms
+[16.135s][info ][gc,cpu       ] GC(7) User=0.08s Sys=0.01s Real=0.01s
+[16.231s][debug][gc,heap      ] GC(8) Heap before GC invocations=8 (full 0):
+[16.231s][debug][gc,heap      ] GC(8)  garbage-first heap   total 262144K, used 157120K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.231s][debug][gc,heap      ] GC(8)   region size 1024K, 153 young (156672K), 10 survivors (10240K)
+[16.231s][debug][gc,heap      ] GC(8)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.231s][debug][gc,heap      ] GC(8)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.231s][info ][gc,start     ] GC(8) Pause Young (G1 Evacuation Pause)
+[16.231s][info ][gc,task      ] GC(8) Using 8 workers of 8 for evacuation
+[16.231s][debug][gc,age       ] GC(8) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.242s][debug][gc,ref       ] GC(8) SoftReference 0.003ms
+[16.243s][debug][gc,ref       ] GC(8) WeakReference 0.655ms
+[16.243s][debug][gc,ref       ] GC(8) FinalReference 0.002ms
+[16.243s][debug][gc,ref       ] GC(8) PhantomReference 0.006ms
+[16.243s][debug][gc,ref       ] GC(8) JNI Weak Reference 0.042ms
+[16.243s][debug][gc,ref       ] GC(8) Ref Counts: Soft: 0 Weak: 11438 Final: 5 Phantom: 40
+[16.243s][trace][gc,age       ] GC(8) Age table with threshold 15 (max threshold 15)
+[16.243s][trace][gc,age       ] GC(8) - age   1:     736160 bytes,     736160 total
+[16.243s][trace][gc,age       ] GC(8) - age   2:     750784 bytes,    1486944 total
+[16.243s][trace][gc,age       ] GC(8) - age   3:     967976 bytes,    2454920 total
+[16.243s][trace][gc,age       ] GC(8) - age   4:    1569672 bytes,    4024592 total
+[16.243s][trace][gc,age       ] GC(8) - age   5:     986024 bytes,    5010616 total
+[16.243s][trace][gc,age       ] GC(8) - age   6:     690032 bytes,    5700648 total
+[16.243s][trace][gc,age       ] GC(8) - age   7:     300616 bytes,    6001264 total
+[16.243s][trace][gc,age       ] GC(8) - age   8:     542328 bytes,    6543592 total
+[16.243s][trace][gc,age       ] GC(8) - age   9:    2866600 bytes,    9410192 total
+[16.243s][info ][gc,phases    ] GC(8)   Pre Evacuate Collection Set: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Choose Collection Set: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Humongous Register: 0.0ms
+[16.243s][info ][gc,phases    ] GC(8)   Evacuate Collection Set: 10.9ms
+[16.243s][debug][gc,phases    ] GC(8)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.2, Max:  0.9, Diff:  0.9, Sum:  1.5, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)     Update RS (ms):           Min:  0.0, Avg:  0.3, Max:  0.6, Diff:  0.6, Sum:  2.3, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)       Processed Buffers:        Min: 0, Avg:  1.2, Max: 3, Diff: 3, Sum: 10, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.5, Diff:  1.5, Sum:  1.9, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)     Object Copy (ms):         Min:  8.1, Avg:  9.3, Max:  9.8, Diff:  1.7, Sum: 74.6, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)     Termination (ms):         Min:  0.1, Avg:  0.2, Max:  0.3, Diff:  0.2, Sum:  1.8, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)       Termination Attempts:     Min: 56, Avg: 212.4, Max: 313, Diff: 257, Sum: 1699, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.243s][debug][gc,phases    ] GC(8)     GC Worker Total (ms):     Min:  8.9, Avg: 10.3, Max: 10.9, Diff:  2.0, Sum: 82.2, Workers: 8
+[16.243s][info ][gc,phases    ] GC(8)   Post Evacuate Collection Set: 1.1ms
+[16.243s][debug][gc,phases    ] GC(8)     Code Roots Fixup: 0.1ms
+[16.243s][debug][gc,phases    ] GC(8)     Preserve CM Refs: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Reference Processing: 0.8ms
+[16.243s][debug][gc,phases    ] GC(8)     Clear Card Table: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Reference Enqueuing: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Merge Per-Thread State: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Code Roots Purge: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Redirty Cards: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Free Collection Set: 0.1ms
+[16.243s][debug][gc,phases    ] GC(8)     Humongous Reclaim: 0.0ms
+[16.243s][debug][gc,phases    ] GC(8)     Expand Heap After Collection: 0.0ms
+[16.243s][info ][gc,phases    ] GC(8)   Other: 0.2ms
+[16.243s][info ][gc,heap      ] GC(8) Eden regions: 143->0(143)
+[16.243s][info ][gc,heap      ] GC(8) Survivor regions: 10->10(20)
+[16.243s][info ][gc,heap      ] GC(8) Old regions: 2->2
+[16.243s][info ][gc,heap      ] GC(8) Humongous regions: 0->0
+[16.243s][info ][gc,metaspace ] GC(8) Metaspace: 16393K->16393K(1064960K)
+[16.243s][debug][gc,heap      ] GC(8) Heap after GC invocations=9 (full 0):
+[16.243s][debug][gc,heap      ] GC(8)  garbage-first heap   total 262144K, used 10899K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.243s][debug][gc,heap      ] GC(8)   region size 1024K, 10 young (10240K), 10 survivors (10240K)
+[16.243s][debug][gc,heap      ] GC(8)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.243s][debug][gc,heap      ] GC(8)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.243s][info ][gc           ] GC(8) Pause Young (G1 Evacuation Pause) 153M->10M(256M) 12.398ms
+[16.243s][info ][gc,cpu       ] GC(8) User=0.08s Sys=0.00s Real=0.02s
+[16.360s][debug][gc,heap      ] GC(9) Heap before GC invocations=9 (full 0):
+[16.360s][debug][gc,heap      ] GC(9)  garbage-first heap   total 262144K, used 157331K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.360s][debug][gc,heap      ] GC(9)   region size 1024K, 153 young (156672K), 10 survivors (10240K)
+[16.360s][debug][gc,heap      ] GC(9)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.360s][debug][gc,heap      ] GC(9)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.360s][info ][gc,start     ] GC(9) Pause Young (G1 Evacuation Pause)
+[16.360s][info ][gc,task      ] GC(9) Using 8 workers of 8 for evacuation
+[16.360s][debug][gc,age       ] GC(9) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.373s][debug][gc,ref       ] GC(9) SoftReference 0.003ms
+[16.374s][debug][gc,ref       ] GC(9) WeakReference 1.021ms
+[16.374s][debug][gc,ref       ] GC(9) FinalReference 0.003ms
+[16.374s][debug][gc,ref       ] GC(9) PhantomReference 0.000ms
+[16.374s][debug][gc,ref       ] GC(9) JNI Weak Reference 0.039ms
+[16.374s][debug][gc,ref       ] GC(9) Ref Counts: Soft: 0 Weak: 12853 Final: 9 Phantom: 0
+[16.374s][trace][gc,age       ] GC(9) Age table with threshold 15 (max threshold 15)
+[16.374s][trace][gc,age       ] GC(9) - age   1:     912184 bytes,     912184 total
+[16.374s][trace][gc,age       ] GC(9) - age   2:     646600 bytes,    1558784 total
+[16.374s][trace][gc,age       ] GC(9) - age   3:     750784 bytes,    2309568 total
+[16.374s][trace][gc,age       ] GC(9) - age   4:     967976 bytes,    3277544 total
+[16.374s][trace][gc,age       ] GC(9) - age   5:    1520512 bytes,    4798056 total
+[16.374s][trace][gc,age       ] GC(9) - age   6:     790840 bytes,    5588896 total
+[16.374s][trace][gc,age       ] GC(9) - age   7:     600688 bytes,    6189584 total
+[16.374s][trace][gc,age       ] GC(9) - age   8:     300616 bytes,    6490200 total
+[16.374s][trace][gc,age       ] GC(9) - age   9:     542328 bytes,    7032528 total
+[16.374s][trace][gc,age       ] GC(9) - age  10:    2866600 bytes,    9899128 total
+[16.374s][info ][gc,phases    ] GC(9)   Pre Evacuate Collection Set: 0.0ms
+[16.374s][debug][gc,phases    ] GC(9)     Choose Collection Set: 0.0ms
+[16.374s][debug][gc,phases    ] GC(9)     Humongous Register: 0.0ms
+[16.374s][info ][gc,phases    ] GC(9)   Evacuate Collection Set: 12.5ms
+[16.374s][debug][gc,phases    ] GC(9)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.2, Max:  1.0, Diff:  1.0, Sum:  1.4, Workers: 8
+[16.374s][debug][gc,phases    ] GC(9)     Update RS (ms):           Min:  0.0, Avg:  0.3, Max:  0.6, Diff:  0.6, Sum:  2.5, Workers: 8
+[16.374s][debug][gc,phases    ] GC(9)       Processed Buffers:        Min: 0, Avg:  1.5, Max: 4, Diff: 4, Sum: 12, Workers: 8
+[16.374s][debug][gc,phases    ] GC(9)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.375s][debug][gc,phases    ] GC(9)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.3, Diff:  1.3, Sum:  2.0, Workers: 8
+[16.375s][debug][gc,phases    ] GC(9)     Object Copy (ms):         Min:  9.8, Avg: 10.6, Max: 11.4, Diff:  1.6, Sum: 84.6, Workers: 8
+[16.375s][debug][gc,phases    ] GC(9)     Termination (ms):         Min:  0.3, Avg:  0.3, Max:  0.4, Diff:  0.1, Sum:  2.7, Workers: 8
+[16.375s][debug][gc,phases    ] GC(9)       Termination Attempts:     Min: 259, Avg: 297.1, Max: 340, Diff: 81, Sum: 2377, Workers: 8
+[16.375s][debug][gc,phases    ] GC(9)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.375s][debug][gc,phases    ] GC(9)     GC Worker Total (ms):     Min: 10.5, Avg: 11.7, Max: 12.5, Diff:  2.0, Sum: 93.5, Workers: 8
+[16.375s][info ][gc,phases    ] GC(9)   Post Evacuate Collection Set: 1.5ms
+[16.375s][debug][gc,phases    ] GC(9)     Code Roots Fixup: 0.1ms
+[16.375s][debug][gc,phases    ] GC(9)     Preserve CM Refs: 0.0ms
+[16.375s][debug][gc,phases    ] GC(9)     Reference Processing: 1.2ms
+[16.375s][debug][gc,phases    ] GC(9)     Clear Card Table: 0.1ms
+[16.375s][debug][gc,phases    ] GC(9)     Reference Enqueuing: 0.0ms
+[16.375s][debug][gc,phases    ] GC(9)     Merge Per-Thread State: 0.0ms
+[16.375s][debug][gc,phases    ] GC(9)     Code Roots Purge: 0.0ms
+[16.375s][debug][gc,phases    ] GC(9)     Redirty Cards: 0.0ms
+[16.375s][debug][gc,phases    ] GC(9)     Free Collection Set: 0.1ms
+[16.375s][debug][gc,phases    ] GC(9)     Humongous Reclaim: 0.0ms
+[16.375s][debug][gc,phases    ] GC(9)     Expand Heap After Collection: 0.0ms
+[16.375s][info ][gc,phases    ] GC(9)   Other: 0.3ms
+[16.375s][info ][gc,heap      ] GC(9) Eden regions: 143->0(142)
+[16.375s][info ][gc,heap      ] GC(9) Survivor regions: 10->11(20)
+[16.375s][info ][gc,heap      ] GC(9) Old regions: 2->2
+[16.375s][info ][gc,heap      ] GC(9) Humongous regions: 0->0
+[16.375s][info ][gc,metaspace ] GC(9) Metaspace: 16393K->16393K(1064960K)
+[16.375s][debug][gc,heap      ] GC(9) Heap after GC invocations=10 (full 0):
+[16.375s][debug][gc,heap      ] GC(9)  garbage-first heap   total 262144K, used 11752K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.375s][debug][gc,heap      ] GC(9)   region size 1024K, 11 young (11264K), 11 survivors (11264K)
+[16.375s][debug][gc,heap      ] GC(9)  Metaspace       used 16393K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.375s][debug][gc,heap      ] GC(9)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.375s][info ][gc           ] GC(9) Pause Young (G1 Evacuation Pause) 153M->11M(256M) 14.509ms
+[16.375s][info ][gc,cpu       ] GC(9) User=0.09s Sys=0.00s Real=0.02s
+[16.486s][debug][gc,heap      ] GC(10) Heap before GC invocations=10 (full 0):
+[16.486s][debug][gc,heap      ] GC(10)  garbage-first heap   total 262144K, used 158184K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.486s][debug][gc,heap      ] GC(10)   region size 1024K, 153 young (156672K), 11 survivors (11264K)
+[16.486s][debug][gc,heap      ] GC(10)  Metaspace       used 16411K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.486s][debug][gc,heap      ] GC(10)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.486s][info ][gc,start     ] GC(10) Pause Young (G1 Evacuation Pause)
+[16.486s][info ][gc,task      ] GC(10) Using 8 workers of 8 for evacuation
+[16.486s][debug][gc,age       ] GC(10) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.498s][debug][gc,ref       ] GC(10) SoftReference 0.003ms
+[16.499s][debug][gc,ref       ] GC(10) WeakReference 1.404ms
+[16.499s][debug][gc,ref       ] GC(10) FinalReference 0.031ms
+[16.499s][debug][gc,ref       ] GC(10) PhantomReference 0.003ms
+[16.499s][debug][gc,ref       ] GC(10) JNI Weak Reference 0.069ms
+[16.499s][debug][gc,ref       ] GC(10) Ref Counts: Soft: 0 Weak: 14383 Final: 143 Phantom: 10
+[16.499s][trace][gc,age       ] GC(10) Age table with threshold 15 (max threshold 15)
+[16.499s][trace][gc,age       ] GC(10) - age   1:     866864 bytes,     866864 total
+[16.499s][trace][gc,age       ] GC(10) - age   2:     816824 bytes,    1683688 total
+[16.499s][trace][gc,age       ] GC(10) - age   3:     646600 bytes,    2330288 total
+[16.499s][trace][gc,age       ] GC(10) - age   4:     750784 bytes,    3081072 total
+[16.499s][trace][gc,age       ] GC(10) - age   5:     967976 bytes,    4049048 total
+[16.499s][trace][gc,age       ] GC(10) - age   6:    1028944 bytes,    5077992 total
+[16.499s][trace][gc,age       ] GC(10) - age   7:     459096 bytes,    5537088 total
+[16.499s][trace][gc,age       ] GC(10) - age   8:     600688 bytes,    6137776 total
+[16.499s][trace][gc,age       ] GC(10) - age   9:     300616 bytes,    6438392 total
+[16.499s][trace][gc,age       ] GC(10) - age  10:     542328 bytes,    6980720 total
+[16.499s][trace][gc,age       ] GC(10) - age  11:    2866600 bytes,    9847320 total
+[16.500s][info ][gc,phases    ] GC(10)   Pre Evacuate Collection Set: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Choose Collection Set: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Humongous Register: 0.0ms
+[16.500s][info ][gc,phases    ] GC(10)   Evacuate Collection Set: 11.7ms
+[16.500s][debug][gc,phases    ] GC(10)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.3, Max:  1.1, Diff:  1.1, Sum:  2.0, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)     Update RS (ms):           Min:  0.0, Avg:  0.3, Max:  0.5, Diff:  0.5, Sum:  2.3, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)       Processed Buffers:        Min: 0, Avg:  1.6, Max: 3, Diff: 3, Sum: 13, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.1, Diff:  1.1, Sum:  1.9, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)     Object Copy (ms):         Min:  4.6, Avg:  9.5, Max: 10.7, Diff:  6.1, Sum: 75.9, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)     Termination (ms):         Min:  0.2, Avg:  0.3, Max:  0.5, Diff:  0.3, Sum:  2.6, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)       Termination Attempts:     Min: 283, Avg: 306.2, Max: 337, Diff: 54, Sum: 2450, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.500s][debug][gc,phases    ] GC(10)     GC Worker Total (ms):     Min:  5.0, Avg: 10.6, Max: 11.7, Diff:  6.7, Sum: 84.9, Workers: 8
+[16.500s][info ][gc,phases    ] GC(10)   Post Evacuate Collection Set: 1.9ms
+[16.500s][debug][gc,phases    ] GC(10)     Code Roots Fixup: 0.1ms
+[16.500s][debug][gc,phases    ] GC(10)     Preserve CM Refs: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Reference Processing: 1.6ms
+[16.500s][debug][gc,phases    ] GC(10)     Clear Card Table: 0.1ms
+[16.500s][debug][gc,phases    ] GC(10)     Reference Enqueuing: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Merge Per-Thread State: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Code Roots Purge: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Redirty Cards: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Free Collection Set: 0.1ms
+[16.500s][debug][gc,phases    ] GC(10)     Humongous Reclaim: 0.0ms
+[16.500s][debug][gc,phases    ] GC(10)     Expand Heap After Collection: 0.0ms
+[16.500s][info ][gc,phases    ] GC(10)   Other: 0.2ms
+[16.500s][info ][gc,heap      ] GC(10) Eden regions: 142->0(142)
+[16.500s][info ][gc,heap      ] GC(10) Survivor regions: 11->11(20)
+[16.500s][info ][gc,heap      ] GC(10) Old regions: 2->2
+[16.500s][info ][gc,heap      ] GC(10) Humongous regions: 1->1
+[16.500s][info ][gc,metaspace ] GC(10) Metaspace: 16411K->16411K(1064960K)
+[16.500s][debug][gc,heap      ] GC(10) Heap after GC invocations=11 (full 0):
+[16.500s][debug][gc,heap      ] GC(10)  garbage-first heap   total 262144K, used 12594K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.500s][debug][gc,heap      ] GC(10)   region size 1024K, 11 young (11264K), 11 survivors (11264K)
+[16.500s][debug][gc,heap      ] GC(10)  Metaspace       used 16411K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.500s][debug][gc,heap      ] GC(10)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.500s][info ][gc           ] GC(10) Pause Young (G1 Evacuation Pause) 154M->12M(256M) 13.994ms
+[16.500s][info ][gc,cpu       ] GC(10) User=0.09s Sys=0.01s Real=0.01s
+[16.597s][debug][gc,heap      ] GC(11) Heap before GC invocations=11 (full 0):
+[16.597s][debug][gc,heap      ] GC(11)  garbage-first heap   total 262144K, used 158002K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.597s][debug][gc,heap      ] GC(11)   region size 1024K, 153 young (156672K), 11 survivors (11264K)
+[16.597s][debug][gc,heap      ] GC(11)  Metaspace       used 16411K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.597s][debug][gc,heap      ] GC(11)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.597s][info ][gc,start     ] GC(11) Pause Young (G1 Evacuation Pause)
+[16.597s][info ][gc,task      ] GC(11) Using 8 workers of 8 for evacuation
+[16.597s][debug][gc,age       ] GC(11) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.609s][debug][gc,ref       ] GC(11) SoftReference 0.002ms
+[16.610s][debug][gc,ref       ] GC(11) WeakReference 1.004ms
+[16.610s][debug][gc,ref       ] GC(11) FinalReference 0.001ms
+[16.610s][debug][gc,ref       ] GC(11) PhantomReference 0.003ms
+[16.610s][debug][gc,ref       ] GC(11) JNI Weak Reference 0.046ms
+[16.610s][debug][gc,ref       ] GC(11) Ref Counts: Soft: 0 Weak: 15716 Final: 2 Phantom: 20
+[16.611s][trace][gc,age       ] GC(11) Age table with threshold 15 (max threshold 15)
+[16.611s][trace][gc,age       ] GC(11) - age   1:     780416 bytes,     780416 total
+[16.611s][trace][gc,age       ] GC(11) - age   2:     766008 bytes,    1546424 total
+[16.611s][trace][gc,age       ] GC(11) - age   3:     816824 bytes,    2363248 total
+[16.611s][trace][gc,age       ] GC(11) - age   4:     646600 bytes,    3009848 total
+[16.611s][trace][gc,age       ] GC(11) - age   5:     750784 bytes,    3760632 total
+[16.611s][trace][gc,age       ] GC(11) - age   6:     967976 bytes,    4728608 total
+[16.611s][trace][gc,age       ] GC(11) - age   7:     712056 bytes,    5440664 total
+[16.611s][trace][gc,age       ] GC(11) - age   8:     447904 bytes,    5888568 total
+[16.611s][trace][gc,age       ] GC(11) - age   9:     600688 bytes,    6489256 total
+[16.611s][trace][gc,age       ] GC(11) - age  10:     300616 bytes,    6789872 total
+[16.611s][trace][gc,age       ] GC(11) - age  11:     542328 bytes,    7332200 total
+[16.611s][trace][gc,age       ] GC(11) - age  12:    2866600 bytes,   10198800 total
+[16.611s][info ][gc,phases    ] GC(11)   Pre Evacuate Collection Set: 0.0ms
+[16.611s][debug][gc,phases    ] GC(11)     Choose Collection Set: 0.0ms
+[16.611s][debug][gc,phases    ] GC(11)     Humongous Register: 0.0ms
+[16.611s][info ][gc,phases    ] GC(11)   Evacuate Collection Set: 11.6ms
+[16.611s][debug][gc,phases    ] GC(11)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.2, Max:  0.9, Diff:  0.9, Sum:  1.5, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)     Update RS (ms):           Min:  0.0, Avg:  0.3, Max:  0.5, Diff:  0.5, Sum:  2.4, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)       Processed Buffers:        Min: 0, Avg:  1.2, Max: 3, Diff: 3, Sum: 10, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.6, Max:  3.6, Diff:  3.6, Sum:  4.5, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)     Object Copy (ms):         Min:  6.8, Avg:  9.8, Max: 10.6, Diff:  3.7, Sum: 78.0, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)     Termination (ms):         Min:  0.2, Avg:  0.6, Max:  0.9, Diff:  0.6, Sum:  5.1, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)       Termination Attempts:     Min: 301, Avg: 351.0, Max: 392, Diff: 91, Sum: 2808, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.611s][debug][gc,phases    ] GC(11)     GC Worker Total (ms):     Min: 11.2, Avg: 11.5, Max: 11.6, Diff:  0.5, Sum: 91.7, Workers: 8
+[16.611s][info ][gc,phases    ] GC(11)   Post Evacuate Collection Set: 1.5ms
+[16.611s][debug][gc,phases    ] GC(11)     Code Roots Fixup: 0.1ms
+[16.611s][debug][gc,phases    ] GC(11)     Preserve CM Refs: 0.0ms
+[16.611s][debug][gc,phases    ] GC(11)     Reference Processing: 1.1ms
+[16.611s][debug][gc,phases    ] GC(11)     Clear Card Table: 0.1ms
+[16.611s][debug][gc,phases    ] GC(11)     Reference Enqueuing: 0.0ms
+[16.611s][debug][gc,phases    ] GC(11)     Merge Per-Thread State: 0.0ms
+[16.611s][debug][gc,phases    ] GC(11)     Code Roots Purge: 0.0ms
+[16.611s][debug][gc,phases    ] GC(11)     Redirty Cards: 0.1ms
+[16.611s][debug][gc,phases    ] GC(11)     Free Collection Set: 0.1ms
+[16.611s][debug][gc,phases    ] GC(11)     Humongous Reclaim: 0.0ms
+[16.611s][debug][gc,phases    ] GC(11)     Expand Heap After Collection: 0.0ms
+[16.611s][info ][gc,phases    ] GC(11)   Other: 0.2ms
+[16.611s][info ][gc,heap      ] GC(11) Eden regions: 142->0(142)
+[16.611s][info ][gc,heap      ] GC(11) Survivor regions: 11->11(20)
+[16.611s][info ][gc,heap      ] GC(11) Old regions: 2->2
+[16.611s][info ][gc,heap      ] GC(11) Humongous regions: 1->1
+[16.611s][info ][gc,metaspace ] GC(11) Metaspace: 16411K->16411K(1064960K)
+[16.611s][debug][gc,heap      ] GC(11) Heap after GC invocations=12 (full 0):
+[16.611s][debug][gc,heap      ] GC(11)  garbage-first heap   total 262144K, used 12828K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.611s][debug][gc,heap      ] GC(11)   region size 1024K, 11 young (11264K), 11 survivors (11264K)
+[16.611s][debug][gc,heap      ] GC(11)  Metaspace       used 16411K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.611s][debug][gc,heap      ] GC(11)   class space    used 1766K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.611s][info ][gc           ] GC(11) Pause Young (G1 Evacuation Pause) 154M->12M(256M) 13.495ms
+[16.611s][info ][gc,cpu       ] GC(11) User=0.09s Sys=0.00s Real=0.01s
+[16.701s][debug][gc,heap      ] GC(12) Heap before GC invocations=12 (full 0):
+[16.701s][debug][gc,heap      ] GC(12)  garbage-first heap   total 262144K, used 158236K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.701s][debug][gc,heap      ] GC(12)   region size 1024K, 153 young (156672K), 11 survivors (11264K)
+[16.701s][debug][gc,heap      ] GC(12)  Metaspace       used 16412K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.701s][debug][gc,heap      ] GC(12)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.701s][info ][gc,start     ] GC(12) Pause Young (G1 Evacuation Pause)
+[16.701s][info ][gc,task      ] GC(12) Using 8 workers of 8 for evacuation
+[16.702s][debug][gc,age       ] GC(12) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.712s][debug][gc,ref       ] GC(12) SoftReference 0.002ms
+[16.713s][debug][gc,ref       ] GC(12) WeakReference 0.818ms
+[16.713s][debug][gc,ref       ] GC(12) FinalReference 0.001ms
+[16.713s][debug][gc,ref       ] GC(12) PhantomReference 0.001ms
+[16.713s][debug][gc,ref       ] GC(12) JNI Weak Reference 0.032ms
+[16.713s][debug][gc,ref       ] GC(12) Ref Counts: Soft: 0 Weak: 16765 Final: 1 Phantom: 4
+[16.713s][trace][gc,age       ] GC(12) Age table with threshold 15 (max threshold 15)
+[16.713s][trace][gc,age       ] GC(12) - age   1:     834496 bytes,     834496 total
+[16.713s][trace][gc,age       ] GC(12) - age   2:     674320 bytes,    1508816 total
+[16.713s][trace][gc,age       ] GC(12) - age   3:     766008 bytes,    2274824 total
+[16.713s][trace][gc,age       ] GC(12) - age   4:     816824 bytes,    3091648 total
+[16.713s][trace][gc,age       ] GC(12) - age   5:     646600 bytes,    3738248 total
+[16.713s][trace][gc,age       ] GC(12) - age   6:     750784 bytes,    4489032 total
+[16.713s][trace][gc,age       ] GC(12) - age   7:     864872 bytes,    5353904 total
+[16.713s][trace][gc,age       ] GC(12) - age   8:     437696 bytes,    5791600 total
+[16.713s][trace][gc,age       ] GC(12) - age   9:     447904 bytes,    6239504 total
+[16.713s][trace][gc,age       ] GC(12) - age  10:     600688 bytes,    6840192 total
+[16.713s][trace][gc,age       ] GC(12) - age  11:     300616 bytes,    7140808 total
+[16.713s][trace][gc,age       ] GC(12) - age  12:     542328 bytes,    7683136 total
+[16.713s][trace][gc,age       ] GC(12) - age  13:    2866600 bytes,   10549736 total
+[16.714s][info ][gc,phases    ] GC(12)   Pre Evacuate Collection Set: 0.0ms
+[16.714s][debug][gc,phases    ] GC(12)     Choose Collection Set: 0.0ms
+[16.714s][debug][gc,phases    ] GC(12)     Humongous Register: 0.0ms
+[16.714s][info ][gc,phases    ] GC(12)   Evacuate Collection Set: 10.6ms
+[16.714s][debug][gc,phases    ] GC(12)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.1, Max:  0.7, Diff:  0.7, Sum:  1.1, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)     Update RS (ms):           Min:  0.0, Avg:  0.2, Max:  0.5, Diff:  0.5, Sum:  1.8, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)       Processed Buffers:        Min: 0, Avg:  1.5, Max: 4, Diff: 4, Sum: 12, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  0.8, Diff:  0.8, Sum:  1.6, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)     Object Copy (ms):         Min:  0.0, Avg:  5.6, Max:  9.2, Diff:  9.2, Sum: 44.7, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)     Termination (ms):         Min:  0.1, Avg:  0.6, Max:  0.7, Diff:  0.6, Sum:  4.5, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)       Termination Attempts:     Min: 1, Avg: 129.2, Max: 244, Diff: 243, Sum: 1034, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.714s][debug][gc,phases    ] GC(12)     GC Worker Total (ms):     Min:  0.6, Avg:  6.7, Max: 10.6, Diff: 10.0, Sum: 53.8, Workers: 8
+[16.714s][info ][gc,phases    ] GC(12)   Post Evacuate Collection Set: 1.3ms
+[16.714s][debug][gc,phases    ] GC(12)     Code Roots Fixup: 0.1ms
+[16.714s][debug][gc,phases    ] GC(12)     Preserve CM Refs: 0.0ms
+[16.714s][debug][gc,phases    ] GC(12)     Reference Processing: 0.9ms
+[16.714s][debug][gc,phases    ] GC(12)     Clear Card Table: 0.1ms
+[16.714s][debug][gc,phases    ] GC(12)     Reference Enqueuing: 0.0ms
+[16.714s][debug][gc,phases    ] GC(12)     Merge Per-Thread State: 0.0ms
+[16.714s][debug][gc,phases    ] GC(12)     Code Roots Purge: 0.0ms
+[16.714s][debug][gc,phases    ] GC(12)     Redirty Cards: 0.1ms
+[16.714s][debug][gc,phases    ] GC(12)     Free Collection Set: 0.1ms
+[16.714s][debug][gc,phases    ] GC(12)     Humongous Reclaim: 0.0ms
+[16.714s][debug][gc,phases    ] GC(12)     Expand Heap After Collection: 0.0ms
+[16.714s][info ][gc,phases    ] GC(12)   Other: 0.2ms
+[16.714s][info ][gc,heap      ] GC(12) Eden regions: 142->0(142)
+[16.714s][info ][gc,heap      ] GC(12) Survivor regions: 11->11(20)
+[16.714s][info ][gc,heap      ] GC(12) Old regions: 2->2
+[16.714s][info ][gc,heap      ] GC(12) Humongous regions: 1->1
+[16.714s][info ][gc,metaspace ] GC(12) Metaspace: 16412K->16412K(1064960K)
+[16.714s][debug][gc,heap      ] GC(12) Heap after GC invocations=13 (full 0):
+[16.714s][debug][gc,heap      ] GC(12)  garbage-first heap   total 262144K, used 13406K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.714s][debug][gc,heap      ] GC(12)   region size 1024K, 11 young (11264K), 11 survivors (11264K)
+[16.714s][debug][gc,heap      ] GC(12)  Metaspace       used 16412K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.714s][debug][gc,heap      ] GC(12)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.714s][info ][gc           ] GC(12) Pause Young (G1 Evacuation Pause) 154M->13M(256M) 12.304ms
+[16.714s][info ][gc,cpu       ] GC(12) User=0.05s Sys=0.00s Real=0.02s
+[16.827s][debug][gc,heap      ] GC(13) Heap before GC invocations=13 (full 0):
+[16.827s][debug][gc,heap      ] GC(13)  garbage-first heap   total 262144K, used 158814K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.827s][debug][gc,heap      ] GC(13)   region size 1024K, 153 young (156672K), 11 survivors (11264K)
+[16.827s][debug][gc,heap      ] GC(13)  Metaspace       used 16412K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.827s][debug][gc,heap      ] GC(13)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.827s][info ][gc,start     ] GC(13) Pause Young (G1 Evacuation Pause)
+[16.827s][info ][gc,task      ] GC(13) Using 8 workers of 8 for evacuation
+[16.828s][debug][gc,age       ] GC(13) Desired survivor size 10485760 bytes, new threshold 13 (max threshold 15)
+[16.841s][debug][gc,ref       ] GC(13) SoftReference 0.002ms
+[16.843s][debug][gc,ref       ] GC(13) WeakReference 1.263ms
+[16.843s][debug][gc,ref       ] GC(13) FinalReference 0.001ms
+[16.843s][debug][gc,ref       ] GC(13) PhantomReference 0.001ms
+[16.843s][debug][gc,ref       ] GC(13) JNI Weak Reference 0.036ms
+[16.843s][debug][gc,ref       ] GC(13) Ref Counts: Soft: 0 Weak: 18434 Final: 1 Phantom: 1
+[16.843s][trace][gc,age       ] GC(13) Age table with threshold 13 (max threshold 15)
+[16.843s][trace][gc,age       ] GC(13) - age   1:     875520 bytes,     875520 total
+[16.843s][trace][gc,age       ] GC(13) - age   2:     723232 bytes,    1598752 total
+[16.843s][trace][gc,age       ] GC(13) - age   3:     674320 bytes,    2273072 total
+[16.843s][trace][gc,age       ] GC(13) - age   4:     766008 bytes,    3039080 total
+[16.843s][trace][gc,age       ] GC(13) - age   5:     816824 bytes,    3855904 total
+[16.843s][trace][gc,age       ] GC(13) - age   6:     646600 bytes,    4502504 total
+[16.843s][trace][gc,age       ] GC(13) - age   7:     750784 bytes,    5253288 total
+[16.843s][trace][gc,age       ] GC(13) - age   8:     431944 bytes,    5685232 total
+[16.843s][trace][gc,age       ] GC(13) - age   9:     437696 bytes,    6122928 total
+[16.843s][trace][gc,age       ] GC(13) - age  10:     447904 bytes,    6570832 total
+[16.843s][trace][gc,age       ] GC(13) - age  11:     600688 bytes,    7171520 total
+[16.843s][trace][gc,age       ] GC(13) - age  12:     300616 bytes,    7472136 total
+[16.843s][trace][gc,age       ] GC(13) - age  13:     542328 bytes,    8014464 total
+[16.848s][info ][gc,phases    ] GC(13)   Pre Evacuate Collection Set: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Choose Collection Set: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Humongous Register: 0.0ms
+[16.848s][info ][gc,phases    ] GC(13)   Evacuate Collection Set: 13.6ms
+[16.848s][debug][gc,phases    ] GC(13)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.2, Max:  1.0, Diff:  1.0, Sum:  1.5, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)     Update RS (ms):           Min:  0.0, Avg:  0.2, Max:  0.9, Diff:  0.9, Sum:  1.8, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)       Processed Buffers:        Min: 0, Avg:  1.4, Max: 6, Diff: 6, Sum: 11, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.2, Max:  1.7, Diff:  1.7, Sum:  1.7, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)     Object Copy (ms):         Min:  8.4, Avg: 10.3, Max: 11.4, Diff:  2.9, Sum: 82.8, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)     Termination (ms):         Min:  0.2, Avg:  0.8, Max:  1.5, Diff:  1.2, Sum:  6.5, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)       Termination Attempts:     Min: 220, Avg: 284.4, Max: 370, Diff: 150, Sum: 2275, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.848s][debug][gc,phases    ] GC(13)     GC Worker Total (ms):     Min: 11.1, Avg: 11.8, Max: 13.6, Diff:  2.5, Sum: 94.5, Workers: 8
+[16.848s][info ][gc,phases    ] GC(13)   Post Evacuate Collection Set: 1.7ms
+[16.848s][debug][gc,phases    ] GC(13)     Code Roots Fixup: 0.1ms
+[16.848s][debug][gc,phases    ] GC(13)     Preserve CM Refs: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Reference Processing: 1.4ms
+[16.848s][debug][gc,phases    ] GC(13)     Clear Card Table: 0.1ms
+[16.848s][debug][gc,phases    ] GC(13)     Reference Enqueuing: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Merge Per-Thread State: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Code Roots Purge: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Redirty Cards: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Free Collection Set: 0.1ms
+[16.848s][debug][gc,phases    ] GC(13)     Humongous Reclaim: 0.0ms
+[16.848s][debug][gc,phases    ] GC(13)     Expand Heap After Collection: 0.0ms
+[16.848s][info ][gc,phases    ] GC(13)   Other: 5.0ms
+[16.848s][info ][gc,heap      ] GC(13) Eden regions: 142->0(144)
+[16.848s][info ][gc,heap      ] GC(13) Survivor regions: 11->9(20)
+[16.848s][info ][gc,heap      ] GC(13) Old regions: 2->4
+[16.848s][info ][gc,heap      ] GC(13) Humongous regions: 1->1
+[16.848s][info ][gc,metaspace ] GC(13) Metaspace: 16412K->16412K(1064960K)
+[16.848s][debug][gc,heap      ] GC(13) Heap after GC invocations=14 (full 0):
+[16.848s][debug][gc,heap      ] GC(13)  garbage-first heap   total 262144K, used 13489K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.848s][debug][gc,heap      ] GC(13)   region size 1024K, 9 young (9216K), 9 survivors (9216K)
+[16.848s][debug][gc,heap      ] GC(13)  Metaspace       used 16412K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.848s][debug][gc,heap      ] GC(13)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.848s][info ][gc           ] GC(13) Pause Young (G1 Evacuation Pause) 155M->13M(256M) 20.404ms
+[16.848s][info ][gc,cpu       ] GC(13) User=0.11s Sys=0.00s Real=0.02s
+[16.962s][debug][gc,heap      ] GC(14) Heap before GC invocations=14 (full 0):
+[16.962s][debug][gc,heap      ] GC(14)  garbage-first heap   total 262144K, used 160945K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.962s][debug][gc,heap      ] GC(14)   region size 1024K, 153 young (156672K), 9 survivors (9216K)
+[16.962s][debug][gc,heap      ] GC(14)  Metaspace       used 16412K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.962s][debug][gc,heap      ] GC(14)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.962s][info ][gc,start     ] GC(14) Pause Young (G1 Evacuation Pause)
+[16.962s][info ][gc,task      ] GC(14) Using 8 workers of 8 for evacuation
+[16.962s][debug][gc,age       ] GC(14) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[16.972s][debug][gc,ref       ] GC(14) SoftReference 0.003ms
+[16.973s][debug][gc,ref       ] GC(14) WeakReference 1.187ms
+[16.973s][debug][gc,ref       ] GC(14) FinalReference 0.001ms
+[16.973s][debug][gc,ref       ] GC(14) PhantomReference 0.001ms
+[16.973s][debug][gc,ref       ] GC(14) JNI Weak Reference 0.010ms
+[16.973s][debug][gc,ref       ] GC(14) Ref Counts: Soft: 0 Weak: 19133 Final: 0 Phantom: 3
+[16.973s][trace][gc,age       ] GC(14) Age table with threshold 15 (max threshold 15)
+[16.973s][trace][gc,age       ] GC(14) - age   1:     768744 bytes,     768744 total
+[16.973s][trace][gc,age       ] GC(14) - age   2:     759440 bytes,    1528184 total
+[16.973s][trace][gc,age       ] GC(14) - age   3:     723232 bytes,    2251416 total
+[16.973s][trace][gc,age       ] GC(14) - age   4:     674320 bytes,    2925736 total
+[16.973s][trace][gc,age       ] GC(14) - age   5:     766008 bytes,    3691744 total
+[16.973s][trace][gc,age       ] GC(14) - age   6:     816824 bytes,    4508568 total
+[16.973s][trace][gc,age       ] GC(14) - age   7:     646600 bytes,    5155168 total
+[16.973s][trace][gc,age       ] GC(14) - age   8:     443024 bytes,    5598192 total
+[16.973s][trace][gc,age       ] GC(14) - age   9:     379584 bytes,    5977776 total
+[16.973s][trace][gc,age       ] GC(14) - age  10:     437696 bytes,    6415472 total
+[16.973s][trace][gc,age       ] GC(14) - age  11:     447904 bytes,    6863376 total
+[16.973s][trace][gc,age       ] GC(14) - age  12:     600688 bytes,    7464064 total
+[16.974s][trace][gc,age       ] GC(14) - age  13:     300616 bytes,    7764680 total
+[16.974s][trace][gc,age       ] GC(14) - age  14:     542328 bytes,    8307008 total
+[16.974s][info ][gc,phases    ] GC(14)   Pre Evacuate Collection Set: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Choose Collection Set: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Humongous Register: 0.0ms
+[16.974s][info ][gc,phases    ] GC(14)   Evacuate Collection Set: 9.7ms
+[16.974s][debug][gc,phases    ] GC(14)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.1, Max:  0.3, Diff:  0.3, Sum:  0.9, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)     Update RS (ms):           Min:  0.0, Avg:  0.4, Max:  0.7, Diff:  0.7, Sum:  3.2, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)       Processed Buffers:        Min: 0, Avg:  2.0, Max: 5, Diff: 5, Sum: 16, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.1, Diff:  0.1, Sum:  0.1, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)     Object Copy (ms):         Min:  7.5, Avg:  8.1, Max:  8.2, Diff:  0.7, Sum: 64.5, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)     Termination (ms):         Min:  0.6, Avg:  0.9, Max:  1.4, Diff:  0.7, Sum:  7.0, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)       Termination Attempts:     Min: 685, Avg: 787.8, Max: 851, Diff: 166, Sum: 6302, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[16.974s][debug][gc,phases    ] GC(14)     GC Worker Total (ms):     Min:  8.9, Avg:  9.5, Max:  9.7, Diff:  0.8, Sum: 75.8, Workers: 8
+[16.974s][info ][gc,phases    ] GC(14)   Post Evacuate Collection Set: 1.5ms
+[16.974s][debug][gc,phases    ] GC(14)     Code Roots Fixup: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Preserve CM Refs: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Reference Processing: 1.3ms
+[16.974s][debug][gc,phases    ] GC(14)     Clear Card Table: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Reference Enqueuing: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Merge Per-Thread State: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Code Roots Purge: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Redirty Cards: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Free Collection Set: 0.1ms
+[16.974s][debug][gc,phases    ] GC(14)     Humongous Reclaim: 0.0ms
+[16.974s][debug][gc,phases    ] GC(14)     Expand Heap After Collection: 0.0ms
+[16.974s][info ][gc,phases    ] GC(14)   Other: 0.2ms
+[16.974s][info ][gc,heap      ] GC(14) Eden regions: 144->0(144)
+[16.974s][info ][gc,heap      ] GC(14) Survivor regions: 9->9(20)
+[16.974s][info ][gc,heap      ] GC(14) Old regions: 4->4
+[16.974s][info ][gc,heap      ] GC(14) Humongous regions: 1->1
+[16.974s][info ][gc,metaspace ] GC(14) Metaspace: 16412K->16412K(1064960K)
+[16.974s][debug][gc,heap      ] GC(14) Heap after GC invocations=15 (full 0):
+[16.974s][debug][gc,heap      ] GC(14)  garbage-first heap   total 262144K, used 14066K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[16.974s][debug][gc,heap      ] GC(14)   region size 1024K, 9 young (9216K), 9 survivors (9216K)
+[16.974s][debug][gc,heap      ] GC(14)  Metaspace       used 16412K, capacity 17338K, committed 17664K, reserved 1064960K
+[16.974s][debug][gc,heap      ] GC(14)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[16.974s][info ][gc           ] GC(14) Pause Young (G1 Evacuation Pause) 157M->13M(256M) 11.571ms
+[16.974s][info ][gc,cpu       ] GC(14) User=0.07s Sys=0.00s Real=0.02s
+[17.078s][debug][gc,heap      ] GC(15) Heap before GC invocations=15 (full 0):
+[17.078s][debug][gc,heap      ] GC(15)  garbage-first heap   total 262144K, used 161522K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.078s][debug][gc,heap      ] GC(15)   region size 1024K, 153 young (156672K), 9 survivors (9216K)
+[17.078s][debug][gc,heap      ] GC(15)  Metaspace       used 16413K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.078s][debug][gc,heap      ] GC(15)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.078s][info ][gc,start     ] GC(15) Pause Young (G1 Evacuation Pause)
+[17.078s][info ][gc,task      ] GC(15) Using 8 workers of 8 for evacuation
+[17.078s][debug][gc,age       ] GC(15) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[17.087s][debug][gc,ref       ] GC(15) SoftReference 0.003ms
+[17.089s][debug][gc,ref       ] GC(15) WeakReference 1.366ms
+[17.089s][debug][gc,ref       ] GC(15) FinalReference 0.001ms
+[17.089s][debug][gc,ref       ] GC(15) PhantomReference 0.001ms
+[17.089s][debug][gc,ref       ] GC(15) JNI Weak Reference 0.010ms
+[17.089s][debug][gc,ref       ] GC(15) Ref Counts: Soft: 0 Weak: 21335 Final: 0 Phantom: 2
+[17.089s][trace][gc,age       ] GC(15) Age table with threshold 15 (max threshold 15)
+[17.089s][trace][gc,age       ] GC(15) - age   1:     894040 bytes,     894040 total
+[17.089s][trace][gc,age       ] GC(15) - age   2:     648200 bytes,    1542240 total
+[17.089s][trace][gc,age       ] GC(15) - age   3:     759440 bytes,    2301680 total
+[17.089s][trace][gc,age       ] GC(15) - age   4:     723232 bytes,    3024912 total
+[17.089s][trace][gc,age       ] GC(15) - age   5:     674320 bytes,    3699232 total
+[17.089s][trace][gc,age       ] GC(15) - age   6:     766008 bytes,    4465240 total
+[17.089s][trace][gc,age       ] GC(15) - age   7:     816824 bytes,    5282064 total
+[17.089s][trace][gc,age       ] GC(15) - age   8:     343552 bytes,    5625616 total
+[17.089s][trace][gc,age       ] GC(15) - age   9:     303232 bytes,    5928848 total
+[17.089s][trace][gc,age       ] GC(15) - age  10:     379584 bytes,    6308432 total
+[17.089s][trace][gc,age       ] GC(15) - age  11:     437696 bytes,    6746128 total
+[17.089s][trace][gc,age       ] GC(15) - age  12:     447904 bytes,    7194032 total
+[17.089s][trace][gc,age       ] GC(15) - age  13:     600688 bytes,    7794720 total
+[17.089s][trace][gc,age       ] GC(15) - age  14:     300616 bytes,    8095336 total
+[17.089s][trace][gc,age       ] GC(15) - age  15:     542328 bytes,    8637664 total
+[17.089s][info ][gc,phases    ] GC(15)   Pre Evacuate Collection Set: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Choose Collection Set: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Humongous Register: 0.0ms
+[17.089s][info ][gc,phases    ] GC(15)   Evacuate Collection Set: 9.5ms
+[17.089s][debug][gc,phases    ] GC(15)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.1, Max:  0.3, Diff:  0.3, Sum:  0.9, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)     Update RS (ms):           Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)       Processed Buffers:        Min: 0, Avg:  1.0, Max: 3, Diff: 3, Sum: 8, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)     Object Copy (ms):         Min:  2.4, Avg:  7.4, Max:  8.6, Diff:  6.2, Sum: 59.2, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)     Termination (ms):         Min:  0.4, Avg:  0.7, Max:  0.9, Diff:  0.4, Sum:  5.4, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)       Termination Attempts:     Min: 389, Avg: 649.6, Max: 770, Diff: 381, Sum: 5197, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[17.089s][debug][gc,phases    ] GC(15)     GC Worker Total (ms):     Min:  2.8, Avg:  8.2, Max:  9.5, Diff:  6.7, Sum: 65.8, Workers: 8
+[17.089s][info ][gc,phases    ] GC(15)   Post Evacuate Collection Set: 1.6ms
+[17.089s][debug][gc,phases    ] GC(15)     Code Roots Fixup: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Preserve CM Refs: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Reference Processing: 1.5ms
+[17.089s][debug][gc,phases    ] GC(15)     Clear Card Table: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Reference Enqueuing: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Merge Per-Thread State: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Code Roots Purge: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Redirty Cards: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Free Collection Set: 0.1ms
+[17.089s][debug][gc,phases    ] GC(15)     Humongous Reclaim: 0.0ms
+[17.089s][debug][gc,phases    ] GC(15)     Expand Heap After Collection: 0.0ms
+[17.089s][info ][gc,phases    ] GC(15)   Other: 0.2ms
+[17.089s][info ][gc,heap      ] GC(15) Eden regions: 144->0(144)
+[17.089s][info ][gc,heap      ] GC(15) Survivor regions: 9->9(20)
+[17.089s][info ][gc,heap      ] GC(15) Old regions: 4->4
+[17.089s][info ][gc,heap      ] GC(15) Humongous regions: 1->1
+[17.089s][info ][gc,metaspace ] GC(15) Metaspace: 16413K->16413K(1064960K)
+[17.089s][debug][gc,heap      ] GC(15) Heap after GC invocations=16 (full 0):
+[17.089s][debug][gc,heap      ] GC(15)  garbage-first heap   total 262144K, used 14255K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.089s][debug][gc,heap      ] GC(15)   region size 1024K, 9 young (9216K), 9 survivors (9216K)
+[17.089s][debug][gc,heap      ] GC(15)  Metaspace       used 16413K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.089s][debug][gc,heap      ] GC(15)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.089s][info ][gc           ] GC(15) Pause Young (G1 Evacuation Pause) 157M->13M(256M) 11.510ms
+[17.089s][info ][gc,cpu       ] GC(15) User=0.08s Sys=0.00s Real=0.01s
+[17.199s][debug][gc,heap      ] GC(16) Heap before GC invocations=16 (full 0):
+[17.199s][debug][gc,heap      ] GC(16)  garbage-first heap   total 262144K, used 161711K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.199s][debug][gc,heap      ] GC(16)   region size 1024K, 153 young (156672K), 9 survivors (9216K)
+[17.199s][debug][gc,heap      ] GC(16)  Metaspace       used 16413K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.199s][debug][gc,heap      ] GC(16)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.199s][info ][gc,start     ] GC(16) Pause Young (G1 Evacuation Pause)
+[17.199s][info ][gc,task      ] GC(16) Using 8 workers of 8 for evacuation
+[17.199s][debug][gc,age       ] GC(16) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[17.209s][debug][gc,ref       ] GC(16) SoftReference 0.003ms
+[17.210s][debug][gc,ref       ] GC(16) WeakReference 1.231ms
+[17.210s][debug][gc,ref       ] GC(16) FinalReference 0.001ms
+[17.210s][debug][gc,ref       ] GC(16) PhantomReference 0.001ms
+[17.210s][debug][gc,ref       ] GC(16) JNI Weak Reference 0.009ms
+[17.210s][debug][gc,ref       ] GC(16) Ref Counts: Soft: 0 Weak: 23013 Final: 0 Phantom: 3
+[17.210s][trace][gc,age       ] GC(16) Age table with threshold 15 (max threshold 15)
+[17.210s][trace][gc,age       ] GC(16) - age   1:     838608 bytes,     838608 total
+[17.210s][trace][gc,age       ] GC(16) - age   2:     769240 bytes,    1607848 total
+[17.210s][trace][gc,age       ] GC(16) - age   3:     648200 bytes,    2256048 total
+[17.210s][trace][gc,age       ] GC(16) - age   4:     759440 bytes,    3015488 total
+[17.210s][trace][gc,age       ] GC(16) - age   5:     723232 bytes,    3738720 total
+[17.210s][trace][gc,age       ] GC(16) - age   6:     674320 bytes,    4413040 total
+[17.210s][trace][gc,age       ] GC(16) - age   7:     766008 bytes,    5179048 total
+[17.210s][trace][gc,age       ] GC(16) - age   8:     454872 bytes,    5633920 total
+[17.210s][trace][gc,age       ] GC(16) - age   9:     247384 bytes,    5881304 total
+[17.210s][trace][gc,age       ] GC(16) - age  10:     303232 bytes,    6184536 total
+[17.210s][trace][gc,age       ] GC(16) - age  11:     379584 bytes,    6564120 total
+[17.210s][trace][gc,age       ] GC(16) - age  12:     437696 bytes,    7001816 total
+[17.210s][trace][gc,age       ] GC(16) - age  13:     447904 bytes,    7449720 total
+[17.210s][trace][gc,age       ] GC(16) - age  14:     600688 bytes,    8050408 total
+[17.210s][trace][gc,age       ] GC(16) - age  15:     300616 bytes,    8351024 total
+[17.210s][info ][gc,phases    ] GC(16)   Pre Evacuate Collection Set: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Choose Collection Set: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Humongous Register: 0.0ms
+[17.210s][info ][gc,phases    ] GC(16)   Evacuate Collection Set: 9.8ms
+[17.210s][debug][gc,phases    ] GC(16)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.1, Max:  0.3, Diff:  0.3, Sum:  1.0, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)     Update RS (ms):           Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)       Processed Buffers:        Min: 0, Avg:  0.6, Max: 1, Diff: 1, Sum: 5, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)     Object Copy (ms):         Min:  8.3, Avg:  8.5, Max:  8.8, Diff:  0.5, Sum: 67.8, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)     Termination (ms):         Min:  0.5, Avg:  1.0, Max:  1.1, Diff:  0.6, Sum:  7.7, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)       Termination Attempts:     Min: 454, Avg: 645.9, Max: 707, Diff: 253, Sum: 5167, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[17.210s][debug][gc,phases    ] GC(16)     GC Worker Total (ms):     Min:  9.4, Avg:  9.6, Max:  9.7, Diff:  0.3, Sum: 76.8, Workers: 8
+[17.210s][info ][gc,phases    ] GC(16)   Post Evacuate Collection Set: 1.6ms
+[17.210s][debug][gc,phases    ] GC(16)     Code Roots Fixup: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Preserve CM Refs: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Reference Processing: 1.3ms
+[17.210s][debug][gc,phases    ] GC(16)     Clear Card Table: 0.1ms
+[17.210s][debug][gc,phases    ] GC(16)     Reference Enqueuing: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Merge Per-Thread State: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Code Roots Purge: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Redirty Cards: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Free Collection Set: 0.1ms
+[17.210s][debug][gc,phases    ] GC(16)     Humongous Reclaim: 0.0ms
+[17.210s][debug][gc,phases    ] GC(16)     Expand Heap After Collection: 0.0ms
+[17.210s][info ][gc,phases    ] GC(16)   Other: 0.3ms
+[17.210s][info ][gc,heap      ] GC(16) Eden regions: 144->0(144)
+[17.210s][info ][gc,heap      ] GC(16) Survivor regions: 9->9(20)
+[17.210s][info ][gc,heap      ] GC(16) Old regions: 4->5
+[17.210s][info ][gc,heap      ] GC(16) Humongous regions: 1->1
+[17.210s][info ][gc,metaspace ] GC(16) Metaspace: 16413K->16413K(1064960K)
+[17.210s][debug][gc,heap      ] GC(16) Heap after GC invocations=17 (full 0):
+[17.210s][debug][gc,heap      ] GC(16)  garbage-first heap   total 262144K, used 14450K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.210s][debug][gc,heap      ] GC(16)   region size 1024K, 9 young (9216K), 9 survivors (9216K)
+[17.210s][debug][gc,heap      ] GC(16)  Metaspace       used 16413K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.210s][debug][gc,heap      ] GC(16)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.210s][info ][gc           ] GC(16) Pause Young (G1 Evacuation Pause) 157M->14M(256M) 11.695ms
+[17.210s][info ][gc,cpu       ] GC(16) User=0.08s Sys=0.00s Real=0.01s
+[17.310s][debug][gc,heap      ] GC(17) Heap before GC invocations=17 (full 0):
+[17.310s][debug][gc,heap      ] GC(17)  garbage-first heap   total 262144K, used 161906K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.310s][debug][gc,heap      ] GC(17)   region size 1024K, 153 young (156672K), 9 survivors (9216K)
+[17.310s][debug][gc,heap      ] GC(17)  Metaspace       used 16414K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.310s][debug][gc,heap      ] GC(17)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.310s][info ][gc,start     ] GC(17) Pause Young (G1 Evacuation Pause)
+[17.310s][info ][gc,task      ] GC(17) Using 8 workers of 8 for evacuation
+[17.310s][debug][gc,age       ] GC(17) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[17.321s][debug][gc,ref       ] GC(17) SoftReference 0.003ms
+[17.322s][debug][gc,ref       ] GC(17) WeakReference 1.161ms
+[17.322s][debug][gc,ref       ] GC(17) FinalReference 0.001ms
+[17.322s][debug][gc,ref       ] GC(17) PhantomReference 0.000ms
+[17.322s][debug][gc,ref       ] GC(17) JNI Weak Reference 0.010ms
+[17.322s][debug][gc,ref       ] GC(17) Ref Counts: Soft: 0 Weak: 23613 Final: 0 Phantom: 0
+[17.322s][trace][gc,age       ] GC(17) Age table with threshold 15 (max threshold 15)
+[17.322s][trace][gc,age       ] GC(17) - age   1:     990240 bytes,     990240 total
+[17.322s][trace][gc,age       ] GC(17) - age   2:     709344 bytes,    1699584 total
+[17.322s][trace][gc,age       ] GC(17) - age   3:     769240 bytes,    2468824 total
+[17.322s][trace][gc,age       ] GC(17) - age   4:     648200 bytes,    3117024 total
+[17.322s][trace][gc,age       ] GC(17) - age   5:     759440 bytes,    3876464 total
+[17.322s][trace][gc,age       ] GC(17) - age   6:     723232 bytes,    4599696 total
+[17.322s][trace][gc,age       ] GC(17) - age   7:     674320 bytes,    5274016 total
+[17.322s][trace][gc,age       ] GC(17) - age   8:     401184 bytes,    5675200 total
+[17.322s][trace][gc,age       ] GC(17) - age   9:     287600 bytes,    5962800 total
+[17.322s][trace][gc,age       ] GC(17) - age  10:     247384 bytes,    6210184 total
+[17.322s][trace][gc,age       ] GC(17) - age  11:     303232 bytes,    6513416 total
+[17.322s][trace][gc,age       ] GC(17) - age  12:     379584 bytes,    6893000 total
+[17.322s][trace][gc,age       ] GC(17) - age  13:     437696 bytes,    7330696 total
+[17.322s][trace][gc,age       ] GC(17) - age  14:     447872 bytes,    7778568 total
+[17.327s][trace][gc,age       ] GC(17) - age  15:     600688 bytes,    8379256 total
+[17.327s][info ][gc,phases    ] GC(17)   Pre Evacuate Collection Set: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Choose Collection Set: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Humongous Register: 0.0ms
+[17.327s][info ][gc,phases    ] GC(17)   Evacuate Collection Set: 10.3ms
+[17.327s][debug][gc,phases    ] GC(17)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.1, Max:  0.3, Diff:  0.3, Sum:  0.9, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)     Update RS (ms):           Min:  0.0, Avg:  1.2, Max:  8.9, Diff:  8.9, Sum:  9.4, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)       Processed Buffers:        Min: 0, Avg:  1.4, Max: 4, Diff: 4, Sum: 11, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)     Object Copy (ms):         Min:  1.2, Avg:  7.2, Max:  9.1, Diff:  7.9, Sum: 58.0, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)     Termination (ms):         Min:  0.0, Avg:  0.8, Max:  1.1, Diff:  1.1, Sum:  6.6, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)       Termination Attempts:     Min: 5, Avg: 517.5, Max: 692, Diff: 687, Sum: 4140, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[17.327s][debug][gc,phases    ] GC(17)     GC Worker Total (ms):     Min:  3.8, Avg:  9.4, Max: 10.3, Diff:  6.4, Sum: 74.9, Workers: 8
+[17.327s][info ][gc,phases    ] GC(17)   Post Evacuate Collection Set: 1.5ms
+[17.327s][debug][gc,phases    ] GC(17)     Code Roots Fixup: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Preserve CM Refs: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Reference Processing: 1.3ms
+[17.327s][debug][gc,phases    ] GC(17)     Clear Card Table: 0.1ms
+[17.327s][debug][gc,phases    ] GC(17)     Reference Enqueuing: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Merge Per-Thread State: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Code Roots Purge: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Redirty Cards: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Free Collection Set: 0.1ms
+[17.327s][debug][gc,phases    ] GC(17)     Humongous Reclaim: 0.0ms
+[17.327s][debug][gc,phases    ] GC(17)     Expand Heap After Collection: 0.0ms
+[17.327s][info ][gc,phases    ] GC(17)   Other: 4.8ms
+[17.327s][info ][gc,heap      ] GC(17) Eden regions: 144->0(144)
+[17.327s][info ][gc,heap      ] GC(17) Survivor regions: 9->9(20)
+[17.327s][info ][gc,heap      ] GC(17) Old regions: 5->5
+[17.327s][info ][gc,heap      ] GC(17) Humongous regions: 1->1
+[17.327s][info ][gc,metaspace ] GC(17) Metaspace: 16414K->16414K(1064960K)
+[17.327s][debug][gc,heap      ] GC(17) Heap after GC invocations=18 (full 0):
+[17.327s][debug][gc,heap      ] GC(17)  garbage-first heap   total 262144K, used 14774K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.327s][debug][gc,heap      ] GC(17)   region size 1024K, 9 young (9216K), 9 survivors (9216K)
+[17.327s][debug][gc,heap      ] GC(17)  Metaspace       used 16414K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.327s][debug][gc,heap      ] GC(17)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.327s][info ][gc           ] GC(17) Pause Young (G1 Evacuation Pause) 158M->14M(256M) 16.711ms
+[17.327s][info ][gc,cpu       ] GC(17) User=0.08s Sys=0.00s Real=0.02s
+[17.424s][debug][gc,heap      ] GC(18) Heap before GC invocations=18 (full 0):
+[17.424s][debug][gc,heap      ] GC(18)  garbage-first heap   total 262144K, used 162230K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.424s][debug][gc,heap      ] GC(18)   region size 1024K, 153 young (156672K), 9 survivors (9216K)
+[17.424s][debug][gc,heap      ] GC(18)  Metaspace       used 16414K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.424s][debug][gc,heap      ] GC(18)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.424s][info ][gc,start     ] GC(18) Pause Young (G1 Evacuation Pause)
+[17.424s][info ][gc,task      ] GC(18) Using 8 workers of 8 for evacuation
+[17.424s][debug][gc,age       ] GC(18) Desired survivor size 10485760 bytes, new threshold 15 (max threshold 15)
+[17.433s][debug][gc,ref       ] GC(18) SoftReference 0.002ms
+[17.434s][debug][gc,ref       ] GC(18) WeakReference 1.525ms
+[17.434s][debug][gc,ref       ] GC(18) FinalReference 0.001ms
+[17.434s][debug][gc,ref       ] GC(18) PhantomReference 0.000ms
+[17.434s][debug][gc,ref       ] GC(18) JNI Weak Reference 0.009ms
+[17.434s][debug][gc,ref       ] GC(18) Ref Counts: Soft: 0 Weak: 25010 Final: 0 Phantom: 0
+[17.435s][trace][gc,age       ] GC(18) Age table with threshold 15 (max threshold 15)
+[17.435s][trace][gc,age       ] GC(18) - age   1:     855624 bytes,     855624 total
+[17.435s][trace][gc,age       ] GC(18) - age   2:     856760 bytes,    1712384 total
+[17.435s][trace][gc,age       ] GC(18) - age   3:     709344 bytes,    2421728 total
+[17.435s][trace][gc,age       ] GC(18) - age   4:     769240 bytes,    3190968 total
+[17.435s][trace][gc,age       ] GC(18) - age   5:     648200 bytes,    3839168 total
+[17.435s][trace][gc,age       ] GC(18) - age   6:     759440 bytes,    4598608 total
+[17.435s][trace][gc,age       ] GC(18) - age   7:     655280 bytes,    5253888 total
+[17.435s][trace][gc,age       ] GC(18) - age   8:     261376 bytes,    5515264 total
+[17.435s][trace][gc,age       ] GC(18) - age   9:     332448 bytes,    5847712 total
+[17.435s][trace][gc,age       ] GC(18) - age  10:     287600 bytes,    6135312 total
+[17.435s][trace][gc,age       ] GC(18) - age  11:     247384 bytes,    6382696 total
+[17.435s][trace][gc,age       ] GC(18) - age  12:     303232 bytes,    6685928 total
+[17.435s][trace][gc,age       ] GC(18) - age  13:     379584 bytes,    7065512 total
+[17.435s][trace][gc,age       ] GC(18) - age  14:     437696 bytes,    7503208 total
+[17.435s][trace][gc,age       ] GC(18) - age  15:     447872 bytes,    7951080 total
+[17.435s][info ][gc,phases    ] GC(18)   Pre Evacuate Collection Set: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Choose Collection Set: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Humongous Register: 0.0ms
+[17.435s][info ][gc,phases    ] GC(18)   Evacuate Collection Set: 8.7ms
+[17.435s][debug][gc,phases    ] GC(18)     Ext Root Scanning (ms):   Min:  0.0, Avg:  0.1, Max:  0.3, Diff:  0.3, Sum:  0.7, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)     Update RS (ms):           Min:  0.0, Avg:  0.0, Max:  0.1, Diff:  0.1, Sum:  0.3, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)       Processed Buffers:        Min: 0, Avg:  1.2, Max: 4, Diff: 4, Sum: 10, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)     Scan RS (ms):             Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.1, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)     Code Root Scanning (ms):  Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)     Object Copy (ms):         Min:  7.3, Avg:  7.5, Max:  7.7, Diff:  0.4, Sum: 60.1, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)     Termination (ms):         Min:  0.6, Avg:  0.6, Max:  0.7, Diff:  0.2, Sum:  5.1, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)       Termination Attempts:     Min: 540, Avg: 618.1, Max: 687, Diff: 147, Sum: 4945, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)     GC Worker Other (ms):     Min:  0.0, Avg:  0.0, Max:  0.0, Diff:  0.0, Sum:  0.0, Workers: 8
+[17.435s][debug][gc,phases    ] GC(18)     GC Worker Total (ms):     Min:  7.9, Avg:  8.3, Max:  8.7, Diff:  0.7, Sum: 66.3, Workers: 8
+[17.435s][info ][gc,phases    ] GC(18)   Post Evacuate Collection Set: 1.8ms
+[17.435s][debug][gc,phases    ] GC(18)     Code Roots Fixup: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Preserve CM Refs: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Reference Processing: 1.6ms
+[17.435s][debug][gc,phases    ] GC(18)     Clear Card Table: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Reference Enqueuing: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Merge Per-Thread State: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Code Roots Purge: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Redirty Cards: 0.1ms
+[17.435s][debug][gc,phases    ] GC(18)     Free Collection Set: 0.1ms
+[17.435s][debug][gc,phases    ] GC(18)     Humongous Reclaim: 0.0ms
+[17.435s][debug][gc,phases    ] GC(18)     Expand Heap After Collection: 0.0ms
+[17.435s][info ][gc,phases    ] GC(18)   Other: 0.2ms
+[17.435s][info ][gc,heap      ] GC(18) Eden regions: 144->0(144)
+[17.435s][info ][gc,heap      ] GC(18) Survivor regions: 9->9(20)
+[17.435s][info ][gc,heap      ] GC(18) Old regions: 5->6
+[17.435s][info ][gc,heap      ] GC(18) Humongous regions: 1->1
+[17.435s][info ][gc,metaspace ] GC(18) Metaspace: 16414K->16414K(1064960K)
+[17.435s][debug][gc,heap      ] GC(18) Heap after GC invocations=19 (full 0):
+[17.435s][debug][gc,heap      ] GC(18)  garbage-first heap   total 262144K, used 15170K [0x00000007b0000000, 0x00000007b0100800, 0x00000007c0000000)
+[17.435s][debug][gc,heap      ] GC(18)   region size 1024K, 9 young (9216K), 9 survivors (9216K)
+[17.435s][debug][gc,heap      ] GC(18)  Metaspace       used 16414K, capacity 17338K, committed 17664K, reserved 1064960K
+[17.435s][debug][gc,heap      ] GC(18)   class space    used 1767K, capacity 1988K, committed 2048K, reserved 1048576K
+[17.435s][info ][gc           ] GC(18) Pause Young (G1 Evacuation Pause) 158M->14M(256M) 10.877ms
+[17.435s][info ][gc,cpu       ] GC(18) User=0.07s Sys=0.00s Real=0.01s

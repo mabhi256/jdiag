@@ -1,0 +1,523 @@
+[0.012s][info][gc,init] CardTable entry size: 512
+[0.012s][info][gc     ] Using Parallel
+[0.013s][info][gc,init] Version: 21+35-2513 (release)
+[0.013s][info][gc,init] CPUs: 10 total, 10 available
+[0.013s][info][gc,init] Memory: 32768M
+[0.013s][info][gc,init] Large Page Support: Disabled
+[0.013s][info][gc,init] NUMA Support: Disabled
+[0.013s][info][gc,init] Compressed Oops: Enabled (Zero based)
+[0.013s][info][gc,init] Alignments: Space 512K, Generation 512K, Heap 8M
+[0.013s][info][gc,init] Heap Min Capacity: 8M
+[0.013s][info][gc,init] Heap Initial Capacity: 512M
+[0.013s][info][gc,init] Heap Max Capacity: 1G
+[0.013s][info][gc,init] Pre-touch: Disabled
+[0.013s][info][gc,init] Parallel Workers: 9
+[0.022s][info][gc,metaspace] CDS archive(s) mapped at: [0x000000b800000000-0x000000b800ca4000-0x000000b800ca4000), size 13254656, SharedBaseAddress: 0x000000b800000000, ArchiveRelocationMode: 1.
+[0.022s][info][gc,metaspace] Compressed class space mapped at: 0x000000b801000000-0x000000b841000000, reserved size: 1073741824
+[0.022s][info][gc,metaspace] Narrow klass base: 0x000000b800000000, Narrow klass shift: 0, Narrow klass range: 0x100000000
+[8.991s][info][gc,start    ] GC(0) Pause Young (System.gc())
+[8.993s][debug][gc,age      ] GC(0) Desired survivor size 22020096 bytes, new threshold 7 (max threshold 15)
+[8.994s][info ][gc,heap     ] GC(0) PSYoungGen: 28949K(153088K)->2515K(153088K) Eden: 28949K(131584K)->0K(131584K) From: 0K(21504K)->2515K(21504K)
+[8.994s][info ][gc,heap     ] GC(0) ParOldGen: 1036K(349696K)->1044K(349696K)
+[8.994s][info ][gc,metaspace] GC(0) Metaspace: 9377K(9664K)->9377K(9664K) NonClass: 8321K(8448K)->8321K(8448K) Class: 1055K(1216K)->1055K(1216K)
+[8.994s][info ][gc          ] GC(0) Pause Young (System.gc()) 29M->3M(491M) 2.788ms
+[8.994s][info ][gc,cpu      ] GC(0) User=0.01s Sys=0.01s Real=0.00s
+[8.994s][info ][gc,start    ] GC(1) Pause Full (System.gc())
+[8.994s][info ][gc,phases,start] GC(1) Marking Phase
+[8.999s][info ][gc,phases      ] GC(1) Marking Phase 5.323ms
+[8.999s][info ][gc,phases,start] GC(1) Summary Phase
+[8.999s][info ][gc,phases      ] GC(1) Summary Phase 0.014ms
+[8.999s][info ][gc,phases,start] GC(1) Adjust Roots
+[9.001s][info ][gc,phases      ] GC(1) Adjust Roots 2.002ms
+[9.001s][info ][gc,phases,start] GC(1) Compaction Phase
+[9.005s][info ][gc,phases      ] GC(1) Compaction Phase 3.589ms
+[9.005s][info ][gc,phases,start] GC(1) Post Compact
+[9.005s][info ][gc,phases      ] GC(1) Post Compact 0.183ms
+[9.005s][info ][gc,heap        ] GC(1) PSYoungGen: 2515K(153088K)->0K(153088K) Eden: 0K(131584K)->0K(131584K) From: 2515K(21504K)->0K(21504K)
+[9.005s][info ][gc,heap        ] GC(1) ParOldGen: 1044K(349696K)->3353K(349696K)
+[9.005s][info ][gc,metaspace   ] GC(1) Metaspace: 9377K(9664K)->9377K(9664K) NonClass: 8321K(8448K)->8321K(8448K) Class: 1055K(1216K)->1055K(1216K)
+[9.005s][info ][gc             ] GC(1) Pause Full (System.gc()) 3M->3M(491M) 11.291ms
+[9.005s][info ][gc,cpu         ] GC(1) User=0.04s Sys=0.01s Real=0.01s
+[9.043s][info ][gc,start       ] GC(2) Pause Young (Allocation Failure)
+[9.043s][debug][gc,age         ] GC(2) Desired survivor size 22020096 bytes, new threshold 7 (max threshold 15)
+[9.043s][info ][gc,heap        ] GC(2) PSYoungGen: 131332K(153088K)->1341K(153088K) Eden: 131332K(131584K)->0K(131584K) From: 0K(21504K)->1341K(21504K)
+[9.043s][info ][gc,heap        ] GC(2) ParOldGen: 3353K(349696K)->3361K(349696K)
+[9.043s][info ][gc,metaspace   ] GC(2) Metaspace: 9552K(9856K)->9552K(9856K) NonClass: 8483K(8640K)->8483K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.043s][info ][gc             ] GC(2) Pause Young (Allocation Failure) 131M->4M(491M) 0.394ms
+[9.043s][info ][gc,cpu         ] GC(2) User=0.00s Sys=0.00s Real=0.00s
+[9.062s][info ][gc,start       ] GC(3) Pause Young (Allocation Failure)
+[9.062s][debug][gc,age         ] GC(3) Desired survivor size 22020096 bytes, new threshold 7 (max threshold 15)
+[9.062s][info ][gc,heap        ] GC(3) PSYoungGen: 132696K(153088K)->1159K(153088K) Eden: 131355K(131584K)->0K(131584K) From: 1341K(21504K)->1159K(21504K)
+[9.062s][info ][gc,heap        ] GC(3) ParOldGen: 3361K(349696K)->3361K(349696K)
+[9.062s][info ][gc,metaspace   ] GC(3) Metaspace: 9570K(9856K)->9570K(9856K) NonClass: 8501K(8640K)->8501K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.062s][info ][gc             ] GC(3) Pause Young (Allocation Failure) 132M->4M(491M) 0.324ms
+[9.062s][info ][gc,cpu         ] GC(3) User=0.00s Sys=0.00s Real=0.00s
+[9.071s][info ][gc,start       ] GC(4) Pause Young (Allocation Failure)
+[9.072s][debug][gc,age         ] GC(4) Desired survivor size 22020096 bytes, new threshold 7 (max threshold 15)
+[9.072s][info ][gc,heap        ] GC(4) PSYoungGen: 132447K(153088K)->1159K(153088K) Eden: 131287K(131584K)->0K(131584K) From: 1159K(21504K)->1159K(21504K)
+[9.072s][info ][gc,heap        ] GC(4) ParOldGen: 3361K(349696K)->3361K(349696K)
+[9.072s][info ][gc,metaspace   ] GC(4) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8503K(8640K)->8503K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.072s][info ][gc             ] GC(4) Pause Young (Allocation Failure) 132M->4M(491M) 0.377ms
+[9.072s][info ][gc,cpu         ] GC(4) User=0.00s Sys=0.00s Real=0.00s
+[9.080s][info ][gc,start       ] GC(5) Pause Young (Allocation Failure)
+[9.080s][debug][gc,age         ] GC(5) Desired survivor size 22020096 bytes, new threshold 7 (max threshold 15)
+[9.080s][info ][gc,heap        ] GC(5) PSYoungGen: 132468K(153088K)->1159K(153088K) Eden: 131308K(131584K)->0K(131584K) From: 1159K(21504K)->1159K(21504K)
+[9.080s][info ][gc,heap        ] GC(5) ParOldGen: 3361K(349696K)->3361K(349696K)
+[9.080s][info ][gc,metaspace   ] GC(5) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.081s][info ][gc             ] GC(5) Pause Young (Allocation Failure) 132M->4M(491M) 0.327ms
+[9.081s][info ][gc,cpu         ] GC(5) User=0.01s Sys=0.01s Real=0.00s
+[9.089s][info ][gc,start       ] GC(6) Pause Young (Allocation Failure)
+[9.089s][debug][gc,age         ] GC(6) Desired survivor size 2621440 bytes, new threshold 6 (max threshold 15)
+[9.089s][info ][gc,heap        ] GC(6) PSYoungGen: 132610K(153088K)->1254K(264704K) Eden: 131450K(131584K)->0K(263168K) From: 1159K(21504K)->1254K(1536K)
+[9.089s][info ][gc,heap        ] GC(6) ParOldGen: 3361K(349696K)->3361K(349696K)
+[9.089s][info ][gc,metaspace   ] GC(6) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.089s][info ][gc             ] GC(6) Pause Young (Allocation Failure) 132M->4M(600M) 0.351ms
+[9.089s][info ][gc,cpu         ] GC(6) User=0.01s Sys=0.00s Real=0.00s
+[9.115s][info ][gc,start       ] GC(7) Pause Young (Allocation Failure)
+[9.116s][debug][gc,age         ] GC(7) Desired survivor size 2621440 bytes, new threshold 5 (max threshold 15)
+[9.116s][info ][gc,heap        ] GC(7) PSYoungGen: 264422K(264704K)->1329K(283648K) Eden: 263168K(263168K)->0K(281088K) From: 1254K(1536K)->1329K(2560K)
+[9.116s][info ][gc,heap        ] GC(7) ParOldGen: 3361K(349696K)->3369K(349696K)
+[9.116s][info ][gc,metaspace   ] GC(7) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.116s][info ][gc             ] GC(7) Pause Young (Allocation Failure) 261M->4M(618M) 0.452ms
+[9.116s][info ][gc,cpu         ] GC(7) User=0.00s Sys=0.00s Real=0.01s
+[9.144s][info ][gc,start       ] GC(8) Pause Young (Allocation Failure)
+[9.145s][debug][gc,age         ] GC(8) Desired survivor size 2621440 bytes, new threshold 4 (max threshold 15)
+[9.145s][info ][gc,heap        ] GC(8) PSYoungGen: 282302K(283648K)->486K(346624K) Eden: 280973K(281088K)->0K(344064K) From: 1329K(2560K)->486K(2560K)
+[9.145s][info ][gc,heap        ] GC(8) ParOldGen: 3369K(349696K)->3978K(349696K)
+[9.145s][info ][gc,metaspace   ] GC(8) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.145s][info ][gc             ] GC(8) Pause Young (Allocation Failure) 278M->4M(680M) 0.397ms
+[9.145s][info ][gc,cpu         ] GC(8) User=0.00s Sys=0.00s Real=0.00s
+[9.172s][info ][gc,start       ] GC(9) Pause Young (Allocation Failure)
+[9.172s][debug][gc,age         ] GC(9) Desired survivor size 2621440 bytes, new threshold 3 (max threshold 15)
+[9.172s][info ][gc,heap        ] GC(9) PSYoungGen: 344387K(346624K)->288K(346624K) Eden: 343901K(344064K)->0K(344064K) From: 486K(2560K)->288K(2560K)
+[9.172s][info ][gc,heap        ] GC(9) ParOldGen: 3978K(349696K)->3978K(349696K)
+[9.172s][info ][gc,metaspace   ] GC(9) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.172s][info ][gc             ] GC(9) Pause Young (Allocation Failure) 340M->4M(680M) 0.273ms
+[9.172s][info ][gc,cpu         ] GC(9) User=0.00s Sys=0.00s Real=0.00s
+[9.199s][info ][gc,start       ] GC(10) Pause Young (Allocation Failure)
+[9.200s][debug][gc,age         ] GC(10) Desired survivor size 2621440 bytes, new threshold 2 (max threshold 15)
+[9.200s][info ][gc,heap        ] GC(10) PSYoungGen: 344080K(346624K)->550K(346624K) Eden: 343792K(344064K)->0K(344064K) From: 288K(2560K)->550K(2560K)
+[9.200s][info ][gc,heap        ] GC(10) ParOldGen: 3978K(349696K)->3986K(349696K)
+[9.200s][info ][gc,metaspace   ] GC(10) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.200s][info ][gc             ] GC(10) Pause Young (Allocation Failure) 339M->4M(680M) 0.331ms
+[9.200s][info ][gc,cpu         ] GC(10) User=0.00s Sys=0.00s Real=0.00s
+[9.221s][info ][gc,start       ] GC(11) Pause Young (Allocation Failure)
+[9.221s][debug][gc,age         ] GC(11) Desired survivor size 2621440 bytes, new threshold 1 (max threshold 15)
+[9.221s][info ][gc,heap        ] GC(11) PSYoungGen: 344411K(346624K)->256K(346624K) Eden: 343860K(344064K)->0K(344064K) From: 550K(2560K)->256K(2560K)
+[9.221s][info ][gc,heap        ] GC(11) ParOldGen: 3986K(349696K)->3986K(349696K)
+[9.221s][info ][gc,metaspace   ] GC(11) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.221s][info ][gc             ] GC(11) Pause Young (Allocation Failure) 340M->4M(680M) 0.248ms
+[9.221s][info ][gc,cpu         ] GC(11) User=0.00s Sys=0.00s Real=0.00s
+[9.242s][info ][gc,start       ] GC(12) Pause Young (Allocation Failure)
+[9.243s][debug][gc,age         ] GC(12) Desired survivor size 2621440 bytes, new threshold 1 (max threshold 15)
+[9.243s][info ][gc,heap        ] GC(12) PSYoungGen: 344070K(346624K)->646K(346624K) Eden: 343814K(344064K)->0K(344064K) From: 256K(2560K)->646K(2560K)
+[9.243s][info ][gc,heap        ] GC(12) ParOldGen: 3986K(349696K)->3986K(349696K)
+[9.243s][info ][gc,metaspace   ] GC(12) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.243s][info ][gc             ] GC(12) Pause Young (Allocation Failure) 339M->4M(680M) 0.286ms
+[9.243s][info ][gc,cpu         ] GC(12) User=0.00s Sys=0.00s Real=0.00s
+[9.264s][info ][gc,start       ] GC(13) Pause Young (Allocation Failure)
+[9.265s][debug][gc,age         ] GC(13) Desired survivor size 2621440 bytes, new threshold 1 (max threshold 15)
+[9.265s][info ][gc,heap        ] GC(13) PSYoungGen: 344653K(346624K)->614K(346624K) Eden: 344006K(344064K)->0K(344064K) From: 646K(2560K)->614K(2560K)
+[9.265s][info ][gc,heap        ] GC(13) ParOldGen: 3986K(349696K)->3986K(349696K)
+[9.265s][info ][gc,metaspace   ] GC(13) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.265s][info ][gc             ] GC(13) Pause Young (Allocation Failure) 340M->4M(680M) 0.302ms
+[9.265s][info ][gc,cpu         ] GC(13) User=0.00s Sys=0.00s Real=0.00s
+[9.287s][info ][gc,start       ] GC(14) Pause Young (Allocation Failure)
+[9.288s][debug][gc,age         ] GC(14) Desired survivor size 2621440 bytes, new threshold 1 (max threshold 15)
+[9.288s][info ][gc,heap        ] GC(14) PSYoungGen: 344423K(346624K)->192K(346624K) Eden: 343808K(344064K)->0K(344064K) From: 614K(2560K)->192K(2560K)
+[9.288s][info ][gc,heap        ] GC(14) ParOldGen: 3986K(349696K)->3986K(349696K)
+[9.288s][info ][gc,metaspace   ] GC(14) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.288s][info ][gc             ] GC(14) Pause Young (Allocation Failure) 340M->4M(680M) 0.276ms
+[9.288s][info ][gc,cpu         ] GC(14) User=0.01s Sys=0.00s Real=0.00s
+[9.309s][info ][gc,start       ] GC(15) Pause Young (Allocation Failure)
+[9.310s][debug][gc,age         ] GC(15) Desired survivor size 2621440 bytes, new threshold 1 (max threshold 15)
+[9.310s][info ][gc,heap        ] GC(15) PSYoungGen: 344039K(346624K)->582K(332800K) Eden: 343847K(344064K)->0K(331776K) From: 192K(2560K)->582K(1024K)
+[9.310s][info ][gc,heap        ] GC(15) ParOldGen: 3986K(349696K)->3986K(349696K)
+[9.310s][info ][gc,metaspace   ] GC(15) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.310s][info ][gc             ] GC(15) Pause Young (Allocation Failure) 339M->4M(666M) 0.292ms
+[9.310s][info ][gc,cpu         ] GC(15) User=0.00s Sys=0.00s Real=0.00s
+[9.331s][info ][gc,start       ] GC(16) Pause Young (Allocation Failure)
+[9.331s][debug][gc,age         ] GC(16) Desired survivor size 2621440 bytes, new threshold 1 (max threshold 15)
+[9.331s][info ][gc,heap        ] GC(16) PSYoungGen: 332358K(332800K)->582K(321024K) Eden: 331776K(331776K)->0K(320000K) From: 582K(1024K)->582K(1024K)
+[9.331s][info ][gc,heap        ] GC(16) ParOldGen: 3986K(349696K)->4018K(349696K)
+[9.331s][info ][gc,metaspace   ] GC(16) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.331s][info ][gc             ] GC(16) Pause Young (Allocation Failure) 328M->4M(655M) 0.321ms
+[9.331s][info ][gc,cpu         ] GC(16) User=0.00s Sys=0.00s Real=0.00s
+[9.352s][info ][gc,start       ] GC(17) Pause Young (Allocation Failure)
+[9.352s][debug][gc,age         ] GC(17) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.352s][info ][gc,heap        ] GC(17) PSYoungGen: 320285K(321024K)->550K(311296K) Eden: 319702K(320000K)->0K(308736K) From: 582K(1024K)->550K(2560K)
+[9.352s][info ][gc,heap        ] GC(17) ParOldGen: 4018K(349696K)->4018K(349696K)
+[9.352s][info ][gc,metaspace   ] GC(17) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.352s][info ][gc             ] GC(17) Pause Young (Allocation Failure) 316M->4M(645M) 0.305ms
+[9.352s][info ][gc,cpu         ] GC(17) User=0.01s Sys=0.00s Real=0.00s
+[9.371s][info ][gc,start       ] GC(18) Pause Young (Allocation Failure)
+[9.371s][debug][gc,age         ] GC(18) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.371s][info ][gc,heap        ] GC(18) PSYoungGen: 309244K(311296K)->454K(298496K) Eden: 308694K(308736K)->0K(297984K) From: 550K(2560K)->454K(512K)
+[9.371s][info ][gc,heap        ] GC(18) ParOldGen: 4018K(349696K)->4042K(349696K)
+[9.371s][info ][gc,metaspace   ] GC(18) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.371s][info ][gc             ] GC(18) Pause Young (Allocation Failure) 305M->4M(633M) 0.242ms
+[9.371s][info ][gc,cpu         ] GC(18) User=0.01s Sys=0.00s Real=0.00s
+[9.389s][info ][gc,start       ] GC(19) Pause Young (Allocation Failure)
+[9.389s][debug][gc,age         ] GC(19) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.389s][info ][gc,heap        ] GC(19) PSYoungGen: 298133K(298496K)->486K(289792K) Eden: 297679K(297984K)->0K(287744K) From: 454K(512K)->486K(2048K)
+[9.389s][info ][gc,heap        ] GC(19) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.389s][info ][gc,metaspace   ] GC(19) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.389s][info ][gc             ] GC(19) Pause Young (Allocation Failure) 295M->4M(624M) 0.198ms
+[9.389s][info ][gc,cpu         ] GC(19) User=0.00s Sys=0.00s Real=0.00s
+[9.407s][info ][gc,start       ] GC(20) Pause Young (Allocation Failure)
+[9.407s][debug][gc,age         ] GC(20) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.407s][info ][gc,heap        ] GC(20) PSYoungGen: 287869K(289792K)->486K(278528K) Eden: 287382K(287744K)->0K(278016K) From: 486K(2048K)->486K(512K)
+[9.407s][info ][gc,heap        ] GC(20) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.407s][info ][gc,metaspace   ] GC(20) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.407s][info ][gc             ] GC(20) Pause Young (Allocation Failure) 285M->4M(613M) 0.266ms
+[9.407s][info ][gc,cpu         ] GC(20) User=0.01s Sys=0.01s Real=0.00s
+[9.424s][info ][gc,start       ] GC(21) Pause Young (Allocation Failure)
+[9.424s][debug][gc,age         ] GC(21) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.424s][info ][gc,heap        ] GC(21) PSYoungGen: 278396K(278528K)->64K(270848K) Eden: 277909K(278016K)->0K(268800K) From: 486K(512K)->64K(2048K)
+[9.424s][info ][gc,heap        ] GC(21) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.424s][info ][gc,metaspace   ] GC(21) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.424s][info ][gc             ] GC(21) Pause Young (Allocation Failure) 275M->4M(606M) 0.214ms
+[9.424s][info ][gc,cpu         ] GC(21) User=0.01s Sys=0.00s Real=0.00s
+[9.440s][info ][gc,start       ] GC(22) Pause Young (Allocation Failure)
+[9.441s][debug][gc,age         ] GC(22) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.441s][info ][gc,heap        ] GC(22) PSYoungGen: 268743K(270848K)->96K(340480K) Eden: 268679K(268800K)->0K(338432K) From: 64K(2048K)->96K(2048K)
+[9.441s][info ][gc,heap        ] GC(22) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.441s][info ][gc,metaspace   ] GC(22) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.441s][info ][gc             ] GC(22) Pause Young (Allocation Failure) 266M->4M(674M) 0.290ms
+[9.441s][info ][gc,cpu         ] GC(22) User=0.00s Sys=0.00s Real=0.00s
+[9.463s][info ][gc,start       ] GC(23) Pause Young (Allocation Failure)
+[9.463s][debug][gc,age         ] GC(23) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.463s][info ][gc,heap        ] GC(23) PSYoungGen: 338263K(340480K)->96K(327168K) Eden: 338167K(338432K)->0K(326656K) From: 96K(2048K)->96K(512K)
+[9.463s][info ][gc,heap        ] GC(23) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.463s][info ][gc,metaspace   ] GC(23) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.463s][info ][gc             ] GC(23) Pause Young (Allocation Failure) 334M->4M(661M) 0.252ms
+[9.463s][info ][gc,cpu         ] GC(23) User=0.00s Sys=0.00s Real=0.00s
+[9.487s][info ][gc,start       ] GC(24) Pause Young (Allocation Failure)
+[9.487s][debug][gc,age         ] GC(24) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.487s][info ][gc,heap        ] GC(24) PSYoungGen: 326752K(327168K)->96K(315904K) Eden: 326656K(326656K)->0K(315392K) From: 96K(512K)->96K(512K)
+[9.487s][info ][gc,heap        ] GC(24) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.487s][info ][gc,metaspace   ] GC(24) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.487s][info ][gc             ] GC(24) Pause Young (Allocation Failure) 323M->4M(650M) 0.228ms
+[9.487s][info ][gc,cpu         ] GC(24) User=0.00s Sys=0.00s Real=0.00s
+[9.511s][info ][gc,start       ] GC(25) Pause Young (Allocation Failure)
+[9.511s][debug][gc,age         ] GC(25) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.511s][info ][gc,heap        ] GC(25) PSYoungGen: 315448K(315904K)->96K(306688K) Eden: 315352K(315392K)->0K(304640K) From: 96K(512K)->96K(2048K)
+[9.511s][info ][gc,heap        ] GC(25) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.511s][info ][gc,metaspace   ] GC(25) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.511s][info ][gc             ] GC(25) Pause Young (Allocation Failure) 312M->4M(641M) 0.177ms
+[9.511s][info ][gc,cpu         ] GC(25) User=0.00s Sys=0.00s Real=0.00s
+[9.532s][info ][gc,start       ] GC(26) Pause Young (Allocation Failure)
+[9.532s][debug][gc,age         ] GC(26) Desired survivor size 2097152 bytes, new threshold 1 (max threshold 15)
+[9.532s][info ][gc,heap        ] GC(26) PSYoungGen: 304393K(306688K)->96K(294912K) Eden: 304297K(304640K)->0K(294400K) From: 96K(2048K)->96K(512K)
+[9.532s][info ][gc,heap        ] GC(26) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.532s][info ][gc,metaspace   ] GC(26) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.532s][info ][gc             ] GC(26) Pause Young (Allocation Failure) 301M->4M(629M) 0.277ms
+[9.532s][info ][gc,cpu         ] GC(26) User=0.00s Sys=0.00s Real=0.00s
+[9.553s][info ][gc,start       ] GC(27) Pause Young (Allocation Failure)
+[9.553s][debug][gc,age         ] GC(27) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.553s][info ][gc,heap        ] GC(27) PSYoungGen: 294243K(294912K)->518K(286720K) Eden: 294147K(294400K)->0K(284672K) From: 96K(512K)->518K(2048K)
+[9.553s][info ][gc,heap        ] GC(27) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.553s][info ][gc,metaspace   ] GC(27) Metaspace: 9573K(9856K)->9573K(9856K) NonClass: 8504K(8640K)->8504K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.553s][info ][gc             ] GC(27) Pause Young (Allocation Failure) 291M->4M(621M) 0.206ms
+[9.553s][info ][gc,cpu         ] GC(27) User=0.00s Sys=0.00s Real=0.00s
+[9.574s][info ][gc,start       ] GC(28) Pause Young (Allocation Failure)
+[9.574s][debug][gc,age         ] GC(28) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.574s][info ][gc,heap        ] GC(28) PSYoungGen: 285190K(286720K)->128K(275456K) Eden: 284672K(284672K)->0K(274944K) From: 518K(2048K)->128K(512K)
+[9.574s][info ][gc,heap        ] GC(28) ParOldGen: 4042K(349696K)->4042K(349696K)
+[9.574s][info ][gc,metaspace   ] GC(28) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.574s][info ][gc             ] GC(28) Pause Young (Allocation Failure) 282M->4M(610M) 0.294ms
+[9.574s][info ][gc,cpu         ] GC(28) User=0.00s Sys=0.00s Real=0.00s
+[9.594s][info ][gc,start       ] GC(29) Pause Young (Allocation Failure)
+[9.594s][debug][gc,age         ] GC(29) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.594s][info ][gc,heap        ] GC(29) PSYoungGen: 275072K(275456K)->486K(267264K) Eden: 274944K(274944K)->0K(265728K) From: 128K(512K)->486K(1536K)
+[9.594s][info ][gc,heap        ] GC(29) ParOldGen: 4042K(349696K)->4090K(349696K)
+[9.594s][info ][gc,metaspace   ] GC(29) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.594s][info ][gc             ] GC(29) Pause Young (Allocation Failure) 272M->4M(602M) 0.236ms
+[9.594s][info ][gc,cpu         ] GC(29) User=0.00s Sys=0.00s Real=0.00s
+[9.614s][info ][gc,start       ] GC(30) Pause Young (Allocation Failure)
+[9.614s][debug][gc,age         ] GC(30) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.614s][info ][gc,heap        ] GC(30) PSYoungGen: 266104K(267264K)->96K(257536K) Eden: 265617K(265728K)->0K(257024K) From: 486K(1536K)->96K(512K)
+[9.614s][info ][gc,heap        ] GC(30) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.614s][info ][gc,metaspace   ] GC(30) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.614s][info ][gc             ] GC(30) Pause Young (Allocation Failure) 263M->4M(593M) 0.301ms
+[9.614s][info ][gc,cpu         ] GC(30) User=0.00s Sys=0.01s Real=0.00s
+[9.633s][info ][gc,start       ] GC(31) Pause Young (Allocation Failure)
+[9.633s][debug][gc,age         ] GC(31) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.633s][info ][gc,heap        ] GC(31) PSYoungGen: 256921K(257536K)->96K(250368K) Eden: 256825K(257024K)->0K(248832K) From: 96K(512K)->96K(1536K)
+[9.633s][info ][gc,heap        ] GC(31) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.633s][info ][gc,metaspace   ] GC(31) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.633s][info ][gc             ] GC(31) Pause Young (Allocation Failure) 254M->4M(586M) 0.257ms
+[9.633s][info ][gc,cpu         ] GC(31) User=0.00s Sys=0.00s Real=0.00s
+[9.652s][info ][gc,start       ] GC(32) Pause Young (Allocation Failure)
+[9.652s][debug][gc,age         ] GC(32) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.652s][info ][gc,heap        ] GC(32) PSYoungGen: 248687K(250368K)->486K(241664K) Eden: 248591K(248832K)->0K(241152K) From: 96K(1536K)->486K(512K)
+[9.652s][info ][gc,heap        ] GC(32) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.652s][info ][gc,metaspace   ] GC(32) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.652s][info ][gc             ] GC(32) Pause Young (Allocation Failure) 246M->4M(577M) 0.224ms
+[9.652s][info ][gc,cpu         ] GC(32) User=0.00s Sys=0.00s Real=0.00s
+[9.669s][info ][gc,start       ] GC(33) Pause Young (Allocation Failure)
+[9.669s][debug][gc,age         ] GC(33) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.670s][info ][gc,heap        ] GC(33) PSYoungGen: 241638K(241664K)->96K(235008K) Eden: 241152K(241152K)->0K(233472K) From: 486K(512K)->96K(1536K)
+[9.670s][info ][gc,heap        ] GC(33) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.670s][info ][gc,metaspace   ] GC(33) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.670s][info ][gc             ] GC(33) Pause Young (Allocation Failure) 239M->4M(571M) 0.242ms
+[9.670s][info ][gc,cpu         ] GC(33) User=0.00s Sys=0.00s Real=0.00s
+[9.687s][info ][gc,start       ] GC(34) Pause Young (Allocation Failure)
+[9.687s][debug][gc,age         ] GC(34) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.687s][info ][gc,heap        ] GC(34) PSYoungGen: 233227K(235008K)->96K(226816K) Eden: 233131K(233472K)->0K(226304K) From: 96K(1536K)->96K(512K)
+[9.687s][info ][gc,heap        ] GC(34) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.687s][info ][gc,metaspace   ] GC(34) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.687s][info ][gc             ] GC(34) Pause Young (Allocation Failure) 231M->4M(563M) 0.289ms
+[9.687s][info ][gc,cpu         ] GC(34) User=0.00s Sys=0.00s Real=0.00s
+[9.704s][info ][gc,start       ] GC(35) Pause Young (Allocation Failure)
+[9.704s][debug][gc,age         ] GC(35) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.704s][info ][gc,heap        ] GC(35) PSYoungGen: 226262K(226816K)->96K(284672K) Eden: 226166K(226304K)->0K(283136K) From: 96K(512K)->96K(1536K)
+[9.704s][info ][gc,heap        ] GC(35) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.704s][info ][gc,metaspace   ] GC(35) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.704s][info ][gc             ] GC(35) Pause Young (Allocation Failure) 224M->4M(619M) 0.255ms
+[9.704s][info ][gc,cpu         ] GC(35) User=0.00s Sys=0.00s Real=0.00s
+[9.725s][info ][gc,start       ] GC(36) Pause Young (Allocation Failure)
+[9.725s][debug][gc,age         ] GC(36) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.725s][info ][gc,heap        ] GC(36) PSYoungGen: 283155K(284672K)->486K(332288K) Eden: 283059K(283136K)->0K(330752K) From: 96K(1536K)->486K(1536K)
+[9.725s][info ][gc,heap        ] GC(36) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.725s][info ][gc,metaspace   ] GC(36) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.725s][info ][gc             ] GC(36) Pause Young (Allocation Failure) 280M->4M(666M) 0.295ms
+[9.725s][info ][gc,cpu         ] GC(36) User=0.00s Sys=0.00s Real=0.00s
+[9.749s][info ][gc,start       ] GC(37) Pause Young (Allocation Failure)
+[9.750s][debug][gc,age         ] GC(37) Desired survivor size 1572864 bytes, new threshold 1 (max threshold 15)
+[9.750s][info ][gc,heap        ] GC(37) PSYoungGen: 331224K(332288K)->96K(319488K) Eden: 330737K(330752K)->0K(318976K) From: 486K(1536K)->96K(512K)
+[9.750s][info ][gc,heap        ] GC(37) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.750s][info ][gc,metaspace   ] GC(37) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.750s][info ][gc             ] GC(37) Pause Young (Allocation Failure) 327M->4M(653M) 0.283ms
+[9.750s][info ][gc,cpu         ] GC(37) User=0.00s Sys=0.00s Real=0.00s
+[9.772s][info ][gc,start       ] GC(38) Pause Young (Allocation Failure)
+[9.772s][debug][gc,age         ] GC(38) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.773s][info ][gc,heap        ] GC(38) PSYoungGen: 319072K(319488K)->96K(308224K) Eden: 318976K(318976K)->0K(307712K) From: 96K(512K)->96K(512K)
+[9.773s][info ][gc,heap        ] GC(38) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.773s][info ][gc,metaspace   ] GC(38) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.773s][info ][gc             ] GC(38) Pause Young (Allocation Failure) 315M->4M(642M) 0.265ms
+[9.773s][info ][gc,cpu         ] GC(38) User=0.00s Sys=0.00s Real=0.00s
+[9.795s][info ][gc,start       ] GC(39) Pause Young (Allocation Failure)
+[9.795s][debug][gc,age         ] GC(39) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.795s][info ][gc,heap        ] GC(39) PSYoungGen: 307684K(308224K)->96K(297984K) Eden: 307588K(307712K)->0K(296960K) From: 96K(512K)->96K(1024K)
+[9.795s][info ][gc,heap        ] GC(39) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.795s][info ][gc,metaspace   ] GC(39) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.795s][info ][gc             ] GC(39) Pause Young (Allocation Failure) 304M->4M(632M) 0.296ms
+[9.795s][info ][gc,cpu         ] GC(39) User=0.00s Sys=0.00s Real=0.01s
+[9.817s][info ][gc,start       ] GC(40) Pause Young (Allocation Failure)
+[9.817s][debug][gc,age         ] GC(40) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.817s][info ][gc,heap        ] GC(40) PSYoungGen: 297056K(297984K)->518K(287744K) Eden: 296960K(296960K)->0K(286720K) From: 96K(1024K)->518K(1024K)
+[9.817s][info ][gc,heap        ] GC(40) ParOldGen: 4090K(349696K)->4090K(349696K)
+[9.817s][info ][gc,metaspace   ] GC(40) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.817s][info ][gc             ] GC(40) Pause Young (Allocation Failure) 294M->4M(622M) 0.292ms
+[9.817s][info ][gc,cpu         ] GC(40) User=0.00s Sys=0.00s Real=0.00s
+[9.838s][info ][gc,start       ] GC(41) Pause Young (Allocation Failure)
+[9.838s][debug][gc,age         ] GC(41) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.839s][info ][gc,heap        ] GC(41) PSYoungGen: 286939K(287744K)->486K(277504K) Eden: 286421K(286720K)->0K(276992K) From: 518K(1024K)->486K(512K)
+[9.839s][info ][gc,heap        ] GC(41) ParOldGen: 4090K(349696K)->4122K(349696K)
+[9.839s][info ][gc,metaspace   ] GC(41) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.839s][info ][gc             ] GC(41) Pause Young (Allocation Failure) 284M->4M(612M) 0.259ms
+[9.839s][info ][gc,cpu         ] GC(41) User=0.00s Sys=0.00s Real=0.00s
+[9.859s][info ][gc,start       ] GC(42) Pause Young (Allocation Failure)
+[9.859s][debug][gc,age         ] GC(42) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.859s][info ][gc,heap        ] GC(42) PSYoungGen: 277478K(277504K)->96K(268288K) Eden: 276992K(276992K)->0K(267776K) From: 486K(512K)->96K(512K)
+[9.859s][info ][gc,heap        ] GC(42) ParOldGen: 4122K(349696K)->4122K(349696K)
+[9.859s][info ][gc,metaspace   ] GC(42) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.859s][info ][gc             ] GC(42) Pause Young (Allocation Failure) 275M->4M(603M) 0.277ms
+[9.859s][info ][gc,cpu         ] GC(42) User=0.00s Sys=0.00s Real=0.00s
+[9.879s][info ][gc,start       ] GC(43) Pause Young (Allocation Failure)
+[9.879s][debug][gc,age         ] GC(43) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.879s][info ][gc,heap        ] GC(43) PSYoungGen: 267774K(268288K)->96K(260096K) Eden: 267678K(267776K)->0K(259072K) From: 96K(512K)->96K(1024K)
+[9.879s][info ][gc,heap        ] GC(43) ParOldGen: 4122K(349696K)->4122K(349696K)
+[9.879s][info ][gc,metaspace   ] GC(43) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.879s][info ][gc             ] GC(43) Pause Young (Allocation Failure) 265M->4M(595M) 0.285ms
+[9.879s][info ][gc,cpu         ] GC(43) User=0.00s Sys=0.00s Real=0.00s
+[9.897s][info ][gc,start       ] GC(44) Pause Young (Allocation Failure)
+[9.898s][debug][gc,age         ] GC(44) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.898s][info ][gc,heap        ] GC(44) PSYoungGen: 259168K(260096K)->486K(251392K) Eden: 259072K(259072K)->0K(250880K) From: 96K(1024K)->486K(512K)
+[9.898s][info ][gc,heap        ] GC(44) ParOldGen: 4122K(349696K)->4122K(349696K)
+[9.898s][info ][gc,metaspace   ] GC(44) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.898s][info ][gc             ] GC(44) Pause Young (Allocation Failure) 257M->4M(587M) 0.241ms
+[9.898s][info ][gc,cpu         ] GC(44) User=0.00s Sys=0.00s Real=0.00s
+[9.916s][info ][gc,start       ] GC(45) Pause Young (Allocation Failure)
+[9.916s][debug][gc,age         ] GC(45) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.916s][info ][gc,heap        ] GC(45) PSYoungGen: 251059K(251392K)->486K(307200K) Eden: 250572K(250880K)->0K(306176K) From: 486K(512K)->486K(1024K)
+[9.916s][info ][gc,heap        ] GC(45) ParOldGen: 4122K(349696K)->4122K(349696K)
+[9.916s][info ][gc,metaspace   ] GC(45) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.916s][info ][gc             ] GC(45) Pause Young (Allocation Failure) 249M->4M(641M) 0.255ms
+[9.916s][info ][gc,cpu         ] GC(45) User=0.00s Sys=0.00s Real=0.00s
+[9.939s][info ][gc,start       ] GC(46) Pause Young (Allocation Failure)
+[9.939s][debug][gc,age         ] GC(46) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.939s][info ][gc,heap        ] GC(46) PSYoungGen: 306634K(307200K)->486K(296448K) Eden: 306147K(306176K)->0K(295936K) From: 486K(1024K)->486K(512K)
+[9.939s][info ][gc,heap        ] GC(46) ParOldGen: 4122K(349696K)->4122K(349696K)
+[9.939s][info ][gc,metaspace   ] GC(46) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.939s][info ][gc             ] GC(46) Pause Young (Allocation Failure) 303M->4M(631M) 0.264ms
+[9.939s][info ][gc,cpu         ] GC(46) User=0.00s Sys=0.00s Real=0.00s
+[9.961s][info ][gc,start       ] GC(47) Pause Young (Allocation Failure)
+[9.961s][debug][gc,age         ] GC(47) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.961s][info ][gc,heap        ] GC(47) PSYoungGen: 296422K(296448K)->486K(286720K) Eden: 295936K(295936K)->0K(285696K) From: 486K(512K)->486K(1024K)
+[9.961s][info ][gc,heap        ] GC(47) ParOldGen: 4122K(349696K)->4122K(349696K)
+[9.961s][info ][gc,metaspace   ] GC(47) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.961s][info ][gc             ] GC(47) Pause Young (Allocation Failure) 293M->4M(621M) 0.207ms
+[9.961s][info ][gc,cpu         ] GC(47) User=0.00s Sys=0.00s Real=0.00s
+[9.982s][info ][gc,start       ] GC(48) Pause Young (Allocation Failure)
+[9.982s][debug][gc,age         ] GC(48) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[9.982s][info ][gc,heap        ] GC(48) PSYoungGen: 286182K(286720K)->486K(276480K) Eden: 285696K(285696K)->0K(275968K) From: 486K(1024K)->486K(512K)
+[9.982s][info ][gc,heap        ] GC(48) ParOldGen: 4122K(349696K)->4122K(349696K)
+[9.982s][info ][gc,metaspace   ] GC(48) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[9.982s][info ][gc             ] GC(48) Pause Young (Allocation Failure) 283M->4M(611M) 0.264ms
+[9.982s][info ][gc,cpu         ] GC(48) User=0.00s Sys=0.00s Real=0.00s
+[10.002s][info ][gc,start       ] GC(49) Pause Young (Allocation Failure)
+[10.002s][debug][gc,age         ] GC(49) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.002s][info ][gc,heap        ] GC(49) PSYoungGen: 276454K(276480K)->486K(267776K) Eden: 275968K(275968K)->0K(266752K) From: 486K(512K)->486K(1024K)
+[10.002s][info ][gc,heap        ] GC(49) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.002s][info ][gc,metaspace   ] GC(49) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.002s][info ][gc             ] GC(49) Pause Young (Allocation Failure) 274M->4M(603M) 0.262ms
+[10.002s][info ][gc,cpu         ] GC(49) User=0.00s Sys=0.00s Real=0.00s
+[10.022s][info ][gc,start       ] GC(50) Pause Young (Allocation Failure)
+[10.022s][debug][gc,age         ] GC(50) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.022s][info ][gc,heap        ] GC(50) PSYoungGen: 266985K(267776K)->96K(258560K) Eden: 266498K(266752K)->0K(258048K) From: 486K(1024K)->96K(512K)
+[10.022s][info ][gc,heap        ] GC(50) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.022s][info ][gc,metaspace   ] GC(50) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.022s][info ][gc             ] GC(50) Pause Young (Allocation Failure) 264M->4M(594M) 0.223ms
+[10.022s][info ][gc,cpu         ] GC(50) User=0.00s Sys=0.00s Real=0.00s
+[10.041s][info ][gc,start       ] GC(51) Pause Young (Allocation Failure)
+[10.041s][debug][gc,age         ] GC(51) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.041s][info ][gc,heap        ] GC(51) PSYoungGen: 258144K(258560K)->96K(250880K) Eden: 258048K(258048K)->0K(249856K) From: 96K(512K)->96K(1024K)
+[10.041s][info ][gc,heap        ] GC(51) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.041s][info ][gc,metaspace   ] GC(51) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.041s][info ][gc             ] GC(51) Pause Young (Allocation Failure) 256M->4M(586M) 0.250ms
+[10.041s][info ][gc,cpu         ] GC(51) User=0.00s Sys=0.00s Real=0.00s
+[10.059s][info ][gc,start       ] GC(52) Pause Young (Allocation Failure)
+[10.060s][debug][gc,age         ] GC(52) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.060s][info ][gc,heap        ] GC(52) PSYoungGen: 249867K(250880K)->96K(242688K) Eden: 249771K(249856K)->0K(242176K) From: 96K(1024K)->96K(512K)
+[10.060s][info ][gc,heap        ] GC(52) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.060s][info ][gc,metaspace   ] GC(52) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.060s][info ][gc             ] GC(52) Pause Young (Allocation Failure) 248M->4M(578M) 0.246ms
+[10.060s][info ][gc,cpu         ] GC(52) User=0.01s Sys=0.00s Real=0.00s
+[10.077s][info ][gc,start       ] GC(53) Pause Young (Allocation Failure)
+[10.078s][debug][gc,age         ] GC(53) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.078s][info ][gc,heap        ] GC(53) PSYoungGen: 242146K(242688K)->96K(235520K) Eden: 242050K(242176K)->0K(234496K) From: 96K(512K)->96K(1024K)
+[10.078s][info ][gc,heap        ] GC(53) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.078s][info ][gc,metaspace   ] GC(53) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.078s][info ][gc             ] GC(53) Pause Young (Allocation Failure) 240M->4M(571M) 0.255ms
+[10.078s][info ][gc,cpu         ] GC(53) User=0.00s Sys=0.00s Real=0.00s
+[10.095s][info ][gc,start       ] GC(54) Pause Young (Allocation Failure)
+[10.095s][debug][gc,age         ] GC(54) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.095s][info ][gc,heap        ] GC(54) PSYoungGen: 234459K(235520K)->486K(284672K) Eden: 234363K(234496K)->0K(284160K) From: 96K(1024K)->486K(512K)
+[10.095s][info ][gc,heap        ] GC(54) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.095s][info ][gc,metaspace   ] GC(54) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.095s][info ][gc             ] GC(54) Pause Young (Allocation Failure) 232M->4M(619M) 0.262ms
+[10.095s][info ][gc,cpu         ] GC(54) User=0.00s Sys=0.00s Real=0.00s
+[10.116s][info ][gc,start       ] GC(55) Pause Young (Allocation Failure)
+[10.116s][debug][gc,age         ] GC(55) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.116s][info ][gc,heap        ] GC(55) PSYoungGen: 284292K(284672K)->64K(275968K) Eden: 283805K(284160K)->0K(274944K) From: 486K(512K)->64K(1024K)
+[10.116s][info ][gc,heap        ] GC(55) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.116s][info ][gc,metaspace   ] GC(55) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.116s][info ][gc             ] GC(55) Pause Young (Allocation Failure) 281M->4M(611M) 0.245ms
+[10.116s][info ][gc,cpu         ] GC(55) User=0.00s Sys=0.00s Real=0.00s
+[10.136s][info ][gc,start       ] GC(56) Pause Young (Allocation Failure)
+[10.136s][debug][gc,age         ] GC(56) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.136s][info ][gc,heap        ] GC(56) PSYoungGen: 275008K(275968K)->96K(266240K) Eden: 274944K(274944K)->0K(265728K) From: 64K(1024K)->96K(512K)
+[10.136s][info ][gc,heap        ] GC(56) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.136s][info ][gc,metaspace   ] GC(56) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.136s][info ][gc             ] GC(56) Pause Young (Allocation Failure) 272M->4M(601M) 0.252ms
+[10.136s][info ][gc,cpu         ] GC(56) User=0.00s Sys=0.00s Real=0.00s
+[10.156s][info ][gc,start       ] GC(57) Pause Young (Allocation Failure)
+[10.156s][debug][gc,age         ] GC(57) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.156s][info ][gc,heap        ] GC(57) PSYoungGen: 265783K(266240K)->486K(258048K) Eden: 265687K(265728K)->0K(257024K) From: 96K(512K)->486K(1024K)
+[10.156s][info ][gc,heap        ] GC(57) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.156s][info ][gc,metaspace   ] GC(57) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.156s][info ][gc             ] GC(57) Pause Young (Allocation Failure) 263M->4M(593M) 0.246ms
+[10.156s][info ][gc,cpu         ] GC(57) User=0.00s Sys=0.00s Real=0.00s
+[10.174s][info ][gc,start       ] GC(58) Pause Young (Allocation Failure)
+[10.175s][debug][gc,age         ] GC(58) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.175s][info ][gc,heap        ] GC(58) PSYoungGen: 257510K(258048K)->486K(249344K) Eden: 257024K(257024K)->0K(248832K) From: 486K(1024K)->486K(512K)
+[10.175s][info ][gc,heap        ] GC(58) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.175s][info ][gc,metaspace   ] GC(58) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.175s][info ][gc             ] GC(58) Pause Young (Allocation Failure) 255M->4M(585M) 0.263ms
+[10.175s][info ][gc,cpu         ] GC(58) User=0.00s Sys=0.00s Real=0.00s
+[10.193s][info ][gc,start       ] GC(59) Pause Young (Allocation Failure)
+[10.193s][debug][gc,age         ] GC(59) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.193s][info ][gc,heap        ] GC(59) PSYoungGen: 249098K(249344K)->96K(242176K) Eden: 248611K(248832K)->0K(241152K) From: 486K(512K)->96K(1024K)
+[10.193s][info ][gc,heap        ] GC(59) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.193s][info ][gc,metaspace   ] GC(59) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.193s][info ][gc             ] GC(59) Pause Young (Allocation Failure) 247M->4M(578M) 0.239ms
+[10.193s][info ][gc,cpu         ] GC(59) User=0.00s Sys=0.00s Real=0.00s
+[10.211s][info ][gc,start       ] GC(60) Pause Young (Allocation Failure)
+[10.211s][debug][gc,age         ] GC(60) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.211s][info ][gc,heap        ] GC(60) PSYoungGen: 241248K(242176K)->486K(233984K) Eden: 241152K(241152K)->0K(233472K) From: 96K(1024K)->486K(512K)
+[10.211s][info ][gc,heap        ] GC(60) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.211s][info ][gc,metaspace   ] GC(60) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.211s][info ][gc             ] GC(60) Pause Young (Allocation Failure) 239M->4M(570M) 0.249ms
+[10.211s][info ][gc,cpu         ] GC(60) User=0.00s Sys=0.00s Real=0.00s
+[10.228s][info ][gc,start       ] GC(61) Pause Young (Allocation Failure)
+[10.228s][debug][gc,age         ] GC(61) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.228s][info ][gc,heap        ] GC(61) PSYoungGen: 233664K(233984K)->486K(281600K) Eden: 233177K(233472K)->0K(280576K) From: 486K(512K)->486K(1024K)
+[10.228s][info ][gc,heap        ] GC(61) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.228s][info ][gc,metaspace   ] GC(61) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.228s][info ][gc             ] GC(61) Pause Young (Allocation Failure) 232M->4M(616M) 0.256ms
+[10.228s][info ][gc,cpu         ] GC(61) User=0.00s Sys=0.00s Real=0.00s
+[10.249s][info ][gc,start       ] GC(62) Pause Young (Allocation Failure)
+[10.249s][debug][gc,age         ] GC(62) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.249s][info ][gc,heap        ] GC(62) PSYoungGen: 280853K(281600K)->96K(271872K) Eden: 280366K(280576K)->0K(271360K) From: 486K(1024K)->96K(512K)
+[10.249s][info ][gc,heap        ] GC(62) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.249s][info ][gc,metaspace   ] GC(62) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.249s][info ][gc             ] GC(62) Pause Young (Allocation Failure) 278M->4M(607M) 0.234ms
+[10.249s][info ][gc,cpu         ] GC(62) User=0.00s Sys=0.00s Real=0.00s
+[10.269s][info ][gc,start       ] GC(63) Pause Young (Allocation Failure)
+[10.269s][debug][gc,age         ] GC(63) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.269s][info ][gc,heap        ] GC(63) PSYoungGen: 271414K(271872K)->486K(263680K) Eden: 271318K(271360K)->0K(262656K) From: 96K(512K)->486K(1024K)
+[10.269s][info ][gc,heap        ] GC(63) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.269s][info ][gc,metaspace   ] GC(63) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.269s][info ][gc             ] GC(63) Pause Young (Allocation Failure) 269M->4M(599M) 0.238ms
+[10.269s][info ][gc,cpu         ] GC(63) User=0.00s Sys=0.01s Real=0.00s
+[10.289s][info ][gc,start       ] GC(64) Pause Young (Allocation Failure)
+[10.289s][debug][gc,age         ] GC(64) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.289s][info ][gc,heap        ] GC(64) PSYoungGen: 262798K(263680K)->486K(254464K) Eden: 262311K(262656K)->0K(253952K) From: 486K(1024K)->486K(512K)
+[10.289s][info ][gc,heap        ] GC(64) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.289s][info ][gc,metaspace   ] GC(64) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.289s][info ][gc             ] GC(64) Pause Young (Allocation Failure) 260M->4M(590M) 0.226ms
+[10.289s][info ][gc,cpu         ] GC(64) User=0.00s Sys=0.00s Real=0.00s
+[10.307s][info ][gc,start       ] GC(65) Pause Young (Allocation Failure)
+[10.308s][debug][gc,age         ] GC(65) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.308s][info ][gc,heap        ] GC(65) PSYoungGen: 254380K(254464K)->96K(246784K) Eden: 253894K(253952K)->0K(245760K) From: 486K(512K)->96K(1024K)
+[10.308s][info ][gc,heap        ] GC(65) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.308s][info ][gc,metaspace   ] GC(65) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.308s][info ][gc             ] GC(65) Pause Young (Allocation Failure) 252M->4M(582M) 0.231ms
+[10.308s][info ][gc,cpu         ] GC(65) User=0.00s Sys=0.00s Real=0.00s
+[10.326s][info ][gc,start       ] GC(66) Pause Young (Allocation Failure)
+[10.326s][debug][gc,age         ] GC(66) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.326s][info ][gc,heap        ] GC(66) PSYoungGen: 245845K(246784K)->96K(238592K) Eden: 245749K(245760K)->0K(238080K) From: 96K(1024K)->96K(512K)
+[10.326s][info ][gc,heap        ] GC(66) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.326s][info ][gc,metaspace   ] GC(66) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.326s][info ][gc             ] GC(66) Pause Young (Allocation Failure) 244M->4M(574M) 0.279ms
+[10.326s][info ][gc,cpu         ] GC(66) User=0.00s Sys=0.00s Real=0.00s
+[10.343s][info ][gc,start       ] GC(67) Pause Young (Allocation Failure)
+[10.343s][debug][gc,age         ] GC(67) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.343s][info ][gc,heap        ] GC(67) PSYoungGen: 238176K(238592K)->96K(286720K) Eden: 238080K(238080K)->0K(285696K) From: 96K(512K)->96K(1024K)
+[10.343s][info ][gc,heap        ] GC(67) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.343s][info ][gc,metaspace   ] GC(67) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.343s][info ][gc             ] GC(67) Pause Young (Allocation Failure) 236M->4M(621M) 0.246ms
+[10.343s][info ][gc,cpu         ] GC(67) User=0.00s Sys=0.00s Real=0.00s
+[10.364s][info ][gc,start       ] GC(68) Pause Young (Allocation Failure)
+[10.364s][debug][gc,age         ] GC(68) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.365s][info ][gc,heap        ] GC(68) PSYoungGen: 285733K(286720K)->96K(276480K) Eden: 285637K(285696K)->0K(275968K) From: 96K(1024K)->96K(512K)
+[10.365s][info ][gc,heap        ] GC(68) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.365s][info ][gc,metaspace   ] GC(68) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.365s][info ][gc             ] GC(68) Pause Young (Allocation Failure) 283M->4M(611M) 0.256ms
+[10.365s][info ][gc,cpu         ] GC(68) User=0.00s Sys=0.00s Real=0.00s
+[10.385s][info ][gc,start       ] GC(69) Pause Young (Allocation Failure)
+[10.385s][debug][gc,age         ] GC(69) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.385s][info ][gc,heap        ] GC(69) PSYoungGen: 275888K(276480K)->486K(267776K) Eden: 275792K(275968K)->0K(266752K) From: 96K(512K)->486K(1024K)
+[10.385s][info ][gc,heap        ] GC(69) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.385s][info ][gc,metaspace   ] GC(69) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.385s][info ][gc             ] GC(69) Pause Young (Allocation Failure) 273M->4M(603M) 0.247ms
+[10.385s][info ][gc,cpu         ] GC(69) User=0.00s Sys=0.00s Real=0.00s
+[10.405s][info ][gc,start       ] GC(70) Pause Young (Allocation Failure)
+[10.405s][debug][gc,age         ] GC(70) Desired survivor size 1048576 bytes, new threshold 1 (max threshold 15)
+[10.405s][info ][gc,heap        ] GC(70) PSYoungGen: 266964K(267776K)->64K(258560K) Eden: 266477K(266752K)->0K(258048K) From: 486K(1024K)->64K(512K)
+[10.405s][info ][gc,heap        ] GC(70) ParOldGen: 4122K(349696K)->4122K(349696K)
+[10.405s][info ][gc,metaspace   ] GC(70) Metaspace: 9574K(9856K)->9574K(9856K) NonClass: 8505K(8640K)->8505K(8640K) Class: 1069K(1216K)->1069K(1216K)
+[10.405s][info ][gc             ] GC(70) Pause Young (Allocation Failure) 264M->4M(594M) 0.273ms
+[10.405s][info ][gc,cpu         ] GC(70) User=0.00s Sys=0.00s Real=0.00s
