@@ -1,4 +1,4 @@
-module github.com/mabhi256/java-gc-analyzer
+module github.com/mabhi256/jdiag
 
 go 1.24.5
 

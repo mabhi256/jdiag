@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mabhi256/java-gc-analyzer/cmd"
+	"github.com/mabhi256/jdiag/cmd"
 )
 
 func main() {
