@@ -1,0 +1,148 @@
+project_name: jdiag
+
+builds:
+  - # Build for multiple platforms
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - "386"
+      - amd64
+      - arm64
+    # Skip 32-bit ARM for simplicity
+    ignore:
+      - goos: darwin
+        goarch: "386"
+    # Set version info at build time
+    ldflags:
+      - -s -w -X github.com/mabhi256/jdiag/cmd.version={{.Version}}
+
+# Archive configuration (creates .tar.gz, .zip files)
+archives:
+  - format: tar.gz
+    # Use zip for Windows
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE*
+
+# Create checksums file
+checksum:
+  name_template: 'checksums.txt'
+
+# Generate changelog
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Others
+      order: 999
+
+# GitHub release configuration
+release:
+  github:
+    owner: mabhi256
+    name: jdiag
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+
+## Package managers - automatically publish to popular package managers
+#brews:
+#  - # Homebrew formula
+#    repository:
+#      owner: myprofile
+#      name: homebrew-tap
+#    directory: Formula
+#    homepage: https://github.com/myprofile/jdiag
+#    description: "Java diagnostics tool for analyzing GC logs and performance"
+#    license: MIT
+#    test: |
+#      system "#{bin}/jdiag version"
+#    install: |
+#      bin.install "jdiag"
+#      # Install shell completions
+#      bash_completion.install "completions/jdiag.bash" => "jdiag"
+#      zsh_completion.install "completions/_jdiag"
+#      fish_completion.install "completions/jdiag.fish"
+#
+## Snap package (Linux)
+#snapcrafts:
+#  - name: jdiag
+#    summary: Java diagnostics tool
+#    description: |
+#      A comprehensive tool for analyzing Java applications and logs.
+#      Supports GC log analysis, validation, and multiple output formats.
+#    grade: stable
+#    confinement: strict
+#    publish: true
+#    license: MIT
+#
+## Winget package (Windows)
+#winget:
+#  - name: jdiag
+#    publisher: myprofile
+#    short_description: "Java diagnostics tool"
+#    license: MIT
+#    homepage: https://github.com/myprofile/jdiag
+#    repository:
+#      owner: myprofile
+#      name: winget-pkgs
+#
+## Docker images
+#dockers:
+#  - image_templates:
+#      - "myprofile/jdiag:latest"
+#      - "myprofile/jdiag:{{ .Tag }}"
+#      - "myprofile/jdiag:v{{ .Major }}"
+#    dockerfile: Dockerfile
+#    build_flag_templates:
+#      - --label=org.opencontainers.image.title={{ .ProjectName }}
+#      - --label=org.opencontainers.image.description=Java diagnostics tool
+#      - --label=org.opencontainers.image.url=https://github.com/myprofile/jdiag
+#      - --label=org.opencontainers.image.source=https://github.com/myprofile/jdiag
+#      - --label=org.opencontainers.image.version={{ .Version }}
+#      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
+#      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+#      - --platform=linux/amd64
+#
+#
+## Generate shell completions during build
+#before:
+#  hooks:
+#    - go mod tidy
+#    - mkdir -p completions
+#    - |
+#      cat > generate_completions.go << 'EOF'
+#      package main
+#      import (
+#        "os"
+#        "github.com/mabhi256/jdiag/cmd"
+#      )
+#      func main() {
+#        rootCmd := cmd.GetRootCmd() // This must be exposed
+#        rootCmd.GenBashCompletionFile("completions/jdiag.bash")
+#        rootCmd.GenZshCompletionFile("completions/_jdiag")
+#        rootCmd.GenFishCompletionFile("completions/jdiag.fish", true)
+#        rootCmd.GenPowerShellCompletionFile("completions/jdiag.ps1")
+#      }
+#      EOF
+#    - go run generate_completions.go
+#    - rm generate_completions.go

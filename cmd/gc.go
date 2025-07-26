@@ -11,12 +11,10 @@ import (
 )
 
 var outputFormat string
-var gcSubcommands = []string{"validate", "analyze"}
 
 var gcCmd = &cobra.Command{
-	Use:       "gc",
-	Short:     "Analyze GC logs",
-	ValidArgs: gcSubcommands,
+	Use:   "gc",
+	Short: "Analyze GC logs",
 }
 
 var gcValidateCmd = &cobra.Command{
