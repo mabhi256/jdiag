@@ -77,7 +77,17 @@ func init() {
 }
 
 func completeGCLogFiles(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return []string{"log"}, cobra.ShellCompDirectiveFilterFileExt
+	// Get current directory files
+	files, _ := os.ReadDir(".")
+
+	var validFiles []string
+	for _, file := range files {
+		if !file.IsDir() && isValidGCLogFile(file.Name()) {
+			validFiles = append(validFiles, file.Name())
+		}
+	}
+
+	return validFiles, cobra.ShellCompDirectiveNoFileComp
 }
 
 func isValidGCLogFile(filename string) bool {
