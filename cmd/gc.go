@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/mabhi256/jdiag/internal/gc"
 	"github.com/spf13/cobra"
 )
 
@@ -15,17 +16,6 @@ var outputFormat string
 var gcCmd = &cobra.Command{
 	Use:   "gc",
 	Short: "Analyze GC logs",
-}
-
-var gcValidateCmd = &cobra.Command{
-	Use:               "validate [gc-log-file]",
-	Short:             "Validate GC log file",
-	Args:              cobra.ExactArgs(1),
-	ValidArgsFunction: completeGCLogFiles,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Validating GC log: %s\n", args[0])
-		// TODO: implement
-	},
 }
 
 var gcAnalyzeCmd = &cobra.Command{
@@ -56,7 +46,16 @@ var gcAnalyzeCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Analyzing GC log: %s\n", args[0])
-		// TODO: implement
+		parser := gc.NewParser()
+		log, err := parser.ParseFile(args[0])
+		if err != nil {
+			fmt.Printf("Error parsing GC log: %v\n", err)
+			return
+		}
+
+		metrics := log.CalculateMetrics()
+		log.PrintSummary(metrics, outputFormat)
+		log.AnalyzePerformanceIssues(metrics)
 	},
 }
 
@@ -65,7 +64,6 @@ var gcAnalyzeCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(gcCmd)
 
-	gcCmd.AddCommand(gcValidateCmd)
 	gcCmd.AddCommand(gcAnalyzeCmd)
 
 	gcAnalyzeCmd.Flags().StringVarP(&outputFormat, "output", "o", "cli", "Output format")

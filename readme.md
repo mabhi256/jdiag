@@ -97,3 +97,43 @@ goreleaser release --snapshot --clean
 # Release using the tag
 goreleaser release --clean
 ```
+
+## Performance Tuning
+
+- *Focus*: Optimizing throughput and latency
+- *Key Metrics*: Pause times, allocation rates, GC frequency, throughput percentage
+- *Parsing Needs*: Extract pause times, heap before/after, duration, GC type
+- *Analysis*: Percentile calculations, trend analysis, recommendations engine
+- *Output*: "Your 95th percentile pause time is 15ms, target is <10ms"
+
+## Issue Diagnosis
+
+- *Focus*: Root cause analysis of GC problems
+- *Key Metrics*: Evacuation failures, Full GCs, allocation spikes, humongous allocations
+- *Parsing Needs*: Detailed phase breakdowns, failure patterns, concurrent cycle analysis
+- *Analysis*: Anomaly detection, correlation analysis, pattern matching
+- *Output*: "Detected evacuation failure at 06:54:42, caused by humongous allocations"
+
+## Capacity Planning
+
+- *Focus*: Right-sizing heap and predicting future needs
+- *Key Metrics*: Heap utilization trends, allocation rates, region usage patterns
+- *Parsing Needs*: Heap region data, metaspace usage, allocation patterns over time
+- *Analysis*: Trend projection, utilization modeling, scenario planning
+- *Output*: "Based on allocation trends, recommend increasing heap to 1GB by Q2"
+
+## Todo
+
+```bash
+// avgBytesPerEvent = 250  // Typical GC log line size
+// Small files (<10MB): Load everything
+// Medium files (10MB-100MB): Chunked processing
+// Large files (>100MB): Streaming with summary or sampling
+Events: make([]GCEvent, 0, min(estimateFromFileSize(filename), 10000)),
+
+// For huge logs, offer different analysis modes
+jdiag gc analyze huge.log --mode=summary   // Just key metrics
+jdiag gc analyze huge.log --mode=sample    // Analyze every 10th event
+jdiag gc analyze huge.log --mode=recent    // Last 1000 events only
+jdiag gc analyze huge.log --mode=streaming // Process in chunks
+```
