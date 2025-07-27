@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,58 +17,30 @@ var rootCmd = &cobra.Command{
 	Long:  `jdiag helps analyze Java application performance through GC logs, heap dumps, and thread dumps.`,
 
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if cmd.Name() == "install" || cmd.Name() == "version" || cmd.Name() == "help" {
+		// Skip setup during completion or special commands
+		if cmd.Name() == "completion" || cmd.Name() == "help" || cmd.Name() == "__complete" {
 			return
 		}
 
-		if !isShellSupported() {
-			return // Skip auto-setup for unsupported shells
-		}
-
-		if !completionsExist() {
-			fmt.Println("🔧 First run detected, setting up jdiag...")
-			if installCompletions(cmd.Root()) == nil {
-				fmt.Println("✅ Shell completions installed")
-				fmt.Println("💡 Restart your shell to enable tab completion")
-			} else {
-				fmt.Println("⚠️  Auto-setup failed. Run 'jdiag install' to try again.")
-			}
-		}
-	},
-}
-
-var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Install shell completions",
-	Run: func(cmd *cobra.Command, args []string) {
-		if !isInPath() {
-			printPathInstructions()
+		// Don't run setup during completion context
+		if isCompletionContext() {
 			return
 		}
 
-		if !isShellSupported() {
-			fmt.Printf("❌ Shell completion not supported for: %s\n", detectShell())
-			fmt.Println("Supported shells: bash, zsh, fish, powershell")
+		// Allow users to disable auto-setup
+		if os.Getenv("JDIAG_NO_AUTO_SETUP") != "" {
 			return
 		}
 
-		if completionsExist() {
-			fmt.Println("✅ Already configured!")
-			return
-		}
-
-		fmt.Println("📦 Installing completions...")
-		if err := installCompletions(cmd.Root()); err != nil {
-			fmt.Printf("❌ Failed: %v\n", err)
-		} else {
-			fmt.Println("✅ Done! Restart your shell to enable tab completion.")
+		if !completionsInstalled() {
+			fmt.Println("🔧 Setting up completions...")
+			setupCompletions()
 		}
 	},
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
@@ -78,28 +49,89 @@ func GetRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func completionsExist() bool {
-	home, _ := os.UserHomeDir()
+func setupCompletions() {
+	shell := detectShell()
+	executable, _ := os.Executable()
+
+	var completionFile string
+	var sourceCmd string
+
+	switch shell {
+	case "bash":
+		completionFile = filepath.Join(os.Getenv("HOME"), ".jdiag_completion")
+		sourceCmd = fmt.Sprintf("echo 'source %s' >> ~/.bashrc", completionFile)
+	case "zsh":
+		completionFile = filepath.Join(os.Getenv("HOME"), ".jdiag_completion")
+		sourceCmd = fmt.Sprintf("echo 'source %s' >> ~/.zshrc", completionFile)
+	case "fish":
+		os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".config/fish/completions"), 0755)
+		completionFile = filepath.Join(os.Getenv("HOME"), ".config/fish/completions/jdiag.fish")
+		// Fish auto-loads, no sourcing needed
+	case "powershell":
+		completionFile = filepath.Join(os.Getenv("HOME"), "jdiag_completion.ps1")
+		sourceCmd = fmt.Sprintf("echo '& \"%s\"' >> $PROFILE", completionFile)
+	default:
+		fmt.Printf("❌ Shell %s not supported\n", shell)
+		return
+	}
+
+	// Generate completion file: jdiag completion zsh > ~/.jdiag_completion
+	cmd := exec.Command(executable, "completion", shell)
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Printf("❌ Failed to generate completions: %v\n", err)
+		return
+	}
+
+	if err := os.WriteFile(completionFile, output, 0644); err != nil {
+		fmt.Printf("❌ Failed to write completion file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("✅ %s completions installed!\n", strings.Title(shell))
+
+	// Add to shell profile (except fish which auto-loads)
+	if sourceCmd != "" && shell != "fish" {
+		if err := exec.Command("sh", "-c", sourceCmd).Run(); err != nil {
+			fmt.Printf("💡 Add to your %s profile: source %s\n", shell, completionFile)
+		} else {
+			fmt.Println("💡 Restart your shell to enable completions")
+		}
+	}
+}
+
+func isCompletionContext() bool {
+	for _, arg := range os.Args {
+		if strings.Contains(arg, "__complete") || strings.Contains(arg, "completion") {
+			return true
+		}
+	}
+	return os.Getenv("COMP_LINE") != "" || os.Getenv("_COMPLETE") != ""
+}
+
+func completionsInstalled() bool {
+	shell := detectShell()
+	home := os.Getenv("HOME")
 
 	paths := map[string]string{
-		"bash":       filepath.Join(home, ".local/share/bash-completion/completions/jdiag"),
-		"zsh":        filepath.Join(home, ".zsh/completions/_jdiag"),
+		"bash":       filepath.Join(home, ".jdiag_completion"),
+		"zsh":        filepath.Join(home, ".jdiag_completion"),
 		"fish":       filepath.Join(home, ".config/fish/completions/jdiag.fish"),
 		"powershell": filepath.Join(home, "jdiag_completion.ps1"),
 	}
 
-	path := paths[detectShell()]
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-func isShellSupported() bool {
-	shell := detectShell()
-	return shell == "bash" || shell == "zsh" || shell == "fish" || shell == "powershell"
+	if path, ok := paths[shell]; ok {
+		_, err := os.Stat(path)
+		return err == nil
+	}
+	return false
 }
 
 func detectShell() string {
 	if runtime.GOOS == "windows" {
+		if os.Getenv("PSModulePath") != "" {
+			return "powershell"
+		}
 		return "powershell"
 	}
 
@@ -108,100 +140,4 @@ func detectShell() string {
 		return "bash"
 	}
 	return shell
-}
-
-type completionConfig struct {
-	dir         string
-	file        string
-	genFunc     func(io.Writer) error
-	activateCmd string
-}
-
-func installCompletions(rootCmd *cobra.Command) error {
-	home, _ := os.UserHomeDir()
-	shell := detectShell()
-
-	configs := map[string]completionConfig{
-		"bash": {
-			dir:     filepath.Join(home, ".local/share/bash-completion/completions"),
-			file:    "jdiag",
-			genFunc: rootCmd.GenBashCompletion,
-			activateCmd: fmt.Sprintf("source %s",
-				filepath.Join(home, ".local/share/bash-completion/completions/jdiag")),
-		},
-		"zsh": {
-			dir:     filepath.Join(home, ".zsh/completions"),
-			file:    "_jdiag",
-			genFunc: rootCmd.GenZshCompletion,
-			activateCmd: fmt.Sprintf("fpath=(%s $fpath) && autoload -U compinit && compinit",
-				filepath.Join(home, ".zsh/completions")),
-		},
-		"fish": {
-			dir:         filepath.Join(home, ".config/fish/completions"),
-			file:        "jdiag.fish",
-			genFunc:     func(w io.Writer) error { return rootCmd.GenFishCompletion(w, true) },
-			activateCmd: "complete --do-complete=jdiag", // Trigger fish to reload completions
-		},
-		"powershell": {
-			dir:     home,
-			file:    "jdiag_completion.ps1",
-			genFunc: rootCmd.GenPowerShellCompletionWithDesc,
-			activateCmd: fmt.Sprintf(". %s",
-				filepath.Join(home, "jdiag_completion.ps1")),
-		},
-	}
-
-	config, ok := configs[shell]
-	if !ok {
-		return fmt.Errorf("unsupported shell: %s", shell)
-	}
-
-	os.MkdirAll(config.dir, 0755)
-
-	file, err := os.Create(filepath.Join(config.dir, config.file))
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	if err := config.genFunc(file); err != nil {
-		return err
-	}
-
-	// Print activation command for immediate use
-	fmt.Printf("🔄 Running this command to enable auto-completions:\n")
-	fmt.Printf("   %s\n", config.activateCmd)
-
-	return nil
-}
-
-func isInPath() bool {
-	execPath, err := os.Executable()
-	if err != nil {
-		return false
-	}
-
-	pathEnv := os.Getenv("PATH")
-	paths := strings.Split(pathEnv, string(os.PathListSeparator))
-	execDir := filepath.Dir(execPath)
-
-	return slices.Contains(paths, execDir)
-}
-
-func printPathInstructions() {
-	execPath, _ := os.Executable()
-	execDir := filepath.Dir(execPath)
-
-	fmt.Printf("❌ jdiag not in PATH. Binary location: %s\n\n", execPath)
-
-	if runtime.GOOS == "windows" {
-		fmt.Printf("Add to PATH: %s\n", execDir)
-	} else {
-		fmt.Printf("Add to shell profile: export PATH=\"%s:$PATH\"\n", execDir)
-		fmt.Printf("Or copy to: /usr/local/bin\n")
-	}
-}
-
-func init() {
-	rootCmd.AddCommand(installCmd)
 }
