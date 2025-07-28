@@ -22,31 +22,41 @@ type GCEvent struct {
 }
 
 type GCLog struct {
-	Events      []GCEvent
-	StartTime   time.Time
-	EndTime     time.Time
-	TotalEvents int
-
-	// From init lines
+	// Configuration from init lines
 	JVMVersion     string
 	HeapRegionSize MemorySize
 	HeapMax        MemorySize
+
+	// GC
+	Events    []GCEvent
+	StartTime time.Time
+	EndTime   time.Time
+
+	Status string
 }
 
 type GCMetrics struct {
-	Throughput   float64 // percentage of time NOT spent in GC
-	TotalGCTime  time.Duration
-	TotalRuntime time.Duration
-
-	AvgPause time.Duration
-	MinPause time.Duration
-	MaxPause time.Duration
-	P95Pause time.Duration
-	P99Pause time.Duration
-
-	AllocationRate float64
-
+	TotalEvents  int
 	YoungGCCount int
 	MixedGCCount int
 	FullGCCount  int
+
+	Throughput     float64 // percentage of time NOT spent in GC
+	AvgHeapUtil    float64
+	AllocationRate float64
+
+	TotalRuntime time.Duration
+	TotalGCTime  time.Duration
+	AvgPause     time.Duration
+	MinPause     time.Duration
+	MaxPause     time.Duration
+	P95Pause     time.Duration
+	P99Pause     time.Duration
+}
+
+type PerformanceIssue struct {
+	Type           string
+	Severity       string // "warning", "critical", "info"
+	Description    string
+	Recommendation []string
 }

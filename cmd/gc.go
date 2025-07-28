@@ -25,7 +25,7 @@ var gcAnalyzeCmd = &cobra.Command{
 	ValidArgsFunction: completeGCLogFiles,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		// Validate output flag
-		validFormats := []string{"cli", "tui", "html"}
+		validFormats := []string{"cli", "cli-more", "tui", "html"}
 		if !slices.Contains(validFormats, outputFormat) {
 			return fmt.Errorf("invalid output format: %s. Valid options: %v", outputFormat, validFormats)
 		}
@@ -53,9 +53,7 @@ var gcAnalyzeCmd = &cobra.Command{
 			return
 		}
 
-		metrics := log.CalculateMetrics()
-		log.PrintSummary(metrics, outputFormat)
-		log.AnalyzePerformanceIssues(metrics)
+		log.Analyze(outputFormat)
 	},
 }
 
@@ -70,22 +68,72 @@ func init() {
 
 	// When user types: jdiag gc analyze file.log -o <TAB>
 	gcAnalyzeCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{"cli", "tui", "html"}, cobra.ShellCompDirectiveNoFileComp
+		return []string{"cli", "cli-more", "tui", "html"}, cobra.ShellCompDirectiveNoFileComp
 	})
 }
 
 func completeGCLogFiles(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// Get current directory files
-	files, _ := os.ReadDir(".")
+	// Determine the directory to search and the prefix to match
+	dir := "."
+	prefix := toComplete
 
-	var validFiles []string
+	// If toComplete contains a path separator, extract directory and filename prefix
+	if strings.Contains(toComplete, "/") {
+		lastSlash := strings.LastIndex(toComplete, "/")
+		dir = toComplete[:lastSlash+1] // Include the trailing slash for proper path construction
+		prefix = toComplete[lastSlash+1:]
+
+		// Clean up the directory path (remove trailing slash for os.ReadDir)
+		dirForRead := strings.TrimSuffix(dir, "/")
+		if dirForRead == "" {
+			dirForRead = "."
+		}
+		dir = dirForRead
+	}
+
+	// Read the target directory
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		// If we can't read the directory, return no suggestions
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	var suggestions []string
+
 	for _, file := range files {
-		if !file.IsDir() && isValidGCLogFile(file.Name()) {
-			validFiles = append(validFiles, file.Name())
+		name := file.Name()
+
+		// Skip hidden files/directories (starting with .)
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+
+		// Filter by prefix if provided
+		if prefix != "" && !strings.HasPrefix(name, prefix) {
+			continue
+		}
+
+		// Construct the full path for suggestions
+		var fullPath string
+		if dir == "." {
+			fullPath = name
+		} else {
+			fullPath = dir + "/" + name
+		}
+
+		if file.IsDir() {
+			// Add directories with trailing slash to indicate they can be traversed
+			suggestions = append(suggestions, fullPath+"/")
+		} else if isValidGCLogFile(name) {
+			// Add valid GC log files
+			suggestions = append(suggestions, fullPath)
 		}
 	}
 
-	return validFiles, cobra.ShellCompDirectiveNoFileComp
+	// Sort suggestions for better user experience
+	slices.Sort(suggestions)
+
+	return suggestions, cobra.ShellCompDirectiveNoFileComp
 }
 
 func isValidGCLogFile(filename string) bool {

@@ -2,152 +2,195 @@ package gc
 
 import (
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 )
 
-func (log *GCLog) CalculateMetrics() *GCMetrics {
-	if len(log.Events) == 0 {
-		return &GCMetrics{}
-	}
+// Performance thresholds
+const (
+	MinThroughputWarning   = 90.0
+	MinThroughputCritical  = 80.0
+	LongPauseThreshold     = 100 * time.Millisecond
+	CriticalPauseThreshold = 500 * time.Millisecond
+	HighAllocRateWarning   = 1000.0 // MB/s
+	HighAllocRateCritical  = 5000.0 // MB/s
+	HighHeapUtilWarning    = 0.8
+	HighHeapUtilCritical   = 0.9
+	HighP99PauseInfo       = 50 * time.Millisecond
+	HighP99PauseWarning    = 200 * time.Millisecond
+	MaxFullGCRateWarning   = 1.0 // per hour
+	MaxFullGCRateCritical  = 2.0 // per hour
+	ExcellentThroughput    = 99.0
+	ExcellentP99Pause      = 10 * time.Millisecond
+)
 
-	metrics := &GCMetrics{}
+func (log *GCLog) Analyze(outputFormat string) {
+	metrics := log.CalculateMetrics()
 
-	var totalGCTime time.Duration
-	var durations []time.Duration
-	var youngCount, mixedCount, fullCount int
+	log.Status = log.AssessGCHealth(metrics)
+	log.PrintReport(metrics, outputFormat)
 
-	for _, event := range log.Events {
-		totalGCTime += event.Duration
-		durations = append(durations, event.Duration)
-
-		eventType := strings.ToLower(strings.TrimSpace(event.Type))
-
-		switch eventType {
-		case "young":
-			youngCount++
-		case "mixed":
-			mixedCount++
-		case "full":
-			fullCount++
-		}
-	}
-
-	metrics.TotalGCTime = totalGCTime
-	metrics.YoungGCCount = youngCount
-	metrics.MixedGCCount = mixedCount
-	metrics.FullGCCount = fullCount
-
-	// Calculate runtime and throughput
-	if !log.StartTime.IsZero() && !log.EndTime.IsZero() {
-		metrics.TotalRuntime = log.EndTime.Sub(log.StartTime)
-		if metrics.TotalRuntime > 0 {
-			metrics.Throughput = (1.0 - float64(totalGCTime)/float64(metrics.TotalRuntime)) * 100.0
-		}
-	}
-
-	// Calculate pause time statistics
-	if len(durations) > 0 {
-		slices.Sort(durations)
-
-		metrics.MinPause = durations[0]
-		metrics.MaxPause = durations[len(durations)-1]
-
-		// Calculate average
-		var sum time.Duration
-		for _, d := range durations {
-			sum += d
-		}
-		metrics.AvgPause = sum / time.Duration(len(durations))
-
-		// Calculate percentiles
-		metrics.P95Pause = calculatePercentile(durations, 95)
-		metrics.P99Pause = calculatePercentile(durations, 99)
-	}
-
-	// Calculate allocation rate (MB/second)
-	if metrics.TotalRuntime > 0 && len(log.Events) > 0 {
-		var totalAllocated MemorySize
-		for _, event := range log.Events {
-			// Allocation is roughly heap growth + GC collection
-			if event.HeapBefore > event.HeapAfter {
-				totalAllocated += event.HeapBefore.Sub(event.HeapAfter)
-			}
-		}
-
-		runtimeSeconds := float64(metrics.TotalRuntime) / float64(time.Second)
-		metrics.AllocationRate = totalAllocated.MB() / runtimeSeconds
-	}
-
-	return metrics
+	issues := metrics.DetectPerformanceIssues()
+	PrintRecommendations(issues)
 }
 
-// calculatePercentile calculates the nth percentile of sorted durations
-func calculatePercentile(sortedDurations []time.Duration, percentile int) time.Duration {
-	if len(sortedDurations) == 0 {
-		return 0
-	}
-
-	index := float64(percentile) / 100.0 * float64(len(sortedDurations)-1)
-	lower := int(index)
-	upper := lower + 1
-
-	if upper >= len(sortedDurations) {
-		return sortedDurations[len(sortedDurations)-1]
-	}
-
-	weight := index - float64(lower)
-	return time.Duration(float64(sortedDurations[lower])*(1-weight) + float64(sortedDurations[upper])*weight)
-}
-
-func (log *GCLog) AnalyzePerformanceIssues(metrics *GCMetrics) {
-	fmt.Printf("\n=== Performance Analysis ===\n")
+func (metrics *GCMetrics) DetectPerformanceIssues() []PerformanceIssue {
+	var issues []PerformanceIssue
 
 	// Check throughput
-	if metrics.Throughput < 90.0 {
-		fmt.Printf("⚠️  LOW THROUGHPUT: %.2f%% (target: >90%%)\n", metrics.Throughput)
-	} else {
-		fmt.Printf("✅ Good throughput: %.2f%%\n", metrics.Throughput)
+	if metrics.Throughput < MinThroughputWarning {
+		severity := "warning"
+		if metrics.Throughput < MinThroughputCritical {
+			severity = "critical"
+		}
+		issues = append(issues, PerformanceIssue{
+			Type:     "Low Throughput",
+			Severity: severity,
+			Description: fmt.Sprintf("%.2f%% throughput (target: >%.0f%%)",
+				metrics.Throughput, MinThroughputWarning),
+			Recommendation: []string{
+				"Consider increasing heap size to reduce GC frequency",
+				"Review GC algorithm choice (G1GC vs ZGC vs Parallel)",
+			},
+		})
 	}
 
 	// Check for long pauses
-	longPauseThreshold := 100 * time.Millisecond
-	if metrics.MaxPause > longPauseThreshold {
-		fmt.Printf("⚠️  LONG GC PAUSES: Max pause %v exceeds %v threshold\n",
-			metrics.MaxPause, longPauseThreshold)
+	if metrics.MaxPause > LongPauseThreshold {
+		severity := "warning"
+		if metrics.MaxPause > CriticalPauseThreshold {
+			severity = "critical"
+		}
+		issues = append(issues, PerformanceIssue{
+			Type:     "Long GC Pauses",
+			Severity: severity,
+			Description: fmt.Sprintf("Max pause %v exceeds %v threshold",
+				metrics.MaxPause, LongPauseThreshold),
+			Recommendation: []string{
+				"Tune G1GC parameters: -XX:MaxGCPauseMillis=<target>",
+				"Consider low-latency collectors (ZGC/Shenandoah) for pause-sensitive apps",
+			},
+		})
 	}
 
-	// Check for frequent full GCs
-	if metrics.FullGCCount > 0 {
-		fullGCRate := float64(metrics.FullGCCount) / float64(metrics.TotalRuntime.Hours())
-		if fullGCRate > 1.0 { // More than 1 full GC per hour
-			fmt.Printf("⚠️  FREQUENT FULL GC: %d full GCs in %v (%.2f/hour)\n",
-				metrics.FullGCCount, metrics.TotalRuntime, fullGCRate)
+	// Check for frequent full GCs (with safe division)
+	if metrics.FullGCCount > 0 && metrics.TotalRuntime > 0 {
+		runtimeHours := metrics.TotalRuntime.Hours()
+		if runtimeHours > 0 {
+			fullGCRate := float64(metrics.FullGCCount) / runtimeHours
+			if fullGCRate > MaxFullGCRateWarning {
+				severity := "warning"
+				if fullGCRate > MaxFullGCRateCritical {
+					severity = "critical"
+				}
+				issues = append(issues, PerformanceIssue{
+					Type:     "Frequent Full GC",
+					Severity: severity,
+					Description: fmt.Sprintf("%d full GCs in %v (%.2f/hour)",
+						metrics.FullGCCount, metrics.TotalRuntime, fullGCRate),
+					Recommendation: []string{
+						"Increase heap size to avoid memory pressure",
+						"Review object lifecycle and potential memory leaks",
+					},
+				})
+			}
 		}
 	}
 
 	// Check allocation rate
-	if metrics.AllocationRate > 1000.0 { // > 1GB/s
-		fmt.Printf("⚠️  HIGH ALLOCATION RATE: %.2f MB/s\n", metrics.AllocationRate)
+	if metrics.AllocationRate > HighAllocRateWarning {
+		severity := "warning"
+		if metrics.AllocationRate > HighAllocRateCritical {
+			severity = "critical"
+		}
+		issues = append(issues, PerformanceIssue{
+			Type:        "High Allocation Rate",
+			Severity:    severity,
+			Description: fmt.Sprintf("%.2f MB/s allocation rate", metrics.AllocationRate),
+			Recommendation: []string{
+				"Review object creation patterns and reduce temporary objects",
+				"Consider object pooling for frequently allocated objects",
+				"Profile allocation hotspots with tools like async-profiler",
+			},
+		})
 	}
 
 	// Check for memory pressure
-	events := log.Events
-	if len(events) > 0 {
-		recentEvents := events[max(0, len(events)-10):] // Last 10 events
-		var avgHeapUtil float64
-		for _, event := range recentEvents {
-			if event.HeapTotal > 0 {
-				utilization := float64(event.HeapAfter) / float64(event.HeapTotal)
-				avgHeapUtil += utilization
-			}
+	if metrics.AvgHeapUtil > HighHeapUtilWarning {
+		severity := "warning"
+		if metrics.AvgHeapUtil > HighHeapUtilCritical {
+			severity = "critical"
 		}
-		avgHeapUtil /= float64(len(recentEvents))
+		issues = append(issues, PerformanceIssue{
+			Type:     "High Heap Utilization",
+			Severity: severity,
+			Description: fmt.Sprintf("%.1f%% average heap utilization in recent GCs",
+				metrics.AvgHeapUtil*100),
+			Recommendation: []string{
+				"Increase maximum heap size (-Xmx)",
+				"Review memory usage patterns and optimize data structures",
+				"Consider implementing memory monitoring and alerting",
+			},
+		})
+	}
 
-		if avgHeapUtil > 0.8 { // > 80% heap utilization
-			fmt.Printf("⚠️  HIGH HEAP UTILIZATION: %.1f%% average in recent GCs\n",
-				avgHeapUtil*100)
+	// Check P99 pause times
+	if metrics.P99Pause > HighP99PauseInfo {
+		severity := "info"
+		if metrics.P99Pause > HighP99PauseWarning {
+			severity = "warning"
+		}
+		issues = append(issues, PerformanceIssue{
+			Type:        "High P99 Pause Times",
+			Severity:    severity,
+			Description: fmt.Sprintf("P99 pause time is %v", metrics.P99Pause),
+			Recommendation: []string{
+				"Fine-tune GC pause target: -XX:MaxGCPauseMillis=<lower_value>",
+				"Consider concurrent collection strategies",
+			},
+		})
+	}
+
+	return issues
+}
+
+func (log *GCLog) AssessGCHealth(metrics *GCMetrics) string {
+	if metrics == nil {
+		return "❓ Unknown (Invalid metrics)"
+	}
+
+	issues := metrics.DetectPerformanceIssues()
+
+	criticalIssues := 0
+	warningIssues := 0
+
+	for _, issue := range issues {
+		switch issue.Severity {
+		case "critical":
+			criticalIssues++
+		case "warning":
+			warningIssues++
 		}
 	}
+
+	if criticalIssues > 0 {
+		return "🔴 Critical (Immediate attention required)"
+	}
+
+	if metrics.FullGCCount > 0 {
+		return "⚠️  Needs Attention (Full GC detected)"
+	}
+
+	if warningIssues > 2 {
+		return "⚠️  Poor (Multiple performance issues)"
+	}
+
+	if warningIssues > 0 {
+		return "⚠️  Fair (Minor performance issues)"
+	}
+
+	if metrics.Throughput > ExcellentThroughput && metrics.P99Pause < ExcellentP99Pause {
+		return "✅ Excellent (Optimal performance)"
+	}
+
+	return "✅ Good (Performance within acceptable range)"
 }

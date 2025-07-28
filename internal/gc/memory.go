@@ -23,15 +23,22 @@ func (m MemorySize) String() string {
 		return "0B"
 	}
 
+	formatValue := func(val float64, unit string) string {
+		if val == float64(int64(val)) {
+			return fmt.Sprintf("%.0f%s", val, unit)
+		}
+		return fmt.Sprintf("%.2f%s", val, unit)
+	}
+
 	switch {
 	case m >= TB:
-		return fmt.Sprintf("%.2fT", float64(m)/float64(TB))
+		return formatValue(float64(m)/float64(TB), "T")
 	case m >= GB:
-		return fmt.Sprintf("%.2fG", float64(m)/float64(GB))
+		return formatValue(float64(m)/float64(GB), "G")
 	case m >= MB:
-		return fmt.Sprintf("%.2fM", float64(m)/float64(MB))
+		return formatValue(float64(m)/float64(MB), "M")
 	case m >= KB:
-		return fmt.Sprintf("%.2fK", float64(m)/float64(KB))
+		return formatValue(float64(m)/float64(KB), "K")
 	default:
 		return fmt.Sprintf("%dB", m)
 	}
@@ -64,10 +71,6 @@ func (m MemorySize) TB() float64 {
 
 // ParseMemorySize parses a memory size string like "9M", "2G", "1024K"
 func ParseMemorySize(s string) (MemorySize, error) {
-	if len(s) == 0 {
-		return 0, fmt.Errorf("empty memory size string")
-	}
-
 	s = strings.TrimSpace(s)
 	if len(s) == 0 {
 		return 0, fmt.Errorf("empty memory size string")

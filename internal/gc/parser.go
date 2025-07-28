@@ -25,10 +25,10 @@ func NewParser() *Parser {
 		versionRegex: regexp.MustCompile(`\[gc,init\]\s+Version:\s+([^\s(]+)`),
 
 		// Heap region size: 1M
-		heapRegionRegex: regexp.MustCompile(`\[gc,init\]\s+Heap region size:\s+(\d+[KMGT])`),
+		heapRegionRegex: regexp.MustCompile(`\[gc,init\]\s+Heap Region Size:\s+(\d+[KMGT])`),
 
 		// Maximum heap size: 256M
-		heapMaxRegex: regexp.MustCompile(`\[gc,init\]\s+Maximum heap size:\s+(\d+[KMGT])`),
+		heapMaxRegex: regexp.MustCompile(`\[gc,init\]\s+Heap Max Capacity:\s+(\d+[KMGT])`),
 
 		// [2025-07-27T06:54:55.176-0400]
 		timestampRegex: regexp.MustCompile(`\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{4})\]`),
@@ -223,5 +223,4 @@ func (p *Parser) setLogBounds(log *GCLog) {
 
 	log.StartTime = log.Events[0].Timestamp
 	log.EndTime = log.Events[len(log.Events)-1].Timestamp
-	log.TotalEvents = len(log.Events)
 }
