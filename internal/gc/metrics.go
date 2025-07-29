@@ -1,7 +1,6 @@
 package gc
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -236,8 +235,6 @@ func (metrics *GCMetrics) calculateAdvancedMetrics(events []GCEvent) {
 }
 
 func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
-	fmt.Printf("=== Starting promotion metrics calculation with %d events ===\n", len(events))
-
 	var youngCollections []GCEvent
 	var mixedCollections []GCEvent
 
@@ -251,10 +248,7 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 		}
 	}
 
-	fmt.Printf("Found %d young collections and %d mixed collections\n", len(youngCollections), len(mixedCollections))
-
 	if len(youngCollections) < 2 {
-		fmt.Printf("Not enough young collections (%d) for analysis. Need at least 2.\n", len(youngCollections))
 		return
 	}
 
@@ -265,34 +259,25 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 	consecutiveSpikes := 0
 	currentSpikeCount := 0
 
-	fmt.Printf("Analyzing young collection patterns...\n")
-
 	// Analyze young collection patterns
 	for i := 1; i < len(youngCollections); i++ {
 		prev := youngCollections[i-1]
 		curr := youngCollections[i]
 
-		fmt.Printf("\nAnalyzing pair %d: prev(OldRegions=%d, HeapAfter=%d) -> curr(OldRegions=%d, HeapBefore=%d, HeapAfter=%d)\n",
-			i, prev.OldRegions, prev.HeapAfter, curr.OldRegions, curr.HeapBefore, curr.HeapAfter)
-
 		if prev.OldRegions > 0 && curr.OldRegions >= prev.OldRegions {
 			promoted := float64(curr.OldRegions - prev.OldRegions)
 			promotionRates = append(promotionRates, promoted)
-			fmt.Printf("  Using OldRegions: promoted %.2f regions\n", promoted)
 
 			growthRatio := float64(curr.OldRegions) / float64(prev.OldRegions)
 			oldRegionGrowths = append(oldRegionGrowths, growthRatio)
-			fmt.Printf("  Growth ratio: %.3f\n", growthRatio)
 
 			// Track consecutive growth spikes
 			const OldRegionGrowthWarning = 1.5
 			if growthRatio > OldRegionGrowthWarning {
 				currentSpikeCount++
-				fmt.Printf("  Growth spike detected! Current consecutive count: %d\n", currentSpikeCount)
 			} else {
 				if currentSpikeCount > consecutiveSpikes {
 					consecutiveSpikes = currentSpikeCount
-					fmt.Printf("  End of spike sequence. Max consecutive spikes updated to: %d\n", consecutiveSpikes)
 				}
 				currentSpikeCount = 0
 			}
@@ -303,7 +288,6 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 			collected := curr.HeapBefore - curr.HeapAfter
 			efficiency := float64(collected) / float64(curr.HeapBefore)
 			youngEfficiencies = append(youngEfficiencies, efficiency)
-			fmt.Printf("  Young GC efficiency: %.3f (collected %d bytes)\n", efficiency, collected)
 		}
 
 		// Detect survivor overflow (heuristic: rapid heap growth + low young efficiency)
@@ -318,12 +302,8 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 				promotionThreshold = 20.0
 			}
 
-			fmt.Printf("  Survivor overflow check: promotion=%.2f (threshold=%.1f), efficiency=%.3f\n",
-				lastPromotion, promotionThreshold, lastEfficiency)
-
 			if lastPromotion > promotionThreshold && lastEfficiency < 0.7 {
 				survivorOverflows++
-				fmt.Printf("  SURVIVOR OVERFLOW DETECTED! Total count: %d\n", survivorOverflows)
 			}
 		}
 	}
@@ -331,64 +311,41 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 	// Update final consecutive count
 	if currentSpikeCount > consecutiveSpikes {
 		consecutiveSpikes = currentSpikeCount
-		fmt.Printf("Final consecutive spikes update: %d\n", consecutiveSpikes)
 	}
 
 	metrics.ConsecutiveGrowthSpikes = consecutiveSpikes
-	fmt.Printf("Set ConsecutiveGrowthSpikes: %d\n", consecutiveSpikes)
 
 	if len(promotionRates) > 0 {
 		metrics.AvgPromotionRate = calculateAverage(promotionRates)
 		metrics.MaxPromotionRate = calculateMax(promotionRates)
-		fmt.Printf("Promotion rates - Avg: %.2f, Max: %.2f (from %d samples)\n",
-			metrics.AvgPromotionRate, metrics.MaxPromotionRate, len(promotionRates))
-	} else {
-		fmt.Printf("No promotion rates calculated\n")
 	}
 
 	if len(oldRegionGrowths) > 0 {
 		metrics.AvgOldGrowthRatio = calculateAverage(oldRegionGrowths)
 		metrics.MaxOldGrowthRatio = calculateMax(oldRegionGrowths)
-		fmt.Printf("Old region growth ratios - Avg: %.3f, Max: %.3f (from %d samples)\n",
-			metrics.AvgOldGrowthRatio, metrics.MaxOldGrowthRatio, len(oldRegionGrowths))
-	} else {
-		fmt.Printf("No old region growth ratios calculated\n")
 	}
 
 	if len(youngCollections) > 0 {
 		metrics.SurvivorOverflowRate = float64(survivorOverflows) / float64(len(youngCollections))
-		fmt.Printf("Survivor overflow rate: %.3f (%d overflows / %d young collections)\n",
-			metrics.SurvivorOverflowRate, survivorOverflows, len(youngCollections))
 	}
 
 	// Calculate promotion efficiency (how much promoted data gets cleaned up)
 	if len(mixedCollections) > 0 && len(promotionRates) > 0 {
-		fmt.Printf("Calculating promotion efficiency...\n")
 		totalPromoted := calculateSum(promotionRates)
 		totalMixedCleaned := 0.0
 
-		for i, mixed := range mixedCollections {
+		for _, mixed := range mixedCollections {
 			if mixed.HeapBefore > mixed.HeapAfter {
 				cleaned := float64(mixed.HeapBefore - mixed.HeapAfter)
 				totalMixedCleaned += cleaned
-				fmt.Printf("  Mixed collection %d cleaned: %.2f bytes\n", i, cleaned)
 			}
 		}
-
-		fmt.Printf("Total promoted: %.2f regions, Total mixed cleaned: %.2f bytes\n",
-			totalPromoted, totalMixedCleaned)
 
 		if totalPromoted > 0 {
 			// Rough approximation - how much mixed collections clean vs what was promoted
 			metrics.PromotionEfficiency = totalMixedCleaned / (totalPromoted * 1024 * 1024) // Convert regions to bytes approximately
-			fmt.Printf("Promotion efficiency: %.3f\n", metrics.PromotionEfficiency)
 		}
-	} else {
-		fmt.Printf("Cannot calculate promotion efficiency: mixedCollections=%d, promotionRates=%d\n",
-			len(mixedCollections), len(promotionRates))
 	}
-
-	fmt.Printf("=== Promotion metrics calculation completed ===\n")
 }
 
 // calculatePercentile calculates the nth percentile of sorted durations

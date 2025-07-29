@@ -138,3 +138,14 @@ type PerformanceIssue struct {
 	Description    string
 	Recommendation []string
 }
+
+type MemoryTrend struct {
+	GrowthRateMBPerHour   float64       // Raw memory growth rate
+	GrowthRatePercent     float64       // Growth as % of heap per hour
+	BaselineGrowthRate    float64       // Growth of post-GC baseline
+	TrendConfidence       float64       // R-squared correlation (0-1)
+	ProjectedFullHeapTime time.Duration // Time until heap exhaustion
+	LeakSeverity          string        // none, warning, critical
+	SamplePeriod          time.Duration // Duration of analysis
+	EventCount            int           // Number of GC events analyzed
+}

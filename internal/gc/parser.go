@@ -82,7 +82,7 @@ func NewParser() *Parser {
 		timestampRegex: regexp.MustCompile(`\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{4})\]`),
 
 		// GC(0) Pause Young (Normal) (G1 Evacuation Pause) 9M->2M(16M) 5.326ms
-		gcSummaryRegex: regexp.MustCompile(`GC\((\d+)\)\s+Pause\s+([^(]+)\s*(?:\(([^)]+)\))?\s*(?:\(([^)]+)\))?\s+(\d+[KMGT])->(\d+[KMGT])\((\d+[KMGT])\)\s+([\d.]+)ms`),
+		gcSummaryRegex: regexp.MustCompile(`GC\((\d+)\)\s+Pause\s+(.+?)\s+(\d+[KMGT])->(\d+[KMGT])\((\d+[KMGT])\)\s+([\d.]+)ms`),
 
 		// GC(0) User=0.00s Sys=0.00s Real=0.01s
 		gcCpuRegex: regexp.MustCompile(`GC\((\d+)\)\s+User=([\d.]+)s\s+Sys=([\d.]+)s\s+Real=([\d.]+)s`),
@@ -302,6 +302,8 @@ func (p *Parser) extractTimestamp(line string) time.Time {
 		// handle error
 		return time.Time{}
 	}
+	fmt.Println("Timestamp raw:", matches[1], "parsed:", timestamp)
+
 	return timestamp
 }
 
@@ -318,19 +320,18 @@ func (p *Parser) parseGCSummary(line string, ts time.Time, event *GCEvent) {
 		matches[8] = "5.326"                // Duration: ([\d.]+)
 	*/
 	matches := p.gcSummaryRegex.FindStringSubmatch(line)
-	if len(matches) < 9 {
+	if len(matches) < 7 {
 		return
 	}
 
-	gcType := strings.TrimSpace(matches[2])
-	subType := matches[3]
-	cause := matches[4]
+	fullTypeString := matches[2] // Young (Mixed) (G1 Humongous Allocation) (Evacuation Failure)
+	gcType, subType, cause := parseGCTypeString(fullTypeString)
 
-	heapBefore, _ := ParseMemorySize(matches[5])
-	heapAfter, _ := ParseMemorySize(matches[6])
-	heapTotal, _ := ParseMemorySize(matches[7])
+	heapBefore, _ := ParseMemorySize(matches[3])
+	heapAfter, _ := ParseMemorySize(matches[4])
+	heapTotal, _ := ParseMemorySize(matches[5])
 
-	duration, err := strconv.ParseFloat(matches[8], 64)
+	duration, err := strconv.ParseFloat(matches[6], 64)
 	if err != nil {
 		return
 	}
@@ -480,10 +481,9 @@ func (p *Parser) parseG1RegionDetails(line string, event *GCEvent) {
 
 	if matches := p.regionSummaryRegex.FindStringSubmatch(line); len(matches) >= 4 {
 		regionType := matches[1]
-		regionsBefore, _ := strconv.Atoi(matches[2])
+		// regionsBefore, _ := strconv.Atoi(matches[2])
 		regionsAfter, _ := strconv.Atoi(matches[3])
 		// regionsConfigured, _ := strconv.Atoi(matches[4])
-		fmt.Printf("region type %s: %v -> %v\n", regionType, regionsBefore, regionsAfter)
 
 		switch regionType {
 		case "Eden":
@@ -566,6 +566,62 @@ func extractGCId(line string) int {
 		}
 	}
 	return -1
+}
+
+func parseGCTypeString(typeString string) (gcType, subType, cause string) {
+	// Examples to handle:
+	// "Young (Concurrent Start) (G1 Humongous Allocation)"
+	// "Young (Mixed) (G1 Humongous Allocation) (Evacuation Failure)"
+	// "Full (G1 Compaction Pause)"
+	// "Remark"
+
+	parts := strings.Fields(typeString)
+	if len(parts) == 0 {
+		return "", "", ""
+	}
+
+	gcType = parts[0] // "Young", "Full", "Remark", etc.
+
+	// Extract all parenthetical expressions
+	parentheticals := extractParentheses(typeString)
+
+	if len(parentheticals) > 0 {
+		// First parenthetical is usually subtype
+		subType = parentheticals[0]
+
+		// Look for common cause patterns
+		for _, paren := range parentheticals {
+			if strings.Contains(paren, "Allocation") ||
+				strings.Contains(paren, "Pause") ||
+				strings.Contains(paren, "System.gc") {
+				cause = paren
+				break
+			}
+		}
+
+		// If no specific cause found, use the last parenthetical
+		if cause == "" && len(parentheticals) > 1 {
+			cause = parentheticals[len(parentheticals)-1]
+		}
+	}
+
+	return gcType, subType, cause
+}
+
+func extractParentheses(text string) []string {
+	var results []string
+	start := -1
+
+	for i, char := range text {
+		if char == '(' {
+			start = i + 1
+		} else if char == ')' && start != -1 {
+			results = append(results, text[start:i])
+			start = -1
+		}
+	}
+
+	return results
 }
 
 func (p *Parser) setLogBounds(log *GCLog) {

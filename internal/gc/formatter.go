@@ -17,6 +17,7 @@ func (log *GCLog) PrintReport(metrics *GCMetrics, issues []PerformanceIssue, out
 		log.printSummary(metrics)
 	case "cli-more":
 		log.printDetailed(metrics)
+		log.PrintRecommendations(issues)
 	case "tui":
 		fmt.Println("TUI format not yet implemented")
 	case "html":
@@ -25,9 +26,6 @@ func (log *GCLog) PrintReport(metrics *GCMetrics, issues []PerformanceIssue, out
 		fmt.Printf("Unknown output format '%s', using summary format\n\n", outputFormat)
 		log.printSummary(metrics)
 	}
-
-	// Always print recommendations after the main report
-	log.PrintRecommendations(issues)
 }
 
 func (log *GCLog) printSummary(metrics *GCMetrics) {
@@ -316,7 +314,7 @@ func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
 			fmt.Printf("\n🔴 %s\n", issue.Type)
 			fmt.Printf("   Issue: %s\n", issue.Description)
 			fmt.Println("   Recommended actions:")
-			log.printRecommendationList(issue.Recommendation)
+			log.printFormattedRecommendations(issue.Recommendation)
 		}
 	}
 
@@ -327,7 +325,7 @@ func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
 			fmt.Printf("\n🟡 %s\n", issue.Type)
 			fmt.Printf("   Concern: %s\n", issue.Description)
 			fmt.Println("   Suggested improvements:")
-			log.printRecommendationList(issue.Recommendation)
+			log.printFormattedRecommendations(issue.Recommendation)
 		}
 	}
 
@@ -337,39 +335,20 @@ func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
 		for _, issue := range info {
 			fmt.Printf("\n💡 %s\n", issue.Type)
 			fmt.Printf("   Note: %s\n", issue.Description)
-			log.printRecommendationList(issue.Recommendation)
+			log.printFormattedRecommendations(issue.Recommendation)
 		}
 	}
 }
 
-func (log *GCLog) printRecommendationList(recommendations []string) {
+func (log *GCLog) printFormattedRecommendations(recommendations []string) {
 	for _, rec := range recommendations {
-		// Skip empty lines
-		if strings.TrimSpace(rec) == "" {
-			fmt.Println()
-			continue
-		}
-
-		// Check if this is a section header (ends with colon)
-		if strings.HasSuffix(strings.TrimSpace(rec), ":") {
-			fmt.Printf("   %s\n", rec)
-			continue
-		}
-
-		// Check if this already has numbering (starts with number and dot)
 		trimmed := strings.TrimSpace(rec)
-		if len(trimmed) > 2 && trimmed[0] >= '0' && trimmed[0] <= '9' && trimmed[1] == '.' {
-			fmt.Printf("     %s\n", rec) // Extra indent for numbered items
+
+		// Skip empty lines
+		if trimmed == "" {
 			continue
 		}
 
-		// Check if this starts with a bullet or dash already
-		if strings.HasPrefix(trimmed, "•") || strings.HasPrefix(trimmed, "-") || strings.HasPrefix(trimmed, "*") {
-			fmt.Printf("   %s\n", rec)
-			continue
-		}
-
-		// Default case: add bullet point
-		fmt.Printf("   • %s\n", rec)
+		fmt.Printf("   • %s\n", trimmed)
 	}
 }
