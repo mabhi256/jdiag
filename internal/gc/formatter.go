@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (log *GCLog) PrintReport(metrics *GCMetrics, outputFormat string) {
+func (log *GCLog) PrintReport(metrics *GCMetrics, issues []PerformanceIssue, outputFormat string) {
 	if metrics == nil {
 		fmt.Println("Error: No metrics available for report")
 		return
@@ -14,20 +14,23 @@ func (log *GCLog) PrintReport(metrics *GCMetrics, outputFormat string) {
 
 	switch outputFormat {
 	case "cli":
-		log.printProfessionalSummary(metrics)
+		log.printSummary(metrics)
 	case "cli-more":
-		log.printProfessionalDetailed(metrics)
+		log.printDetailed(metrics)
 	case "tui":
 		fmt.Println("TUI format not yet implemented")
 	case "html":
 		fmt.Println("HTML format not yet implemented")
 	default:
 		fmt.Printf("Unknown output format '%s', using summary format\n\n", outputFormat)
-		log.printProfessionalSummary(metrics)
+		log.printSummary(metrics)
 	}
+
+	// Always print recommendations after the main report
+	log.PrintRecommendations(issues)
 }
 
-func (log *GCLog) printProfessionalSummary(metrics *GCMetrics) {
+func (log *GCLog) printSummary(metrics *GCMetrics) {
 	duration := log.EndTime.Sub(log.StartTime).Round(time.Millisecond)
 
 	// Header
@@ -90,11 +93,19 @@ func (log *GCLog) printProfessionalSummary(metrics *GCMetrics) {
 		fmt.Printf("📊 Allocation Rate: %.1f MB/sec\n", metrics.AllocationRate)
 	}
 
+	// G1GC-specific metrics if available
+	if metrics.YoungCollectionEfficiency > 0 {
+		fmt.Printf("⚡ Young Collection Efficiency: %.1f%%\n", metrics.YoungCollectionEfficiency*100)
+	}
+	if metrics.MixedCollectionEfficiency > 0 {
+		fmt.Printf("🔄 Mixed Collection Efficiency: %.1f%%\n", metrics.MixedCollectionEfficiency*100)
+	}
+
 	// Status
 	fmt.Printf("\n🎯 Overall Assessment: %s\n", log.Status)
 }
 
-func (log *GCLog) printProfessionalDetailed(metrics *GCMetrics) {
+func (log *GCLog) printDetailed(metrics *GCMetrics) {
 	duration := log.EndTime.Sub(log.StartTime)
 
 	fmt.Println("═══════════════════════════════════════════════════════════════════")
@@ -127,6 +138,32 @@ func (log *GCLog) printProfessionalDetailed(metrics *GCMetrics) {
 		}
 		fmt.Println()
 	}
+
+	// G1GC-specific metrics
+	if metrics.YoungCollectionEfficiency > 0 || metrics.MixedCollectionEfficiency > 0 {
+		fmt.Println()
+		fmt.Println("🔧 G1GC COLLECTION EFFICIENCY")
+		fmt.Println(strings.Repeat("─", 50))
+		if metrics.YoungCollectionEfficiency > 0 {
+			fmt.Printf("Young Generation:       %.1f%% efficiency\n", metrics.YoungCollectionEfficiency*100)
+		}
+		if metrics.MixedCollectionEfficiency > 0 {
+			fmt.Printf("Mixed Collections:      %.1f%% efficiency\n", metrics.MixedCollectionEfficiency*100)
+		}
+		if metrics.MixedToYoungRatio > 0 {
+			fmt.Printf("Mixed/Young Ratio:      %.1f%% mixed collections\n", metrics.MixedToYoungRatio*100)
+		}
+		if metrics.PauseTimeVariance > 0 {
+			fmt.Printf("Pause Time Variance:    %.1f%% coefficient of variation\n", metrics.PauseTimeVariance*100)
+		}
+		if metrics.PauseTargetMissRate > 0 {
+			fmt.Printf("Pause Target Miss Rate: %.1f%% collections exceed target\n", metrics.PauseTargetMissRate*100)
+		}
+		if metrics.EvacuationFailureRate > 0 {
+			fmt.Printf("Evacuation Failures:    %.1f%% of collections\n", metrics.EvacuationFailureRate*100)
+		}
+	}
+
 	fmt.Println()
 
 	// Detailed Pause Analysis
@@ -196,12 +233,25 @@ func (log *GCLog) printProfessionalDetailed(metrics *GCMetrics) {
 	}
 	fmt.Println()
 
-	// Assessment
-	fmt.Println("🎯 ASSESSMENT")
-	fmt.Println(strings.Repeat("─", 50))
-	fmt.Printf("Overall Status:        %s\n", log.Status)
-	fmt.Printf("Data Confidence:       %s\n", getConfidenceLevel(metrics.TotalEvents))
-	fmt.Println()
+	// G1GC Region Analysis (if available)
+	if metrics.AvgRegionUtilization > 0 {
+		fmt.Println("🏗️  G1GC REGION ANALYSIS")
+		fmt.Println(strings.Repeat("─", 50))
+		fmt.Printf("Average Region Utilization: %.1f%%", metrics.AvgRegionUtilization*100)
+		if metrics.AvgRegionUtilization > 0.85 {
+			fmt.Printf(" ⚠️  [High - may cause evacuation pressure]")
+		} else if metrics.AvgRegionUtilization > 0.7 {
+			fmt.Printf(" [Moderate]")
+		} else {
+			fmt.Printf(" [Good]")
+		}
+		fmt.Println()
+
+		if metrics.AllocationBurstCount > 0 {
+			fmt.Printf("Allocation Bursts:          %d detected\n", metrics.AllocationBurstCount)
+		}
+		fmt.Println()
+	}
 }
 
 // Clean helper functions for professional output
@@ -230,19 +280,9 @@ func getPauseAssessmentWithIcon(maxPause time.Duration) (string, string) {
 	}
 }
 
-func getConfidenceLevel(totalEvents int) string {
-	if totalEvents < 10 {
-		return "Low (Limited sample size)"
-	} else if totalEvents < 50 {
-		return "Moderate"
-	} else {
-		return "High"
-	}
-}
-
-func PrintRecommendations(issues []PerformanceIssue) {
+func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
 	if len(issues) == 0 {
-		fmt.Println("💡 RECOMMENDATIONS")
+		fmt.Println("\n💡 RECOMMENDATIONS")
 		fmt.Println(strings.Repeat("─", 50))
 		fmt.Println("✅ No performance issues detected.")
 		fmt.Println("   Current GC configuration appears optimal.")
@@ -250,7 +290,7 @@ func PrintRecommendations(issues []PerformanceIssue) {
 		return
 	}
 
-	fmt.Println("🚀 PERFORMANCE RECOMMENDATIONS")
+	fmt.Println("\n🚀 PERFORMANCE RECOMMENDATIONS")
 	fmt.Println(strings.Repeat("─", 50))
 
 	// Group by severity
@@ -276,9 +316,7 @@ func PrintRecommendations(issues []PerformanceIssue) {
 			fmt.Printf("\n🔴 %s\n", issue.Type)
 			fmt.Printf("   Issue: %s\n", issue.Description)
 			fmt.Println("   Recommended actions:")
-			for _, rec := range issue.Recommendation {
-				fmt.Printf("   • %s\n", rec)
-			}
+			log.printRecommendationList(issue.Recommendation)
 		}
 	}
 
@@ -289,9 +327,7 @@ func PrintRecommendations(issues []PerformanceIssue) {
 			fmt.Printf("\n🟡 %s\n", issue.Type)
 			fmt.Printf("   Concern: %s\n", issue.Description)
 			fmt.Println("   Suggested improvements:")
-			for _, rec := range issue.Recommendation {
-				fmt.Printf("   • %s\n", rec)
-			}
+			log.printRecommendationList(issue.Recommendation)
 		}
 	}
 
@@ -301,9 +337,39 @@ func PrintRecommendations(issues []PerformanceIssue) {
 		for _, issue := range info {
 			fmt.Printf("\n💡 %s\n", issue.Type)
 			fmt.Printf("   Note: %s\n", issue.Description)
-			for _, rec := range issue.Recommendation {
-				fmt.Printf("   • %s\n", rec)
-			}
+			log.printRecommendationList(issue.Recommendation)
 		}
+	}
+}
+
+func (log *GCLog) printRecommendationList(recommendations []string) {
+	for _, rec := range recommendations {
+		// Skip empty lines
+		if strings.TrimSpace(rec) == "" {
+			fmt.Println()
+			continue
+		}
+
+		// Check if this is a section header (ends with colon)
+		if strings.HasSuffix(strings.TrimSpace(rec), ":") {
+			fmt.Printf("   %s\n", rec)
+			continue
+		}
+
+		// Check if this already has numbering (starts with number and dot)
+		trimmed := strings.TrimSpace(rec)
+		if len(trimmed) > 2 && trimmed[0] >= '0' && trimmed[0] <= '9' && trimmed[1] == '.' {
+			fmt.Printf("     %s\n", rec) // Extra indent for numbered items
+			continue
+		}
+
+		// Check if this starts with a bullet or dash already
+		if strings.HasPrefix(trimmed, "•") || strings.HasPrefix(trimmed, "-") || strings.HasPrefix(trimmed, "*") {
+			fmt.Printf("   %s\n", rec)
+			continue
+		}
+
+		// Default case: add bullet point
+		fmt.Printf("   • %s\n", rec)
 	}
 }

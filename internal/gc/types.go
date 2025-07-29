@@ -19,6 +19,52 @@ type GCEvent struct {
 	UserTime   time.Duration
 	SystemTime time.Duration
 	RealTime   time.Duration
+
+	// G1GC timing fields (Microsoft GC Toolkit patterns)
+	PreEvacuateTime         time.Duration
+	PostEvacuateTime        time.Duration
+	ExtRootScanTime         time.Duration
+	UpdateRSTime            time.Duration
+	ScanRSTime              time.Duration
+	CodeRootScanTime        time.Duration
+	ObjectCopyTime          time.Duration
+	TerminationTime         time.Duration
+	WorkerOtherTime         time.Duration
+	ReferenceProcessingTime time.Duration
+	EvacuationFailureTime   time.Duration
+
+	// G1GC region information
+	RegionSize            MemorySize
+	YoungRegions          int
+	YoungRegionsMemory    MemorySize
+	SurvivorRegions       int
+	SurvivorRegionsMemory MemorySize
+	EdenRegions           int
+	SurvivorRegionsAfter  int
+	OldRegions            int
+	HumongousRegions      int
+	HeapTotalRegions      int
+	HeapUsedRegions       int
+
+	// Worker thread information
+	WorkersUsed      int
+	WorkersAvailable int
+
+	// G1GC-specific flags
+	ToSpaceExhausted bool
+
+	// Metaspace information
+	MetaspaceUsed      MemorySize
+	MetaspaceCapacity  MemorySize
+	MetaspaceCommitted MemorySize
+	MetaspaceReserved  MemorySize
+	ClassSpaceUsed     MemorySize
+	ClassSpaceCapacity MemorySize
+
+	// Concurrent marking details
+	ConcurrentPhase    string
+	ConcurrentDuration time.Duration
+	ConcurrentCycleId  int
 }
 
 type GCLog struct {
@@ -52,6 +98,38 @@ type GCMetrics struct {
 	MaxPause     time.Duration
 	P95Pause     time.Duration
 	P99Pause     time.Duration
+
+	// G1GC collection analysis
+	YoungCollectionEfficiency float64
+	MixedCollectionEfficiency float64
+	MixedToYoungRatio         float64
+	ConcurrentCycleDuration   time.Duration
+	ConcurrentCycleFrequency  float64
+
+	// G1GC pause time analysis
+	PauseTimeVariance   float64
+	PauseTargetMissRate float64
+	LongPauseCount      int
+
+	// G1GC region analysis
+	AvgRegionUtilization   float64
+	RegionExhaustionEvents int
+	EvacuationFailureRate  float64
+
+	// G1GC concurrent marking
+	ConcurrentMarkingKeepup  bool
+	ConcurrentCycleFailures  int
+	IHOPTriggeredCollections int
+
+	// G1GC allocation patterns
+	AllocationBurstCount    int
+	AvgPromotionRate        float64 // regions promoted per young GC
+	MaxPromotionRate        float64
+	AvgOldGrowthRatio       float64
+	MaxOldGrowthRatio       float64
+	SurvivorOverflowRate    float64 // % of collections with survivor overflow
+	PromotionEfficiency     float64 // how much promoted data survives concurrent mark
+	ConsecutiveGrowthSpikes int     // consecutive high-growth young GCs
 }
 
 type PerformanceIssue struct {

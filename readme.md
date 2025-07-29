@@ -122,6 +122,21 @@ goreleaser release --clean
 - *Analysis*: Trend projection, utilization modeling, scenario planning
 - *Output*: "Based on allocation trends, recommend increasing heap to 1GB by Q2"
 
+1. Historical Baseline Comparison
+   - Distinguishes between "normal bad" vs "newly bad" performance
+   - Enables regression detection after deployments
+   - Compare current performance against 7-day, 30-day moving averages
+
+2. Streaming Real-time Analysis
+    - Enable immediate alerts for GC storms
+    - Catch transient issues that don't show up in daily log analysis
+    - Allow proactive intervention before user impact
+
+3. Predictive Analytics (Prevents Outages)
+    - Forecast when applications will hit memory limits
+    - Predict when GC pauses will exceed SLA thresholds
+    - Enable proactive scaling decisions
+
 ## Todo
 
 ```bash
@@ -137,3 +152,45 @@ jdiag gc analyze huge.log --mode=sample    // Analyze every 10th event
 jdiag gc analyze huge.log --mode=recent    // Last 1000 events only
 jdiag gc analyze huge.log --mode=streaming // Process in chunks
 ```
+
+| **Problem Category** | **Specific Issue** | **Primary Metrics** | **Thresholds** | **Additional Context** |
+|---------------------|-------------------|-------------------|---------------|----------------------|
+| **Memory Leaks** | Memory Leak Pattern | • Heap growth trend (linear regression)<br>• Old region growth slope<br>• Consecutive growth cycles | • Growth rate >5% per collection<br>• >15 consecutive growth cycles | • `HeapAfter` trend analysis<br>• Old generation region count |
+| **Evacuation Issues** | Evacuation Failures | • `EvacuationFailure` count<br>• Evacuation failure rate<br>• `ObjectCopyTime` average | • Failure rate >2%<br>• Object copy >50ms | • `ToSpaceExhausted` events<br>• `EvacuationFailureTime` |
+| | Poor Evacuation Efficiency | • Eden regions before/after<br>• Evacuation efficiency ratio | • Efficiency <80% | • Region evacuation patterns |
+| **Pause Time Issues** | Pause Target Violations | • `PauseTargetMissRate`<br>• `PauseTimeVariance`<br>• Pause percentiles (P95, P99) | • Miss rate >20%<br>• High variance (>50%) | • Individual phase timing |
+| | Phase-Specific Delays | • `ObjectCopyTime`<br>• `ExtRootScanTime`<br>• `TerminationTime`<br>• `ReferenceProcessingTime` | • Object Copy >50ms<br>• Root Scan >30ms<br>• Termination >10ms<br>• Ref Processing >20ms | • Worker thread utilization |
+| **Mixed Collections** | Missing Mixed Collections | • Mixed collection count<br>• Mixed-to-young ratio | • Ratio <5% | • `MixedGCCount` vs `YoungGCCount` |
+| | Inefficient Mixed Collections | • Mixed collection efficiency<br>• Regions reclaimed vs selected | • Efficiency <30% | • Old generation cleanup rate |
+| **Concurrent Marking** | Marking Falling Behind | • `ConcurrentMarkingKeepup` flag<br>• Allocation rate vs marking speed | • Cannot keep up indicator | • Mixed collection frequency |
+| | Long Concurrent Phases | • `ConcurrentDuration` per phase<br>• Phase-specific thresholds | • Mark >5s<br>• Scan Root Regions >100ms<br>• Create Live Data >2s | • Individual concurrent phase timing |
+| **Memory Pressure** | High Heap Utilization | • `AvgHeapUtil`<br>• Region utilization patterns | • >80% warning<br>• >90% critical | • `HeapUsedRegions`/`HeapTotalRegions` |
+| | Region Exhaustion | • Region utilization rate<br>• Fragmentation analysis | • >85% utilization<br>• High fragmentation | • Region distribution patterns |
+| **Allocation Issues** | High Allocation Rate | • `AllocationRate` (MB/s)<br>• Allocation bursts | • >1000 MB/s warning<br>• >5000 MB/s critical | • Heap growth between collections |
+| | Allocation Bursts | • Allocation spikes count<br>• Irregular patterns | • >10% irregular intervals | • Statistical spike detection |
+| | Premature Promotion | • Young generation efficiency<br>• Promotion rate | • Efficiency <70%<br>• Promotion >20% | • Survivor overflow analysis |
+| **Worker Thread Issues** | Work Imbalance | • `TerminationTime`<br>• Worker utilization variance | • Termination >10ms | • Work distribution analysis |
+| | Thread Saturation | • `WorkersUsed`/`WorkersAvailable`<br>• Worker efficiency | • >95% utilization | • Thread utilization patterns |
+| | Underutilization | • Worker thread usage ratio | • <50% utilization | • Thread scaling issues |
+| **Reference Processing** | Ref Processing Bottleneck | • `ReferenceProcessingTime`<br>• Reference processing frequency | • >20ms average<br>• >50ms critical | • Weak/Soft reference patterns |
+| **GC Thrashing** | Excessive GC Frequency | • GC frequency (collections/sec)<br>• Short interval count | • >5 collections/sec<br>• >30% short intervals | • Collection interval analysis |
+| **Full GC Issues** | Full GC Events | • `FullGCCount`<br>• Full GC rate per hour | • Any Full GC is critical | • G1 fallback indicators |
+| **Region Sizing** | Poor Region Utilization | • Region size vs allocation patterns<br>• Region efficiency metrics | • Very high/low utilization | • Region size optimization |
+| **Metaspace Issues** | Metaspace Pressure | • Metaspace-triggered collections<br>• Metaspace growth rate | • Any metaspace collections | • ClassLoader leak indicators |
+
+## **Key Derived Metrics:**
+
+| **Calculated Metric** | **Formula** | **Used For** |
+|---------------------|-------------|--------------|
+| `Throughput` | `(TotalRuntime - TotalGCTime) / TotalRuntime * 100` | Overall performance |
+| `AllocationRate` | `HeapGrowth / TimeBetweenCollections` | Allocation pressure |
+| `PromotionRate` | `OldGenGrowth / YoungGenSize` | Object lifecycle |
+| `GCFrequency` | `CollectionCount / TotalTime` | GC thrashing |
+| `PauseVariance` | `StdDev(PauseTimes) / Mean(PauseTimes)` | Pause predictability |
+| `RegionUtilization` | `UsedRegions / TotalRegions` | Memory efficiency |
+
+## **Critical Thresholds Summary:**
+
+- **🔴 Critical**: Evacuation failures >5%, Full GC events, Throughput <80%, Pause variance >100%
+- **⚠️ Warning**: Throughput <90%, Allocation rate >1GB/s, Heap utilization >80%, Phase timing beyond targets
+- **✅ Good**: Throughput >95%, Low pause variance, Efficient mixed collections, No evacuation failures
