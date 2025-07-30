@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -47,17 +48,31 @@ var gcAnalyzeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Analyzing GC log: %s\n", args[0])
 		parser := gc.NewParser()
-		log, err := parser.ParseFile(args[0])
+		rawLog, err := parser.ParseFile(args[0])
 		if err != nil {
 			fmt.Printf("Error parsing GC log: %v\n", err)
 			return
 		}
 
-		log.Analyze(outputFormat)
+		analyzedLog, metrics, issues := rawLog.GetAnalysisData()
+
+		switch outputFormat {
+		case "cli":
+			analyzedLog.PrintSummary(metrics)
+		case "cli-more":
+			analyzedLog.PrintDetailed(metrics)
+			analyzedLog.PrintRecommendations(issues)
+		case "tui":
+			tui.StartTUI(analyzedLog, metrics, issues)
+		case "html":
+			fmt.Println("HTML format not yet implemented")
+		default:
+			analyzedLog.PrintSummary(metrics)
+		}
 	},
 }
 
-// TODO: add summary, analyze, compare, export, watch commands
+// TODO: add compare, export, watch commands
 
 func init() {
 	rootCmd.AddCommand(gcCmd)

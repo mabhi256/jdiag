@@ -194,3 +194,134 @@ jdiag gc analyze huge.log --mode=streaming // Process in chunks
 - **🔴 Critical**: Evacuation failures >5%, Full GC events, Throughput <80%, Pause variance >100%
 - **⚠️ Warning**: Throughput <90%, Allocation rate >1GB/s, Heap utilization >80%, Phase timing beyond targets
 - **✅ Good**: Throughput >95%, Low pause variance, Efficient mixed collections, No evacuation failures
+
+internal/
+├── common/
+│   ├── types.go              # Universal types (Duration, MemorySize, etc.)
+│   ├── interfaces.go         # Common interfaces across all analyzers
+│   └── utils.go              # Universal utilities
+├── gc/
+│   ├── common/
+│   │   ├── interfaces.go     # GC-specific interfaces
+│   │   └── types.go          # GC shared types
+│   ├── g1gc/
+│   │   ├── parser.go
+│   │   ├── metrics.go
+│   │   ├── analysis.go
+│   │   └── types.go
+│   ├── zgc/
+│   │   ├── parser.go
+│   │   ├── metrics.go  
+│   │   ├── analysis.go
+│   │   └── types.go
+│   └── parallel/             # Future: Parallel GC
+├── heap/
+│   ├── common/
+│   │   ├── interfaces.go     # Heap analysis interfaces
+│   │   └── types.go          # Heap shared types  
+│   ├── hprof/
+│   │   ├── parser.go         # .hprof file parsing
+│   │   ├── metrics.go        # Object stats, leak detection
+│   │   ├── analysis.go       # Memory leak patterns
+│   │   └── types.go
+│   ├── jfr/
+│   │   ├── parser.go         # JFR heap events parsing
+│   │   ├── metrics.go
+│   │   ├── analysis.go
+│   │   └── types.go
+│   └── mat/                  # Future: Eclipse MAT integration
+├── thread/
+│   ├── common/
+│   │   ├── interfaces.go     # Thread analysis interfaces
+│   │   └── types.go          # Thread shared types
+│   ├── jstack/
+│   │   ├── parser.go         # jstack output parsing
+│   │   ├── metrics.go        # Deadlock, contention analysis
+│   │   ├── analysis.go       # Thread patterns
+│   │   └── types.go
+│   ├── jfr/
+│   │   ├── parser.go         # JFR thread events
+│   │   ├── metrics.go
+│   │   ├── analysis.go
+│   │   └── types.go
+│   └── flight/               # Future: Flight Recorder integration
+├── output/
+│   ├── common/
+│   │   ├── colors.go         # Universal color schemes
+│   │   ├── tables.go         # Table formatting utilities
+│   │   ├── charts.go         # ASCII chart utilities
+│   │   └── utils.go          # Common formatting functions
+│   ├── cli/
+│   │   ├── common/
+│   │   │   ├── layout.go     # CLI layout utilities
+│   │   │   └── templates.go  # CLI templates
+│   │   ├── gc/
+│   │   │   ├── g1gc.go       # G1GC CLI formatter
+│   │   │   └── zgc.go        # ZGC CLI formatter
+│   │   ├── heap/
+│   │   │   ├── hprof.go      # Heap dump CLI formatter
+│   │   │   └── jfr.go        # JFR heap CLI formatter
+│   │   └── thread/
+│   │       ├── jstack.go     # Thread dump CLI formatter
+│   │       └── jfr.go        # JFR thread CLI formatter
+│   ├── tui/
+│   │   ├── app.go            # Main TUI coordinator
+│   │   ├── common/
+│   │   │   ├── navigation.go # Common TUI navigation
+│   │   │   ├── styles.go     # TUI styles
+│   │   │   └── components.go # Reusable TUI components
+│   │   ├── gc/
+│   │   │   ├── g1gc/
+│   │   │   │   ├── dashboard.go
+│   │   │   │   ├── metrics.go
+│   │   │   │   └── issues.go
+│   │   │   └── zgc/
+│   │   │       ├── dashboard.go
+│   │   │       ├── metrics.go
+│   │   │       └── issues.go
+│   │   ├── heap/
+│   │   │   ├── hprof/
+│   │   │   │   ├── overview.go   # Object distribution
+│   │   │   │   ├── leaks.go      # Memory leak analysis
+│   │   │   │   └── objects.go    # Top objects view
+│   │   │   └── jfr/
+│   │   │       ├── allocation.go # Allocation tracking
+│   │   │       └── timeline.go   # Heap over time
+│   │   └── thread/
+│   │       ├── jstack/
+│   │       │   ├── overview.go   # Thread states overview
+│   │       │   ├── deadlock.go   # Deadlock analysis
+│   │       │   └── contention.go # Lock contention
+│   │       └── jfr/
+│   │           ├── activity.go   # Thread activity
+│   │           └── blocking.go   # Blocking events
+│   └── html/
+│       ├── common/
+│       │   ├── templates.go      # HTML templates
+│       │   ├── assets.go         # CSS/JS assets  
+│       │   └── charts.go         # Chart.js integration
+│       ├── gc/
+│       │   ├── g1gc.go
+│       │   └── zgc.go
+│       ├── heap/
+│       │   ├── hprof.go
+│       │   └── jfr.go
+│       └── thread/
+│           ├── jstack.go
+│           └── jfr.go
+└── detector/
+    ├── file.go                   # Auto-detect file types
+    ├── gc.go                     # Auto-detect GC type  
+    └── format.go                 # Auto-detect dump formats
+
+```bash
+jdiag gc analyze gc.log -o cli|tui|html
+jdiag heap analyze heap.hprof -o cli|tui|html
+jdiag thread analyze thread.dump -o cli|tui|html  
+
+# analyze/compare/watch/export 
+jdiag jfr analyze recording.jfr
+jdiag gc watch gc.log
+jdiag jfr watch recording.jfr
+
+```
