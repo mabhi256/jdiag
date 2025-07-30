@@ -2,7 +2,6 @@ package gc
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"regexp"
 	"sort"
@@ -302,7 +301,6 @@ func (p *Parser) extractTimestamp(line string) time.Time {
 		// handle error
 		return time.Time{}
 	}
-	fmt.Println("Timestamp raw:", matches[1], "parsed:", timestamp)
 
 	return timestamp
 }

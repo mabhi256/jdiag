@@ -139,6 +139,12 @@ type PerformanceIssue struct {
 	Recommendation []string
 }
 
+type Analysis struct {
+	Critical []PerformanceIssue
+	Warning  []PerformanceIssue
+	Info     []PerformanceIssue
+}
+
 type MemoryTrend struct {
 	GrowthRateMBPerHour   float64       // Raw memory growth rate
 	GrowthRatePercent     float64       // Growth as % of heap per hour

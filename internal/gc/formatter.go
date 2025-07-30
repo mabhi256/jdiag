@@ -6,29 +6,7 @@ import (
 	"time"
 )
 
-func (log *GCLog) PrintReport(metrics *GCMetrics, issues []PerformanceIssue, outputFormat string) {
-	if metrics == nil {
-		fmt.Println("Error: No metrics available for report")
-		return
-	}
-
-	switch outputFormat {
-	case "cli":
-		log.printSummary(metrics)
-	case "cli-more":
-		log.printDetailed(metrics)
-		log.PrintRecommendations(issues)
-	case "tui":
-		fmt.Println("TUI format not yet implemented")
-	case "html":
-		fmt.Println("HTML format not yet implemented")
-	default:
-		fmt.Printf("Unknown output format '%s', using summary format\n\n", outputFormat)
-		log.printSummary(metrics)
-	}
-}
-
-func (log *GCLog) printSummary(metrics *GCMetrics) {
+func (log *GCLog) PrintSummary(metrics *GCMetrics) {
 	duration := log.EndTime.Sub(log.StartTime).Round(time.Millisecond)
 
 	// Header
@@ -103,7 +81,7 @@ func (log *GCLog) printSummary(metrics *GCMetrics) {
 	fmt.Printf("\n🎯 Overall Assessment: %s\n", log.Status)
 }
 
-func (log *GCLog) printDetailed(metrics *GCMetrics) {
+func (log *GCLog) PrintDetailed(metrics *GCMetrics) {
 	duration := log.EndTime.Sub(log.StartTime)
 
 	fmt.Println("═══════════════════════════════════════════════════════════════════")
@@ -278,8 +256,10 @@ func getPauseAssessmentWithIcon(maxPause time.Duration) (string, string) {
 	}
 }
 
-func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
-	if len(issues) == 0 {
+func (log *GCLog) PrintRecommendations(issues *Analysis) {
+	totalIssues := len(issues.Critical) + len(issues.Warning) + len(issues.Info)
+
+	if totalIssues == 0 {
 		fmt.Println("\n💡 RECOMMENDATIONS")
 		fmt.Println(strings.Repeat("─", 50))
 		fmt.Println("✅ No performance issues detected.")
@@ -291,26 +271,10 @@ func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
 	fmt.Println("\n🚀 PERFORMANCE RECOMMENDATIONS")
 	fmt.Println(strings.Repeat("─", 50))
 
-	// Group by severity
-	critical := []PerformanceIssue{}
-	warnings := []PerformanceIssue{}
-	info := []PerformanceIssue{}
-
-	for _, issue := range issues {
-		switch issue.Severity {
-		case "critical":
-			critical = append(critical, issue)
-		case "warning":
-			warnings = append(warnings, issue)
-		default:
-			info = append(info, issue)
-		}
-	}
-
 	// Critical issues
-	if len(critical) > 0 {
+	if len(issues.Critical) > 0 {
 		fmt.Println("\n🚩 CRITICAL ISSUES - Immediate attention required:")
-		for _, issue := range critical {
+		for _, issue := range issues.Critical {
 			fmt.Printf("\n🔴 %s\n", issue.Type)
 			fmt.Printf("   Issue: %s\n", issue.Description)
 			fmt.Println("   Recommended actions:")
@@ -319,9 +283,9 @@ func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
 	}
 
 	// Warning issues
-	if len(warnings) > 0 {
+	if len(issues.Warning) > 0 {
 		fmt.Println("\n⚠️  WARNINGS - Address when possible:")
-		for _, issue := range warnings {
+		for _, issue := range issues.Warning {
 			fmt.Printf("\n🟡 %s\n", issue.Type)
 			fmt.Printf("   Concern: %s\n", issue.Description)
 			fmt.Println("   Suggested improvements:")
@@ -330,9 +294,9 @@ func (log *GCLog) PrintRecommendations(issues []PerformanceIssue) {
 	}
 
 	// Optimization opportunities
-	if len(info) > 0 {
+	if len(issues.Info) > 0 {
 		fmt.Println("\n📈 OPTIMIZATION OPPORTUNITIES:")
-		for _, issue := range info {
+		for _, issue := range issues.Info {
 			fmt.Printf("\n💡 %s\n", issue.Type)
 			fmt.Printf("   Note: %s\n", issue.Description)
 			log.printFormattedRecommendations(issue.Recommendation)

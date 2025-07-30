@@ -74,14 +74,15 @@ const (
 	EvacFailureRateWarning  = 1.0 // 1% evacuation failure rate
 )
 
-func (log *GCLog) Analyze(outputFormat string) {
+func (log *GCLog) GetAnalysisData() (*GCLog, *GCMetrics, *Analysis) {
 	metrics := log.CalculateMetrics()
-	issues := metrics.DetectPerformanceIssues(log.Events)
-	log.Status = log.AssessGCHealth(metrics, issues)
-	log.PrintReport(metrics, issues, outputFormat)
+	analysis := metrics.DetectPerformanceIssues(log.Events)
+	log.Status = log.AssessGCHealth(metrics, analysis)
+
+	return log, metrics, analysis
 }
 
-func (metrics *GCMetrics) DetectPerformanceIssues(events []GCEvent) []PerformanceIssue {
+func (metrics *GCMetrics) DetectPerformanceIssues(events []GCEvent) *Analysis {
 	var issues []PerformanceIssue
 
 	issues = append(issues, analyzeHumongousObjects(events)...)
@@ -96,7 +97,7 @@ func (metrics *GCMetrics) DetectPerformanceIssues(events []GCEvent) []Performanc
 	issues = append(issues, analyzeCollectionEfficiency(metrics, events)...)
 	issues = append(issues, analyzeDetailedPhases(events)...)
 
-	return issues
+	return groupIssuesBySeverity(issues)
 }
 
 func analyzeFullGCProblems(metrics *GCMetrics) []PerformanceIssue {
@@ -777,22 +778,13 @@ func generateAllocationAdvice(metrics *GCMetrics) string {
 	return "Monitor allocation patterns and object lifecycle"
 }
 
-func (log *GCLog) AssessGCHealth(metrics *GCMetrics, issues []PerformanceIssue) string {
+func (log *GCLog) AssessGCHealth(metrics *GCMetrics, issues *Analysis) string {
 	if metrics == nil {
 		return "❓ Unknown"
 	}
 
-	criticalCount := 0
-	warningCount := 0
-
-	for _, issue := range issues {
-		switch issue.Severity {
-		case "critical":
-			criticalCount++
-		case "warning":
-			warningCount++
-		}
-	}
+	criticalCount := len(issues.Critical)
+	warningCount := len(issues.Warning)
 
 	if criticalCount > 0 {
 		return "🔴 Critical"
@@ -1198,4 +1190,21 @@ func detectShortTermMemoryLeaks(events []GCEvent) []PerformanceIssue {
 	}
 
 	return issues
+}
+
+func groupIssuesBySeverity(allIssues []PerformanceIssue) *Analysis {
+	var analyzed Analysis
+
+	for _, issue := range allIssues {
+		switch issue.Severity {
+		case "critical":
+			analyzed.Critical = append(analyzed.Critical, issue)
+		case "warning":
+			analyzed.Warning = append(analyzed.Warning, issue)
+		default:
+			analyzed.Info = append(analyzed.Info, issue)
+		}
+	}
+
+	return &analyzed
 }
