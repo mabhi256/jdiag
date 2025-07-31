@@ -8,18 +8,19 @@ import (
 	"github.com/mabhi256/jdiag/internal/gc"
 )
 
-func RenderMetrics(metrics *gc.GCMetrics, subTab MetricsSubTab, width, height, scrollY int) string {
-	if metrics == nil {
+func (m *Model) RenderMetrics() string {
+	if m.metrics == nil {
 		return "Loading metrics..."
 	}
 
-	tabs := renderMetricsSubTabs(subTab)
-	content := renderMetricsContent(metrics, subTab)
+	tabs := renderMetricsSubTabs(m.metricsSubTab)
+	content := renderMetricsContent(m.metrics, m.metricsSubTab)
 
 	// Apply scrolling if needed
 	contentLines := strings.Split(content, "\n")
-	availableHeight := height - 2 // Account for tabs
+	availableHeight := m.height - 4 // Account for tabs
 
+	scrollY := m.scrollPositions[MetricsTab]
 	if len(contentLines) > availableHeight {
 		maxScrollY := len(contentLines) - availableHeight
 		if scrollY > maxScrollY {
@@ -52,7 +53,7 @@ func renderMetricsSubTabs(currentSub MetricsSubTab) string {
 		if MetricsSubTab(i) == currentSub {
 			style = TabActiveStyle
 		}
-		rendered = append(rendered, style.Render(fmt.Sprintf("[%d] %s", i+1, tab)))
+		rendered = append(rendered, style.Render(tab))
 	}
 
 	return strings.Join(rendered, "  ")
@@ -389,10 +390,7 @@ func formatMetricWithStatus(label, value string, current, target float64, better
 	}
 
 	// Calculate padding for alignment
-	labelPadding := 22 - len(label)
-	if labelPadding < 1 {
-		labelPadding = 1
-	}
+	labelPadding := max(22-len(label), 1)
 
 	return fmt.Sprintf("%s%s%s %s",
 		label,

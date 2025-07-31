@@ -109,20 +109,6 @@ func renderIssuesHeader(issues *gc.Analysis, filterSev string) string {
 	return header
 }
 
-func getFilteredIssues(issues []gc.PerformanceIssue, filterSev string) []gc.PerformanceIssue {
-	if filterSev == "all" {
-		return issues
-	}
-
-	var filtered []gc.PerformanceIssue
-	for _, issue := range issues {
-		if strings.ToLower(issue.Severity) == filterSev {
-			filtered = append(filtered, issue)
-		}
-	}
-	return filtered
-}
-
 func renderNoIssues() string {
 	return GoodStyle.Render("✅ No performance issues detected!\n\nYour G1GC configuration appears to be working well.")
 }

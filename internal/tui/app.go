@@ -42,6 +42,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 
+		case "tab":
+			// Cycle through tabs: Dashboard -> Metrics -> Issues -> Dashboard
+			switch m.currentTab {
+			case DashboardTab:
+				m.currentTab = MetricsTab
+			case MetricsTab:
+				m.currentTab = IssuesTab
+			case IssuesTab:
+				m.currentTab = DashboardTab
+			}
+
 		case "1":
 			m.currentTab = DashboardTab
 		case "2":
@@ -105,16 +116,6 @@ func (m *Model) handleRightNavigation() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) getFilterIndex() int {
-	filters := []string{"critical", "warning", "info"}
-	for i, filter := range filters {
-		if filter == m.issuesFilter {
-			return i
-		}
-	}
-	return 0 // Default to "critical"
-}
-
 func (m *Model) handleTabSpecificKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.currentTab {
 	case DashboardTab:
@@ -151,21 +152,6 @@ func (m *Model) handleMetricsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		// Will be bounded in rendering
 		m.scrollPositions[MetricsTab]++
-	case "1":
-		m.metricsSubTab = GeneralMetrics
-		m.scrollPositions[MetricsTab] = 0
-	case "2":
-		m.metricsSubTab = TimingMetrics
-		m.scrollPositions[MetricsTab] = 0
-	case "3":
-		m.metricsSubTab = MemoryMetrics
-		m.scrollPositions[MetricsTab] = 0
-	case "4":
-		m.metricsSubTab = G1GCMetrics
-		m.scrollPositions[MetricsTab] = 0
-	case "5":
-		m.metricsSubTab = ConcurrentMetrics
-		m.scrollPositions[MetricsTab] = 0
 	}
 	return m, nil
 }
@@ -208,24 +194,37 @@ func (m *Model) View() string {
 
 	var content string
 
+	// Calculate available height for content (header + content + shortcuts)
+	headerHeight := 2 // tab line + border
+	shortcutsHeight := 1
+	contentHeight := m.height - headerHeight - shortcutsHeight
+
 	// Render current Tab
 	switch m.currentTab {
 	case DashboardTab:
-		content = RenderDashboard(m.gcLog, m.metrics, m.issues, m.width, m.height-6)
+		content = m.RenderDashboard()
 
 	case MetricsTab:
-		content = RenderMetrics(m.metrics, m.metricsSubTab, m.width, m.height-6, m.scrollPositions[MetricsTab])
+		content = m.RenderMetrics()
 
 	case IssuesTab:
-		content = RenderIssues(m.issues, m.issuesFilter, m.selectedIssue, m.expandedIssues, m.width, m.height-6)
+		content = RenderIssues(m.issues, m.issuesFilter, m.selectedIssue, m.expandedIssues, m.width, contentHeight)
 	}
+
+	// Create a style that ensures content takes up exactly the available height
+	contentStyle := lipgloss.NewStyle().
+		Height(contentHeight).
+		Width(m.width)
+	content = contentStyle.Render(content)
 
 	// Build the full Tab
 	header := m.renderHeader()
+	shortcuts := m.renderFooter()
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		content,
+		shortcuts,
 	)
 }
 
@@ -260,6 +259,33 @@ func (m *Model) renderHeader() string {
 	headerContent = append(headerContent, border)
 
 	return lipgloss.JoinVertical(lipgloss.Left, headerContent...)
+}
+
+func GetShortcuts(currentTab TabType) string {
+	base := "q:quit • tab:cycle • 1-3:tabs"
+
+	var tabSpecific string
+	switch currentTab {
+	case DashboardTab:
+		tabSpecific = "↑↓:scroll"
+
+	case MetricsTab:
+		tabSpecific = "↑↓:scroll • ←/→:metrics"
+
+	case IssuesTab:
+		tabSpecific = "↑↓:nav • ←/→:filter • space/enter:expand"
+	}
+
+	if tabSpecific != "" {
+		return base + " • " + tabSpecific
+	}
+	return base
+}
+
+func (m *Model) renderFooter() string {
+	shortcuts := GetShortcuts(m.currentTab)
+
+	return HelpBarStyle.Width(m.width).Render(shortcuts)
 }
 
 func StartTUI(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis) error {

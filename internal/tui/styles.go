@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mabhi256/jdiag/internal/gc"
 )
 
 var (
@@ -53,6 +52,14 @@ var (
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Bold(true).
 			Padding(0, 1)
+)
+
+var (
+	HelpBarStyle = lipgloss.NewStyle().
+		Foreground(MutedColor).
+		Background(lipgloss.Color("#1a1a1a")).
+		Width(0). // Will be set dynamically
+		Padding(0, 1)
 )
 
 type TerminalCapabilities struct {
@@ -221,25 +228,6 @@ func GetSeverityIcon(severity string) string {
 	default:
 		return "✅ Good"
 	}
-}
-
-func FormatMemorySize(size gc.MemorySize) string {
-	bytes := float64(size.Bytes())
-
-	if bytes >= 1024*1024*1024 {
-		return fmt.Sprintf("%.1fG", bytes/(1024*1024*1024))
-	}
-	if bytes >= 1024*1024 {
-		return fmt.Sprintf("%.0fM", bytes/(1024*1024))
-	}
-	if bytes >= 1024 {
-		return fmt.Sprintf("%.0fK", bytes/1024)
-	}
-	return fmt.Sprintf("%.0fB", bytes)
-}
-
-func FormatPercentage(value float64) string {
-	return fmt.Sprintf("%.1f%%", value*100)
 }
 
 func FormatDuration(d time.Duration) string {

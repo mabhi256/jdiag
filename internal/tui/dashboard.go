@@ -8,46 +8,56 @@ import (
 	"github.com/mabhi256/jdiag/internal/gc"
 )
 
-// RenderDashboard renders the dashboard view
-func RenderDashboard(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis, width, height int) string {
-	if metrics == nil {
+func (m *Model) RenderDashboard() string {
+	if m.metrics == nil {
 		return "Loading dashboard..."
 	}
 
+	var headerContent []string
+
+	// Add JVM info if available, otherwise add empty line to maintain height
 	jvmInfo := ""
-	if gcLog != nil {
-		jvmInfo = fmt.Sprintf("JVM: %s", gcLog.JVMVersion)
-		if gcLog.HeapMax > 0 {
-			jvmInfo += fmt.Sprintf("  Heap: %s", gcLog.HeapMax.String())
+	if m.gcLog.JVMVersion != "" {
+		jvmInfo = fmt.Sprintf("JVM: %s", m.gcLog.JVMVersion)
+		if m.gcLog.HeapMax > 0 {
+			jvmInfo += fmt.Sprintf("  Heap: %s", m.gcLog.HeapMax.String())
 		}
-		if !gcLog.StartTime.IsZero() && !gcLog.EndTime.IsZero() {
-			runtime := gcLog.EndTime.Sub(gcLog.StartTime)
+		if !m.gcLog.StartTime.IsZero() && !m.gcLog.EndTime.IsZero() {
+			runtime := m.gcLog.EndTime.Sub(m.gcLog.StartTime)
 			jvmInfo += fmt.Sprintf("  Runtime: %s", FormatDuration(runtime))
 		}
+
+		headerLine := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240")).
+			Render(jvmInfo)
+		headerContent = append(headerContent, headerLine)
+	} else {
+		// Add empty line to maintain consistent height when JVM info is not available
+		headerContent = append(headerContent, "")
 	}
 
-	headerLine := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
-		Render(jvmInfo)
+	// Add spacing after JVM info section
+	headerContent = append(headerContent, "")
 
 	// Calculate layout - split into two columns
-	leftWidth := width/2 - 2
-	rightWidth := width - leftWidth - 4
+	leftWidth := m.width/2 - 2
+	rightWidth := m.width - leftWidth - 6
 
-	leftColumn := renderDashboardLeft(metrics, leftWidth)
-	rightColumn := renderDashboardRight(metrics, issues, rightWidth)
+	leftColumn := renderDashboardLeft(m.metrics, leftWidth)
+	rightColumn := renderDashboardRight(m.metrics, m.issues, rightWidth)
 
 	// Join columns horizontally
 	columnsContent := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		leftColumn,
-		"  ", // spacing
+		"             ", // spacing
 		rightColumn,
 	)
 
+	headerSection := strings.Join(headerContent, "\n")
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
-		headerLine,
+		headerSection,
 		columnsContent,
 	)
 
@@ -56,7 +66,7 @@ func RenderDashboard(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis
 
 func renderDashboardLeft(metrics *gc.GCMetrics, width int) string {
 	sections := []string{
-		renderPerformanceOverview(metrics, width),
+		renderPerformanceOverview(metrics),
 		"", // spacing
 		renderCollectionBreakdown(metrics, width),
 	}
@@ -74,72 +84,85 @@ func renderDashboardRight(metrics *gc.GCMetrics, issues *gc.Analysis, width int)
 	return strings.Join(sections, "\n")
 }
 
-func renderPerformanceOverview(metrics *gc.GCMetrics, width int) string {
+func renderPerformanceOverview(metrics *gc.GCMetrics) string {
 	title := TitleStyle.Render("Performance Overview")
 
-	var lines []string
+	var rows []string
 
-	// Throughput
+	// Throughput - only show if warning/critical
 	throughputTarget := 95.0
-	throughputStatus := "✅"
-	if metrics.Throughput < 90.0 {
-		throughputStatus = "🔴"
-	} else if metrics.Throughput < throughputTarget {
-		throughputStatus = "⚠️"
+	if metrics.Throughput < throughputTarget {
+		status := "⚠️"
+		if metrics.Throughput < 90.0 {
+			status = "🔴"
+		}
+		throughputRow := fmt.Sprintf("%-15s %s %s",
+			"Throughput",
+			fmt.Sprintf("%.1f%%", metrics.Throughput),
+			status)
+		rows = append(rows, throughputRow)
 	}
 
-	throughputLine := fmt.Sprintf("• Throughput: %.1f%% (target >%.0f%%) %s",
-		metrics.Throughput, throughputTarget, throughputStatus)
-	lines = append(lines, throughputLine)
-
-	// P99 Pause
+	// P99 Pause - only show if warning/critical
 	p99Target := 200.0 // ms
-	p99Status := "✅"
 	p99Ms := float64(metrics.P99Pause.Nanoseconds()) / 1000000
-	if p99Ms > 500 {
-		p99Status = "🔴"
-	} else if p99Ms > p99Target {
-		p99Status = "⚠️"
+	if p99Ms > p99Target {
+		status := "⚠️"
+		if p99Ms > 500 {
+			status = "🔴"
+		}
+		p99Row := fmt.Sprintf("%-15s %s %s",
+			"P99 Pause",
+			fmt.Sprintf("%.1fms", p99Ms),
+			status)
+		rows = append(rows, p99Row)
 	}
 
-	p99Line := fmt.Sprintf("• P99 Pause: %.1fms (target <%.0fms) %s",
-		p99Ms, p99Target, p99Status)
-	lines = append(lines, p99Line)
-
-	// Average Pause
+	// Always show key metrics without status
 	avgMs := float64(metrics.AvgPause.Nanoseconds()) / 1000000
-	avgLine := fmt.Sprintf("• Avg Pause: %.1fms", avgMs)
-	lines = append(lines, avgLine)
+	avgRow := fmt.Sprintf("%-15s %-12s",
+		"Avg Pause",
+		fmt.Sprintf("%.1fms", avgMs))
+	rows = append(rows, avgRow)
 
-	// Allocation Rate
-	allocStatus := "ℹ️"
-	allocDescription := "normal"
-	if metrics.AllocationRate > 500 {
-		allocStatus = "🔴"
-		allocDescription = "very high"
-	} else if metrics.AllocationRate > 100 {
-		allocStatus = "⚠️"
-		allocDescription = "high"
+	// Allocation Rate - only show status if high
+	allocRow := fmt.Sprintf("%-15s %s",
+		"Allocation",
+		fmt.Sprintf("%.0f MB/s", metrics.AllocationRate))
+	if metrics.AllocationRate > 100 {
+		status := "⚠️"
+		if metrics.AllocationRate > 500 {
+			status = "🔴"
+		}
+		allocRow += fmt.Sprintf(" %s", status)
 	}
+	rows = append(rows, allocRow)
 
-	allocLine := fmt.Sprintf("• Allocation: %.0f MB/s (%s) %s",
-		metrics.AllocationRate, allocDescription, allocStatus)
-	lines = append(lines, allocLine)
+	// Total Events and Runtime - simple display
+	eventsRow := fmt.Sprintf("%-15s %-12s",
+		"Total Events",
+		fmt.Sprintf("%d", metrics.TotalEvents))
+	rows = append(rows, eventsRow)
 
-	// Total Events
-	eventsLine := fmt.Sprintf("• Total Events: %d", metrics.TotalEvents)
-	lines = append(lines, eventsLine)
-
-	// Runtime
 	if metrics.TotalRuntime > 0 {
-		runtimeLine := fmt.Sprintf("• Runtime: %s", FormatDuration(metrics.TotalRuntime))
-		lines = append(lines, runtimeLine)
+		runtimeRow := fmt.Sprintf("%-15s %-12s",
+			"Runtime",
+			FormatDuration(metrics.TotalRuntime))
+		rows = append(rows, runtimeRow)
 	}
 
-	content := strings.Join(lines, "\n")
+	// If no issues, show a simple "All Good" message
+	if len(rows) == 3 || (len(rows) == 4 && metrics.TotalRuntime > 0) { // Only basic metrics shown
+		if metrics.Throughput >= 95.0 && p99Ms <= 200.0 {
+			rows = append([]string{"✅ Performance looks good"}, rows...)
+		}
+	}
+
+	content := strings.Join(rows, "\n")
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		title,
+		"",
 		content,
 	)
 }
@@ -157,12 +180,12 @@ func renderCollectionBreakdown(metrics *gc.GCMetrics, width int) string {
 	// Young GC percentage
 	youngPct := float64(metrics.YoungGCCount) / total
 	youngBar := CreateProgressBar(youngPct, barWidth, GoodColor)
-	youngLine := fmt.Sprintf("Young    %s %d%%", youngBar, int(youngPct*100))
+	youngLine := fmt.Sprintf("Young  %s %d%%", youngBar, int(youngPct*100))
 
 	// Mixed GC percentage
 	mixedPct := float64(metrics.MixedGCCount) / total
 	mixedBar := CreateProgressBar(mixedPct, barWidth, InfoColor)
-	mixedLine := fmt.Sprintf("Mixed    %s %d%%", mixedBar, int(mixedPct*100))
+	mixedLine := fmt.Sprintf("Mixed  %s %d%%", mixedBar, int(mixedPct*100))
 
 	// Full GC percentage
 	fullPct := float64(metrics.FullGCCount) / total
@@ -171,12 +194,14 @@ func renderCollectionBreakdown(metrics *gc.GCMetrics, width int) string {
 		fullColor = CriticalColor
 	}
 	fullBar := CreateProgressBar(fullPct, barWidth, fullColor)
-	fullLine := fmt.Sprintf("Full     %s %d%%", fullBar, int(fullPct*100))
+	fullLine := fmt.Sprintf("Full   %s %d%%", fullBar, int(fullPct*100))
 
 	content := strings.Join([]string{youngLine, mixedLine, fullLine}, "\n")
 
 	return lipgloss.JoinVertical(lipgloss.Left,
+		"",
 		title,
+		"",
 		content,
 	)
 }
@@ -189,13 +214,14 @@ func renderIssuesSummary(issues *gc.Analysis, width int) string {
 	infoCount := len(issues.Info)
 
 	var lines []string
+	lines = append(lines, "")
 
 	// Issue counts
 	if criticalCount > 0 {
-		lines = append(lines, CriticalStyle.Render(fmt.Sprintf("🔴 Critical: %d", criticalCount)))
+		lines = append(lines, CriticalStyle.Render(fmt.Sprintf("Critical: %d", criticalCount)))
 	}
 	if warningCount > 0 {
-		lines = append(lines, WarningStyle.Render(fmt.Sprintf("⚠️  Warning: %d", warningCount)))
+		lines = append(lines, WarningStyle.Render(fmt.Sprintf("Warning: %d", warningCount)))
 	}
 	if infoCount > 0 {
 		lines = append(lines, InfoStyle.Render(fmt.Sprintf("ℹ️  Info: %d", infoCount)))
@@ -212,11 +238,7 @@ func renderIssuesSummary(issues *gc.Analysis, width int) string {
 			lines = append(lines, MutedStyle.Render("Top Issue:"))
 
 			issueTitle := TruncateString(topIssue.Type, width-2)
-			severity := GetSeverityIcon(topIssue.Severity)
 			lines = append(lines, issueTitle)
-			lines = append(lines, severity)
-			lines = append(lines, "")
-			lines = append(lines, MutedStyle.Render("→ View Details [Tab 3]"))
 		}
 	}
 
@@ -251,7 +273,7 @@ func renderMemoryPressure(metrics *gc.GCMetrics, width int) string {
 		heapStatus = "⚠️"
 	}
 
-	heapLine := fmt.Sprintf("Heap     %s %.0f%% %s",
+	heapLine := fmt.Sprintf("Heap  %s %.0f%% %s",
 		heapBar, metrics.AvgHeapUtil*100, heapStatus)
 	lines = append(lines, heapLine)
 
@@ -297,7 +319,9 @@ func renderMemoryPressure(metrics *gc.GCMetrics, width int) string {
 	content := strings.Join(lines, "\n")
 
 	return lipgloss.JoinVertical(lipgloss.Left,
+		"",
 		title,
+		"",
 		content,
 	)
 }
