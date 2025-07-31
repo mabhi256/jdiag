@@ -35,19 +35,13 @@ func (m *Model) RenderMetrics() string {
 		content = strings.Join(contentLines[start:end], "\n")
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left,
-		tabs,
-		"",
-		content,
-	)
+	return lipgloss.JoinVertical(lipgloss.Left, tabs, "", content)
 }
 
 func renderMetricsSubTabs(currentSub MetricsSubTab) string {
-	tabs := []string{
-		"General", "Timing", "Memory", "G1GC", "Concurrent",
-	}
-
+	tabs := []string{"General", "Timing", "Memory", "G1GC", "Concurrent"}
 	var rendered []string
+
 	for i, tab := range tabs {
 		style := TabInactiveStyle
 		if MetricsSubTab(i) == currentSub {
@@ -76,325 +70,348 @@ func renderMetricsContent(metrics *gc.GCMetrics, subTab MetricsSubTab) string {
 	}
 }
 
+func renderSection(title string, lines []string) string {
+	if len(lines) == 0 {
+		return ""
+	}
+
+	// Calculate optimal width for alignment
+	maxWidth := 0
+	for _, line := range lines {
+		if idx := strings.Index(line, ":"); idx != -1 {
+			maxWidth = max(maxWidth, idx+1)
+		}
+	}
+
+	// Format lines with consistent spacing
+	var formatted []string
+	for _, line := range lines {
+		if idx := strings.Index(line, ":"); idx != -1 {
+			label := line[:idx+1]
+			rest := line[idx+1:]
+			padding := maxWidth - len(label) + 2
+			formatted = append(formatted, label+strings.Repeat(" ", padding)+strings.TrimSpace(rest))
+		} else {
+			formatted = append(formatted, line)
+		}
+	}
+
+	return TitleStyle.Render(title) + "\n" + strings.Join(formatted, "\n")
+}
+
+func getStatusIndicator(current, warning, critical float64) string {
+	if warning > critical {
+		// Higher is better (e.g., throughput: warning=90%, critical=80%)
+		if current <= critical {
+			return CriticalStyle.Render("🔴 Critical")
+		} else if current <= warning {
+			return WarningStyle.Render("⚠️ Below Target")
+		}
+	} else {
+		// Lower is better (e.g., pause time: warning=100ms, critical=500ms)
+		if current >= critical {
+			return CriticalStyle.Render("🔴 Critical")
+		} else if current >= warning {
+			return WarningStyle.Render("⚠️ High")
+		}
+	}
+	return "" // Good - no indicator needed
+}
+
 func renderGeneralMetrics(metrics *gc.GCMetrics) string {
-	var sections []string
+	total := float64(metrics.TotalEvents)
 
 	// Performance Section
-	sections = append(sections, TitleStyle.Render("General Performance"))
-
-	lines := []string{
-		fmt.Sprintf("• Total Events:        %d", metrics.TotalEvents),
-		fmt.Sprintf("• Runtime:            %s", FormatDuration(metrics.TotalRuntime)),
-		formatMetricWithStatus("• Throughput:", fmt.Sprintf("%.1f%%", metrics.Throughput),
-			metrics.Throughput, 95.0, "higher"),
-		fmt.Sprintf("• Total GC Time:      %s", FormatDuration(metrics.TotalGCTime)),
+	throughputStatus := getStatusIndicator(metrics.Throughput, gc.ThroughputPoor, gc.ThroughputCritical)
+	throughputStr := fmt.Sprintf("• Throughput: %.1f%%", metrics.Throughput)
+	if throughputStatus != "" {
+		throughputStr += " " + throughputStatus
 	}
-	sections = append(sections, strings.Join(lines, "\n"))
+
+	perf := []string{
+		fmt.Sprintf("• Total Events: %d", metrics.TotalEvents),
+		fmt.Sprintf("• Runtime: %s", FormatDuration(metrics.TotalRuntime)),
+		throughputStr,
+		fmt.Sprintf("• Total GC Time: %s", FormatDuration(metrics.TotalGCTime)),
+	}
 
 	// Collection Breakdown
-	sections = append(sections, "")
-	sections = append(sections, TitleStyle.Render("Collection Breakdown"))
-
-	total := float64(metrics.TotalEvents)
-	collectionLines := []string{
-		fmt.Sprintf("• Young GCs:          %d (%.1f%%)",
-			metrics.YoungGCCount, float64(metrics.YoungGCCount)/total*100),
-		fmt.Sprintf("• Mixed GCs:          %d (%.1f%%)",
-			metrics.MixedGCCount, float64(metrics.MixedGCCount)/total*100),
+	collection := []string{
+		fmt.Sprintf("• Young GCs: %d (%.1f%%)", metrics.YoungGCCount, float64(metrics.YoungGCCount)/total*100),
+		fmt.Sprintf("• Mixed GCs: %d (%.1f%%)", metrics.MixedGCCount, float64(metrics.MixedGCCount)/total*100),
 	}
-
 	if metrics.FullGCCount > 0 {
-		fullLine := fmt.Sprintf("• Full GCs:           %d (%.1f%%) %s",
-			metrics.FullGCCount, float64(metrics.FullGCCount)/total*100,
-			CriticalStyle.Render("🔴 Critical"))
-		collectionLines = append(collectionLines, fullLine)
+		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%) %s", metrics.FullGCCount, float64(metrics.FullGCCount)/total*100, CriticalStyle.Render("🔴 Critical")))
 	} else {
-		collectionLines = append(collectionLines, fmt.Sprintf("• Full GCs:           %d %s",
-			metrics.FullGCCount, GoodStyle.Render("✅ Good")))
+		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%)", metrics.FullGCCount, float64(metrics.FullGCCount)/total*100))
 	}
-
-	sections = append(sections, strings.Join(collectionLines, "\n"))
 
 	// Allocation Statistics
-	sections = append(sections, "")
-	sections = append(sections, TitleStyle.Render("Allocation Statistics"))
-
-	allocLines := []string{
-		formatMetricWithStatus("• Allocation Rate:", fmt.Sprintf("%.1f MB/s", metrics.AllocationRate),
-			metrics.AllocationRate, 100.0, "lower"),
-		fmt.Sprintf("• Avg Heap Util:      %.1f%%", metrics.AvgHeapUtil*100),
+	allocRateStatus := getStatusIndicator(metrics.AllocationRate, gc.AllocRateHigh, gc.AllocRateCritical)
+	allocRateStr := fmt.Sprintf("• Allocation Rate: %.1f MB/s", metrics.AllocationRate)
+	if allocRateStatus != "" {
+		allocRateStr += " " + allocRateStatus
 	}
 
+	alloc := []string{
+		allocRateStr,
+		fmt.Sprintf("• Avg Heap Util: %.1f%%", metrics.AvgHeapUtil*100),
+	}
 	if metrics.AllocationBurstCount > 0 {
-		allocLines = append(allocLines,
-			fmt.Sprintf("• Allocation Bursts:  %d", metrics.AllocationBurstCount))
+		alloc = append(alloc, fmt.Sprintf("• Allocation Bursts: %d", metrics.AllocationBurstCount))
 	}
 
-	sections = append(sections, strings.Join(allocLines, "\n"))
-
-	return strings.Join(sections, "\n")
+	return strings.Join([]string{
+		renderSection("General Performance", perf),
+		renderSection("Collection Breakdown", collection),
+		renderSection("Allocation Statistics", alloc),
+	}, "\n\n")
 }
 
 func renderTimingMetrics(metrics *gc.GCMetrics) string {
-	var sections []string
+	// Maximum pause with status
+	maxPauseStatus := getStatusIndicator(float64(metrics.MaxPause.Milliseconds()), float64(gc.PausePoor.Milliseconds()), float64(gc.PauseCritical.Milliseconds()))
+	maxPauseStr := fmt.Sprintf("• Maximum: %s", FormatDuration(metrics.MaxPause))
+	if maxPauseStatus != "" {
+		maxPauseStr += " " + maxPauseStatus
+	}
 
-	// Pause Time Statistics
-	sections = append(sections, TitleStyle.Render("Pause Time Statistics"))
+	// P95 pause with status
+	p95PauseStatus := getStatusIndicator(float64(metrics.P95Pause.Milliseconds()), float64(gc.PauseAcceptable.Milliseconds()), float64(gc.PausePoor.Milliseconds()))
+	p95PauseStr := fmt.Sprintf("• P95: %s", FormatDuration(metrics.P95Pause))
+	if p95PauseStatus != "" {
+		p95PauseStr += " " + p95PauseStatus
+	}
 
-	pauseLines := []string{
-		fmt.Sprintf("• Average:            %s", FormatDuration(metrics.AvgPause)),
-		fmt.Sprintf("• Minimum:            %s", FormatDuration(metrics.MinPause)),
-		formatMetricWithStatus("• Maximum:", FormatDuration(metrics.MaxPause),
-			float64(metrics.MaxPause.Milliseconds()), 200.0, "lower"),
-		formatMetricWithStatus("• P95:", FormatDuration(metrics.P95Pause),
-			float64(metrics.P95Pause.Milliseconds()), 100.0, "lower"),
-		formatMetricWithStatus("• P99:", FormatDuration(metrics.P99Pause),
-			float64(metrics.P99Pause.Milliseconds()), 200.0, "lower"),
+	// P99 pause with status
+	p99PauseStatus := getStatusIndicator(float64(metrics.P99Pause.Milliseconds()), float64(gc.PausePoor.Milliseconds()), float64(gc.PauseCritical.Milliseconds()))
+	p99PauseStr := fmt.Sprintf("• P99: %s", FormatDuration(metrics.P99Pause))
+	if p99PauseStatus != "" {
+		p99PauseStr += " " + p99PauseStatus
+	}
+
+	lines := []string{
+		fmt.Sprintf("• Average: %s", FormatDuration(metrics.AvgPause)),
+		fmt.Sprintf("• Minimum: %s", FormatDuration(metrics.MinPause)),
+		maxPauseStr,
+		p95PauseStr,
+		p99PauseStr,
 	}
 
 	if metrics.PauseTargetMissRate > 0 {
-		missStatus := "✅ Good"
+		var status string
 		if metrics.PauseTargetMissRate > 0.2 {
-			missStatus = CriticalStyle.Render("🔴 High")
+			status = CriticalStyle.Render("🔴 High")
 		} else if metrics.PauseTargetMissRate > 0.1 {
-			missStatus = WarningStyle.Render("⚠️ Elevated")
+			status = WarningStyle.Render("⚠️ Elevated")
 		}
 
-		pauseLines = append(pauseLines,
-			fmt.Sprintf("• Target Miss Rate:   %.1f%% %s",
-				metrics.PauseTargetMissRate*100, missStatus))
+		targetMissStr := fmt.Sprintf("• Target Miss Rate: %.1f%%", metrics.PauseTargetMissRate*100)
+		if status != "" {
+			targetMissStr += " " + status
+		}
+		lines = append(lines, targetMissStr)
 	}
 
 	if metrics.LongPauseCount > 0 {
-		pauseLines = append(pauseLines,
-			fmt.Sprintf("• Long Pauses:        %d %s",
-				metrics.LongPauseCount, WarningStyle.Render("⚠️")))
+		lines = append(lines, fmt.Sprintf("• Long Pauses: %d %s", metrics.LongPauseCount, WarningStyle.Render("⚠️")))
 	}
 
 	if metrics.PauseTimeVariance > 0 {
-		varianceStatus := "✅ Consistent"
-		if metrics.PauseTimeVariance > 0.5 {
-			varianceStatus = WarningStyle.Render("⚠️ High Variance")
+		var status string
+		if metrics.PauseTimeVariance > gc.PauseVarianceCritical {
+			status = CriticalStyle.Render("🔴 Very High Variance")
+		} else if metrics.PauseTimeVariance > gc.PauseVarianceWarning {
+			status = WarningStyle.Render("⚠️ High Variance")
 		}
-		pauseLines = append(pauseLines,
-			fmt.Sprintf("• Pause Variance:     %.3f %s",
-				metrics.PauseTimeVariance, varianceStatus))
+
+		varianceStr := fmt.Sprintf("• Pause Variance: %.3f", metrics.PauseTimeVariance)
+		if status != "" {
+			varianceStr += " " + status
+		}
+		lines = append(lines, varianceStr)
 	}
 
-	sections = append(sections, strings.Join(pauseLines, "\n"))
-
-	return strings.Join(sections, "\n")
+	return renderSection("Pause Time Statistics", lines)
 }
 
 func renderMemoryMetrics(metrics *gc.GCMetrics) string {
 	var sections []string
 
 	// Memory Utilization
-	sections = append(sections, TitleStyle.Render("Memory Utilization"))
-
-	memLines := []string{
-		formatMetricWithStatus("• Avg Heap Util:", fmt.Sprintf("%.1f%%", metrics.AvgHeapUtil*100),
-			metrics.AvgHeapUtil*100, 70.0, "lower"),
+	heapUtilStatus := getStatusIndicator(metrics.AvgHeapUtil*100, gc.HeapUtilWarning*100, gc.HeapUtilCritical*100)
+	heapUtilStr := fmt.Sprintf("• Avg Heap Util: %.1f%%", metrics.AvgHeapUtil*100)
+	if heapUtilStatus != "" {
+		heapUtilStr += " " + heapUtilStatus
 	}
+
+	mem := []string{heapUtilStr}
 
 	if metrics.AvgRegionUtilization > 0 {
-		memLines = append(memLines,
-			formatMetricWithStatus("• Avg Region Util:", fmt.Sprintf("%.1f%%", metrics.AvgRegionUtilization*100),
-				metrics.AvgRegionUtilization*100, 75.0, "lower"))
+		regionUtilStatus := getStatusIndicator(metrics.AvgRegionUtilization*100, gc.RegionUtilWarning*100, gc.RegionUtilCritical*100)
+		regionUtilStr := fmt.Sprintf("• Avg Region Util: %.1f%%", metrics.AvgRegionUtilization*100)
+		if regionUtilStatus != "" {
+			regionUtilStr += " " + regionUtilStatus
+		}
+		mem = append(mem, regionUtilStr)
 	}
-
-	sections = append(sections, strings.Join(memLines, "\n"))
+	sections = append(sections, renderSection("Memory Utilization", mem))
 
 	// Allocation Patterns
-	sections = append(sections, "")
-	sections = append(sections, TitleStyle.Render("Allocation Patterns"))
-
-	allocLines := []string{
-		formatMetricWithStatus("• Allocation Rate:", fmt.Sprintf("%.1f MB/s", metrics.AllocationRate),
-			metrics.AllocationRate, 100.0, "lower"),
+	allocRateStatus := getStatusIndicator(metrics.AllocationRate, gc.AllocRateHigh, gc.AllocRateCritical)
+	allocRateStr := fmt.Sprintf("• Allocation Rate: %.1f MB/s", metrics.AllocationRate)
+	if allocRateStatus != "" {
+		allocRateStr += " " + allocRateStatus
 	}
 
+	alloc := []string{allocRateStr}
 	if metrics.AllocationBurstCount > 0 {
-		allocLines = append(allocLines,
-			fmt.Sprintf("• Allocation Bursts:  %d", metrics.AllocationBurstCount))
+		alloc = append(alloc, fmt.Sprintf("• Allocation Bursts: %d", metrics.AllocationBurstCount))
 	}
-
-	sections = append(sections, strings.Join(allocLines, "\n"))
+	sections = append(sections, renderSection("Allocation Patterns", alloc))
 
 	// Promotion Statistics
 	if metrics.AvgPromotionRate > 0 || metrics.MaxPromotionRate > 0 {
-		sections = append(sections, "")
-		sections = append(sections, TitleStyle.Render("Promotion Statistics"))
-
-		promLines := []string{}
+		var prom []string
 
 		if metrics.AvgPromotionRate > 0 {
-			promLines = append(promLines,
-				formatMetricWithStatus("• Avg Promotion:", fmt.Sprintf("%.1f regions/GC", metrics.AvgPromotionRate),
-					metrics.AvgPromotionRate, 5.0, "lower"))
+			avgPromStatus := getStatusIndicator(metrics.AvgPromotionRate, gc.PromotionRateWarning, gc.PromotionRateCritical)
+			avgPromStr := fmt.Sprintf("• Avg Promotion: %.1f regions/GC", metrics.AvgPromotionRate)
+			if avgPromStatus != "" {
+				avgPromStr += " " + avgPromStatus
+			}
+			prom = append(prom, avgPromStr)
 		}
 
 		if metrics.MaxPromotionRate > 0 {
-			promLines = append(promLines,
-				formatMetricWithStatus("• Max Promotion:", fmt.Sprintf("%.1f regions/GC", metrics.MaxPromotionRate),
-					metrics.MaxPromotionRate, 10.0, "lower"))
+			maxPromStatus := getStatusIndicator(metrics.MaxPromotionRate, gc.PromotionRateWarning, gc.PromotionRateCritical)
+			maxPromStr := fmt.Sprintf("• Max Promotion: %.1f regions/GC", metrics.MaxPromotionRate)
+			if maxPromStatus != "" {
+				maxPromStr += " " + maxPromStatus
+			}
+			prom = append(prom, maxPromStr)
 		}
 
 		if metrics.SurvivorOverflowRate > 0 {
-			promLines = append(promLines,
-				formatMetricWithStatus("• Survivor Overflow:", fmt.Sprintf("%.1f%%", metrics.SurvivorOverflowRate*100),
-					metrics.SurvivorOverflowRate*100, 10.0, "lower"))
+			survivorStatus := getStatusIndicator(metrics.SurvivorOverflowRate*100, gc.SurvivorOverflowWarning*100, gc.SurvivorOverflowCritical*100)
+			survivorStr := fmt.Sprintf("• Survivor Overflow: %.1f%%", metrics.SurvivorOverflowRate*100)
+			if survivorStatus != "" {
+				survivorStr += " " + survivorStatus
+			}
+			prom = append(prom, survivorStr)
 		}
 
 		if metrics.PromotionEfficiency > 0 {
-			promLines = append(promLines,
-				formatMetricWithStatus("• Promotion Efficiency:", fmt.Sprintf("%.1f%%", metrics.PromotionEfficiency*100),
-					metrics.PromotionEfficiency*100, 50.0, "higher"))
+			efficiencyStatus := getStatusIndicator(metrics.PromotionEfficiency*100, gc.PromotionEfficiencyWarning*100, gc.PromotionEfficiencyCritical*100)
+			efficiencyStr := fmt.Sprintf("• Promotion Efficiency: %.1f%%", metrics.PromotionEfficiency*100)
+			if efficiencyStatus != "" {
+				efficiencyStr += " " + efficiencyStatus
+			}
+			prom = append(prom, efficiencyStr)
 		}
 
-		sections = append(sections, strings.Join(promLines, "\n"))
+		sections = append(sections, renderSection("Promotion Statistics", prom))
 	}
 
-	return strings.Join(sections, "\n")
+	return strings.Join(sections, "\n\n")
 }
 
 func renderG1GCMetrics(metrics *gc.GCMetrics) string {
 	var sections []string
 
 	// Collection Efficiency
-	sections = append(sections, TitleStyle.Render("Collection Efficiency"))
-
-	effLines := []string{}
-
+	var eff []string
 	if metrics.YoungCollectionEfficiency > 0 {
-		effLines = append(effLines,
-			formatMetricWithStatus("• Young GC Efficiency:", fmt.Sprintf("%.1f%%", metrics.YoungCollectionEfficiency*100),
-				metrics.YoungCollectionEfficiency*100, 80.0, "higher"))
+		youngEffStatus := getStatusIndicator(metrics.YoungCollectionEfficiency*100, gc.YoungCollectionEffWarning*100, gc.YoungCollectionEff*100/2)
+		youngEffStr := fmt.Sprintf("• Young GC Efficiency: %.1f%%", metrics.YoungCollectionEfficiency*100)
+		if youngEffStatus != "" {
+			youngEffStr += " " + youngEffStatus
+		}
+		eff = append(eff, youngEffStr)
 	}
 
 	if metrics.MixedCollectionEfficiency > 0 {
-		effLines = append(effLines,
-			formatMetricWithStatus("• Mixed GC Efficiency:", fmt.Sprintf("%.1f%%", metrics.MixedCollectionEfficiency*100),
-				metrics.MixedCollectionEfficiency*100, 40.0, "higher"))
+		mixedEffStatus := getStatusIndicator(metrics.MixedCollectionEfficiency*100, gc.MixedCollectionEffWarning*100, gc.MixedCollectionEff*100/2)
+		mixedEffStr := fmt.Sprintf("• Mixed GC Efficiency: %.1f%%", metrics.MixedCollectionEfficiency*100)
+		if mixedEffStatus != "" {
+			mixedEffStr += " " + mixedEffStatus
+		}
+		eff = append(eff, mixedEffStr)
 	}
 
 	if metrics.MixedToYoungRatio > 0 {
-		effLines = append(effLines,
-			fmt.Sprintf("• Mixed to Young Ratio: %.2f", metrics.MixedToYoungRatio))
+		eff = append(eff, fmt.Sprintf("• Mixed to Young Ratio: %.2f", metrics.MixedToYoungRatio))
 	}
-
-	sections = append(sections, strings.Join(effLines, "\n"))
+	sections = append(sections, renderSection("Collection Efficiency", eff))
 
 	// Region Statistics
 	if metrics.AvgRegionUtilization > 0 || metrics.RegionExhaustionEvents > 0 {
-		sections = append(sections, "")
-		sections = append(sections, TitleStyle.Render("Region Statistics"))
-
-		regionLines := []string{}
+		var region []string
 
 		if metrics.AvgRegionUtilization > 0 {
-			regionLines = append(regionLines,
-				formatMetricWithStatus("• Avg Region Util:", fmt.Sprintf("%.1f%%", metrics.AvgRegionUtilization*100),
-					metrics.AvgRegionUtilization*100, 75.0, "lower"))
+			regionUtilStatus := getStatusIndicator(metrics.AvgRegionUtilization*100, gc.RegionUtilWarning*100, gc.RegionUtilCritical*100)
+			regionUtilStr := fmt.Sprintf("• Avg Region Util: %.1f%%", metrics.AvgRegionUtilization*100)
+			if regionUtilStatus != "" {
+				regionUtilStr += " " + regionUtilStatus
+			}
+			region = append(region, regionUtilStr)
 		}
 
 		if metrics.RegionExhaustionEvents > 0 {
-			regionLines = append(regionLines,
-				fmt.Sprintf("• Region Exhaustion:  %d %s",
-					metrics.RegionExhaustionEvents, CriticalStyle.Render("🔴")))
+			region = append(region, fmt.Sprintf("• Region Exhaustion: %d %s", metrics.RegionExhaustionEvents, CriticalStyle.Render("🔴")))
 		}
-
-		sections = append(sections, strings.Join(regionLines, "\n"))
+		sections = append(sections, renderSection("Region Statistics", region))
 	}
 
 	// Evacuation Statistics
 	if metrics.EvacuationFailureRate > 0 {
-		sections = append(sections, "")
-		sections = append(sections, TitleStyle.Render("Evacuation Statistics"))
-
-		evacLines := []string{
-			formatMetricWithStatus("• Evacuation Failures:", fmt.Sprintf("%.2f%%", metrics.EvacuationFailureRate*100),
-				metrics.EvacuationFailureRate*100, 1.0, "lower"),
+		evacFailStatus := getStatusIndicator(metrics.EvacuationFailureRate*100, gc.EvacFailureRateWarning, gc.EvacFailureRateCritical)
+		evacFailStr := fmt.Sprintf("• Evacuation Failures: %.2f%%", metrics.EvacuationFailureRate*100)
+		if evacFailStatus != "" {
+			evacFailStr += " " + evacFailStatus
 		}
 
-		sections = append(sections, strings.Join(evacLines, "\n"))
+		evac := []string{evacFailStr}
+		sections = append(sections, renderSection("Evacuation Statistics", evac))
 	}
 
-	return strings.Join(sections, "\n")
+	return strings.Join(sections, "\n\n")
 }
 
 func renderConcurrentMetrics(metrics *gc.GCMetrics) string {
-	var sections []string
+	lines := []string{}
 
-	// Concurrent Marking
-	sections = append(sections, TitleStyle.Render("Concurrent Marking"))
-
-	concLines := []string{}
-
-	keepupStatus := GoodStyle.Render("✅ Keeping Up")
 	if !metrics.ConcurrentMarkingKeepup {
-		keepupStatus = CriticalStyle.Render("🔴 Falling Behind")
+		lines = append(lines, fmt.Sprintf("• Marking Keepup: %s", CriticalStyle.Render("🔴 Falling Behind")))
 	}
-	concLines = append(concLines, fmt.Sprintf("• Marking Keepup:     %s", keepupStatus))
 
 	if metrics.ConcurrentCycleDuration > 0 {
-		cycleStatus := "✅ Normal"
-		cycleSecs := metrics.ConcurrentCycleDuration.Seconds()
-		if cycleSecs > 60 {
-			cycleStatus = CriticalStyle.Render("🔴 Too Long")
-		} else if cycleSecs > 30 {
-			cycleStatus = WarningStyle.Render("⚠️ Long")
+		var status string
+		if metrics.ConcurrentCycleDuration > gc.ConcurrentCycleCritical {
+			status = CriticalStyle.Render("🔴 Too Long")
+		} else if metrics.ConcurrentCycleDuration > gc.ConcurrentCycleWarning {
+			status = WarningStyle.Render("⚠️ Long")
 		}
 
-		concLines = append(concLines,
-			fmt.Sprintf("• Cycle Duration:     %s %s",
-				FormatDuration(metrics.ConcurrentCycleDuration), cycleStatus))
+		cycleDurationStr := fmt.Sprintf("• Cycle Duration: %s", FormatDuration(metrics.ConcurrentCycleDuration))
+		if status != "" {
+			cycleDurationStr += " " + status
+		}
+		lines = append(lines, cycleDurationStr)
 	}
 
 	if metrics.ConcurrentCycleFrequency > 0 {
-		concLines = append(concLines,
-			fmt.Sprintf("• Cycle Frequency:    %.2f/hour", metrics.ConcurrentCycleFrequency))
+		lines = append(lines, fmt.Sprintf("• Cycle Frequency: %.2f/hour", metrics.ConcurrentCycleFrequency))
 	}
 
 	if metrics.ConcurrentCycleFailures > 0 {
-		concLines = append(concLines,
-			fmt.Sprintf("• Cycle Failures:     %d %s",
-				metrics.ConcurrentCycleFailures, CriticalStyle.Render("🔴")))
+		lines = append(lines, fmt.Sprintf("• Cycle Failures: %d %s", metrics.ConcurrentCycleFailures, CriticalStyle.Render("🔴")))
 	}
 
-	sections = append(sections, strings.Join(concLines, "\n"))
-
-	return strings.Join(sections, "\n")
-}
-
-// Helper function to format a metric with status indicator
-func formatMetricWithStatus(label, value string, current, target float64, better string) string {
-	var status string
-
-	if better == "higher" {
-		if current >= target {
-			status = GoodStyle.Render("✅ Good")
-		} else if current >= target*0.8 {
-			status = WarningStyle.Render("⚠️ Below Target")
-		} else {
-			status = CriticalStyle.Render("🔴 Poor")
-		}
-	} else { // lower is better
-		if current <= target {
-			status = GoodStyle.Render("✅ Good")
-		} else if current <= target*1.5 {
-			status = WarningStyle.Render("⚠️ High")
-		} else {
-			status = CriticalStyle.Render("🔴 Critical")
-		}
+	// If no issues to show, show basic concurrent status
+	if len(lines) == 0 {
+		lines = append(lines, "• Concurrent marking: No issues detected")
 	}
 
-	// Calculate padding for alignment
-	labelPadding := max(22-len(label), 1)
-
-	return fmt.Sprintf("%s%s%s %s",
-		label,
-		strings.Repeat(" ", labelPadding),
-		value,
-		status)
+	return renderSection("Concurrent Marking", lines)
 }

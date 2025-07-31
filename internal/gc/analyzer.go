@@ -23,15 +23,14 @@ const (
 	PauseTargetDefault = 200 * time.Millisecond
 
 	// Memory pressure
-	HeapUtilGood     = 0.7  // 70% - healthy utilization
 	HeapUtilWarning  = 0.8  // 80% - start monitoring
 	HeapUtilCritical = 0.9  // 90% - immediate action needed
 	RegionUtilMax    = 0.75 // 75% - optimal for G1 region management
 
 	// Allocation thresholds
-	AllocRateModerate = 100.0  // MB/s - typical web app
-	AllocRateHigh     = 500.0  // MB/s - high-throughput app
-	AllocRateCritical = 2000.0 // MB/s - requires special tuning
+	AllocRateModerate = 100.0  // MB/s
+	AllocRateHigh     = 500.0  //
+	AllocRateCritical = 2000.0 //
 
 	// Collection efficiency targets
 	YoungCollectionEff = 0.8  // 80% of young gen should be collected
@@ -45,33 +44,45 @@ const (
 	RefProcessingTarget = 15 * time.Millisecond
 
 	// Leak detection thresholds
-	LeakGrowthCritical = 5.0 // MB/hour - definitely a leak
-	LeakGrowthWarning  = 1.0 // MB/hour - suspicious growth
-	LeakGrowthMinimal  = 0.1 // MB/hour - normal application growth
+	LeakGrowthCritical = 5.0 // MB/hour
+	LeakGrowthWarning  = 1.0 //
+	LeakGrowthMinimal  = 0.1 //
 
 	// Minimum data points for reliable trend analysis
 	MinEventsForTrend = 20
 	MinTimeForTrend   = 30 * time.Minute
 
-	// Memory pressure indicators
 	BaselineGrowthCritical = 0.05 // 5% per hour of total heap
-	BaselineGrowthWarning  = 0.02 // 2% per hour of total heap
+	BaselineGrowthWarning  = 0.02 //
 
-	// Premature promotion thresholds
-	PromotionRateCritical    = 15.0 // regions per young GC
-	PromotionRateWarning     = 8.0  // regions per young GC
-	OldRegionGrowthCritical  = 3.0  // 3x growth per young GC is severe
-	OldRegionGrowthWarning   = 1.5  // 1.5x growth is concerning
-	SurvivorOverflowCritical = 0.3  // 30% of young collections overflow survivors
+	PromotionRateWarning     = 10.0 // regions per young GC
+	PromotionRateCritical    = 15.0
+	OldRegionGrowthCritical  = 3.0 // 3x growth per young GC
+	OldRegionGrowthWarning   = 1.5 //
+	SurvivorOverflowWarning  = 0.2 // 20% - concerning survivor overflow
+	SurvivorOverflowCritical = 0.3 // 30% of young collections overflow survivors
 
-	// Humongous object thresholds
 	HumongousPercentCritical = 80.0 // 80% of heap in humongous objects
-	HumongousPercentWarning  = 50.0 // 50% of heap in humongous objects
-	HumongousPercentModerate = 20.0 // 20% of heap in humongous objects
+	HumongousPercentWarning  = 50.0 //
+	HumongousPercentModerate = 20.0 //
 
-	// Evacuation failure thresholds
 	EvacFailureRateCritical = 5.0 // 5% evacuation failure rate
-	EvacFailureRateWarning  = 1.0 // 1% evacuation failure rate
+	EvacFailureRateWarning  = 1.0 //
+
+	ConcurrentCycleWarning  = 20 * time.Second // Warning cycle duration
+	ConcurrentCycleCritical = 60 * time.Second
+
+	RegionUtilWarning  = 0.85 // 85% - start monitoring region pressure
+	RegionUtilCritical = 0.95 // 95% - critical region pressure
+
+	YoungCollectionEffWarning = 0.6  // 60% - suboptimal young collection
+	MixedCollectionEffWarning = 0.25 // 25% - suboptimal mixed collection
+
+	PromotionEfficiencyWarning  = 0.3 // 30% - low promotion efficiency
+	PromotionEfficiencyCritical = 0.1 // 10% - very poor promotion efficiency
+
+	PauseVarianceWarning  = 0.3
+	PauseVarianceCritical = 0.7
 )
 
 func (log *GCLog) GetAnalysisData() (*GCLog, *GCMetrics, *Analysis) {
@@ -479,10 +490,10 @@ func analyzePrematurePromotion(metrics *GCMetrics, events []GCEvent) []Performan
 		metrics.AvgPromotionRate > PromotionRateCritical {
 
 		issues = append(issues, PerformanceIssue{
-			Type:     "Premature Promotion - Critical",
+			Type:     "Premature Promotion",
 			Severity: "critical",
 			Description: fmt.Sprintf(
-				"SEVERE premature promotion: Old generation growing %.1fx per young GC (max: %.1fx), "+
+				"Old gen growing %.1fx per young GC (max: %.1fx), "+
 					"%.1f regions promoted per collection",
 				metrics.AvgOldGrowthRatio, metrics.MaxOldGrowthRatio,
 				metrics.AvgPromotionRate),

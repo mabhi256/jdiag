@@ -151,11 +151,11 @@ func renderPerformanceOverview(metrics *gc.GCMetrics) string {
 		rows = append(rows, runtimeRow)
 	}
 
-	// If no issues, show a simple "All Good" message
-	if len(rows) == 3 || (len(rows) == 4 && metrics.TotalRuntime > 0) { // Only basic metrics shown
-		if metrics.Throughput >= 95.0 && p99Ms <= 200.0 {
-			rows = append([]string{"✅ Performance looks good"}, rows...)
-		}
+	if len(rows) == 4 {
+		rows = append(rows, "")
+	}
+	if len(rows) == 3 {
+		rows = append(rows, "", "")
 	}
 
 	content := strings.Join(rows, "\n")
@@ -273,7 +273,7 @@ func renderMemoryPressure(metrics *gc.GCMetrics, width int) string {
 		heapStatus = "⚠️"
 	}
 
-	heapLine := fmt.Sprintf("Heap  %s %.0f%% %s",
+	heapLine := fmt.Sprintf("Heap     %s %.0f%% %s",
 		heapBar, metrics.AvgHeapUtil*100, heapStatus)
 	lines = append(lines, heapLine)
 

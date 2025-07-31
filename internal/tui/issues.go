@@ -165,9 +165,9 @@ func renderIssueItem(issue gc.PerformanceIssue, isSelected, isExpanded bool, wid
 
 	// Description line
 	descLine := fmt.Sprintf("  ├─ %s", issue.Description)
-	if len(descLine) > width-2 {
-		descLine = TruncateString(descLine, width-2)
-	}
+	// if len(descLine) > width-2 {
+	// 	descLine = TruncateString(descLine, width-2)
+	// }
 	lines = append(lines, MutedStyle.Render(descLine))
 
 	// Expansion control
