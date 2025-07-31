@@ -8,27 +8,24 @@ import (
 	"github.com/mabhi256/jdiag/internal/gc"
 )
 
-func RenderIssues(issues *gc.Analysis, filterSev string, selectedIndex int, expandedItems map[int]bool, width, height int) string {
-	totalIssues := len(issues.Critical) + len(issues.Warning) + len(issues.Info)
+func (m *Model) RenderIssues() string {
+	totalIssues := len(m.issues.Critical) + len(m.issues.Warning) + len(m.issues.Info)
 	if totalIssues == 0 {
 		return renderNoIssues()
 	}
 
-	filteredIssues := getFilteredIssuesFromAnalyzed(issues, filterSev)
+	subTab := m.issuesState.selectedSubTab
+	subTabIssues := m.GetSubTabIssues()
 
-	if len(filteredIssues) == 0 {
-		return renderNoFilteredIssues(filterSev)
-	}
-
-	header := renderIssuesHeader(issues, filterSev)
-	content := renderIssuesList(filteredIssues, selectedIndex, expandedItems, width)
+	header := renderIssuesHeader(m.issues, subTab)
+	content := m.renderIssuesList(subTabIssues)
 
 	// Apply scrolling logic (same as before)
 	contentLines := strings.Split(content, "\n")
-	availableHeight := height - 4
+	availableHeight := m.height - 4
 
 	if len(contentLines) > availableHeight {
-		selectedStartLine := calculateSelectedStartLine(filteredIssues, selectedIndex, expandedItems)
+		selectedStartLine := m.calculateSelectedStartLine(subTabIssues)
 
 		scrollY := 0
 		if selectedStartLine >= availableHeight {
@@ -54,57 +51,31 @@ func RenderIssues(issues *gc.Analysis, filterSev string, selectedIndex int, expa
 	)
 }
 
-func getFilteredIssuesFromAnalyzed(issues *gc.Analysis, filterSev string) []gc.PerformanceIssue {
-	switch filterSev {
-	case "critical":
-		return issues.Critical
-	case "warning":
-		return issues.Warning
-	case "info":
-		return issues.Info
-	default:
-		return []gc.PerformanceIssue{}
-	}
-}
-
-func renderIssuesHeader(issues *gc.Analysis, filterSev string) string {
+func renderIssuesHeader(issues *gc.Analysis, subTab IssuesSubTab) string {
 	criticalCount := len(issues.Critical)
 	warningCount := len(issues.Warning)
 	infoCount := len(issues.Info)
 
 	counts := []string{}
-	if criticalCount > 0 {
-		style := TabInactiveStyle
-		if filterSev == "critical" {
-			style = TabActiveStyle
-		}
-		counts = append(counts, style.Render(fmt.Sprintf("🔴 Critical: %d", criticalCount)))
+	criticalStyle := TabInactiveStyle
+	if subTab == CriticalIssues {
+		criticalStyle = TabActiveStyle
 	}
+	counts = append(counts, criticalStyle.Render(fmt.Sprintf("🔴 Critical: %d", criticalCount)))
 
-	if warningCount > 0 {
-		style := TabInactiveStyle
-		if filterSev == "warning" {
-			style = TabActiveStyle
-		}
-		counts = append(counts, style.Render(fmt.Sprintf("⚠️  Warning: %d", warningCount)))
+	warningStyle := TabInactiveStyle
+	if subTab == WarningIssues {
+		warningStyle = TabActiveStyle
 	}
+	counts = append(counts, warningStyle.Render(fmt.Sprintf("⚠️  Warning: %d", warningCount)))
 
-	if infoCount > 0 {
-		style := TabInactiveStyle
-		if filterSev == "info" {
-			style = TabActiveStyle
-		}
-		counts = append(counts, style.Render(fmt.Sprintf("ℹ️  Info: %d", infoCount)))
+	infoStyle := TabInactiveStyle
+	if subTab == InfoIssues {
+		infoStyle = TabActiveStyle
 	}
-
-	if len(counts) == 0 {
-		return GoodStyle.Render("✅ No issues detected!")
-	}
+	counts = append(counts, infoStyle.Render(fmt.Sprintf("ℹ️  Info: %d", infoCount)))
 
 	header := strings.Join(counts, "  ")
-
-	filteredCount := len(getFilteredIssuesFromAnalyzed(issues, filterSev))
-	header += MutedStyle.Render(fmt.Sprintf("     │ Showing: %d issues", filteredCount))
 
 	return header
 }
@@ -113,18 +84,23 @@ func renderNoIssues() string {
 	return GoodStyle.Render("✅ No performance issues detected!\n\nYour G1GC configuration appears to be working well.")
 }
 
-func renderNoFilteredIssues(filterSev string) string {
-	return fmt.Sprintf("No %s issues found.\n\nPress 'a' to show all issues.", filterSev)
+func renderNoSubTabIssues(subTab IssuesSubTab) string {
+	return fmt.Sprintf("No %s issues found.\n\n", subTab)
 }
 
-func renderIssuesList(issues []gc.PerformanceIssue, selectedIndex int, expandedItems map[int]bool, width int) string {
+func (m *Model) renderIssuesList(issues []gc.PerformanceIssue) string {
 	var lines []string
 
-	for i, issue := range issues {
-		isSelected := i == selectedIndex
-		isExpanded := expandedItems[i]
+	selectedSubTab := m.issuesState.selectedSubTab
+	if len(issues) == 0 {
+		return renderNoSubTabIssues(selectedSubTab)
+	}
 
-		issueLines := renderIssueItem(issue, isSelected, isExpanded, width)
+	for i, issue := range issues {
+		isSelected := i == m.GetSelectedIssue()
+		isExpanded := m.IsIssueExpanded(i)
+
+		issueLines := renderIssueItem(issue, isSelected, isExpanded, m.width)
 		lines = append(lines, issueLines...)
 		lines = append(lines, "") // Spacing between issues
 	}
@@ -207,15 +183,16 @@ func renderIssueItem(issue gc.PerformanceIssue, isSelected, isExpanded bool, wid
 }
 
 // Calculate the starting line number for the selected issue
-func calculateSelectedStartLine(issues []gc.PerformanceIssue, selectedIndex int, expandedItems map[int]bool) int {
+func (m *Model) calculateSelectedStartLine(issues []gc.PerformanceIssue) int {
 	lineCount := 0
+	selectedIssue := m.GetSelectedIssue()
 
-	for i := 0; i < selectedIndex && i < len(issues); i++ {
+	for i := 0; i < selectedIssue && i < len(issues); i++ {
 		// Each issue has at least 4 lines (title, description, expand control, spacing)
 		lineCount += 4
 
 		// Add lines for expanded recommendations
-		if expandedItems[i] && len(issues[i].Recommendation) > 0 {
+		if m.IsIssueExpanded(selectedIssue) && len(issues[i].Recommendation) > 0 {
 			lineCount += 2 // Header and spacing
 			for _, rec := range issues[i].Recommendation {
 				wrapped := WrapText(rec, 72) // Approximate width for calculation

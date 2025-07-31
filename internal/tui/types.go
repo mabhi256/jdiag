@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/mabhi256/jdiag/internal/gc"
 )
 
@@ -18,12 +17,9 @@ type Model struct {
 
 	scrollPositions map[TabType]int
 	metricsSubTab   MetricsSubTab
-	issuesFilter    string
-	expandedIssues  map[int]bool
-	selectedIssue   int
-
-	// Key bindings
-	keys KeyMap
+	issuesState     *IssuesState
+	eventsState     *EventsState
+	trendsState     *TrendsState
 }
 
 type TabType int
@@ -36,6 +32,35 @@ const (
 	TrendsTab
 )
 
+type IssuesState struct {
+	selectedSubTab   IssuesSubTab
+	expandedIssues   map[IssueKey]bool
+	selectedIssueMap map[IssuesSubTab]int
+}
+
+type IssuesSubTab int
+
+const (
+	CriticalIssues IssuesSubTab = iota
+	WarningIssues
+	InfoIssues
+)
+
+var issueTypeName = map[IssuesSubTab]string{
+	CriticalIssues: "critical",
+	WarningIssues:  "warning",
+	InfoIssues:     "info",
+}
+
+func (ss IssuesSubTab) String() string {
+	return issueTypeName[ss]
+}
+
+type IssueKey struct {
+	SubTab IssuesSubTab
+	ID     int
+}
+
 type MetricsSubTab int
 
 const (
@@ -46,35 +71,71 @@ const (
 	ConcurrentMetrics
 )
 
-type KeyMap struct {
-	Tab1  key.Binding
-	Tab2  key.Binding
-	Tab3  key.Binding
-	Left  key.Binding
-	Right key.Binding
-	Up    key.Binding
-	Down  key.Binding
-	Enter key.Binding
-	Quit  key.Binding
+type EventsState struct {
+	selectedEvent int
+	eventFilter   EventFilter
+	sortBy        EventSortBy
+	searchTerm    string
+	showDetails   bool
 }
 
-func k(keys []string, help, desc string) key.Binding {
-	return key.NewBinding(
-		key.WithKeys(keys...),
-		key.WithHelp(help, desc),
-	)
+type EventFilter int
+
+const (
+	AllEvent EventFilter = iota
+	YoungEvent
+	MixedEvent
+	FullEvent
+	ConcurrentEvent
+)
+
+type EventSortBy int
+
+const (
+	TimeSortEvent EventSortBy = iota
+	DurationSortEvent
+	TypeSortEvent
+)
+
+type TrendsState struct {
+	trendSubTab TrendSubTab
+	timeWindow  int // number of recent events to show
 }
 
-func DefaultKeyMap() KeyMap {
-	return KeyMap{
-		Tab1:  k([]string{"1"}, "1", "dashboard"),
-		Tab2:  k([]string{"2"}, "2", "metrics"),
-		Tab3:  k([]string{"3"}, "3", "issues"),
-		Left:  k([]string{"left", "h"}, "←/h", "prev tab"),
-		Right: k([]string{"right", "l"}, "→/l", "next tab"),
-		Up:    k([]string{"up", "k"}, "↑/k", "up"),
-		Down:  k([]string{"down", "j"}, "↓/j", "down"),
-		Enter: k([]string{"enter"}, "enter", "expand"),
-		Quit:  k([]string{"q", "ctrl+c"}, "q", "quit"),
+type TrendSubTab int
+
+const (
+	PauseTrend TrendSubTab = iota
+	HeapTrend
+	AllocationTrend
+	FrequencyTrend
+)
+
+func (m *Model) GetSubTabIssues() []gc.PerformanceIssue {
+	subTab := m.issuesState.selectedSubTab
+
+	switch subTab {
+	case CriticalIssues:
+		return m.issues.Critical
+	case WarningIssues:
+		return m.issues.Warning
+	case InfoIssues:
+		return m.issues.Info
+	default:
+		return []gc.PerformanceIssue{}
 	}
+}
+
+func (m *Model) GetSelectedIssue() int {
+	currentSubTab := m.issuesState.selectedSubTab
+	return m.issuesState.selectedIssueMap[currentSubTab]
+}
+
+func (m *Model) IsIssueExpanded(id int) bool {
+	selectedSubTab := m.issuesState.selectedSubTab
+	issueKey := IssueKey{
+		SubTab: selectedSubTab,
+		ID:     id,
+	}
+	return m.issuesState.expandedIssues[issueKey]
 }

@@ -13,17 +13,35 @@ import (
 const PageSize = 10 // Number of lines to scroll per page
 
 func initialModel(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis) *Model {
+	selecttedIssuesTab := getFirstNonEmptyFilter(issues)
+	selectedIssue := make(map[IssuesSubTab]int)
+	selectedIssue[CriticalIssues] = 0
+	selectedIssue[WarningIssues] = 0
+	selectedIssue[InfoIssues] = 0
+
 	return &Model{
 		currentTab:      DashboardTab,
 		gcLog:           gcLog,
 		metrics:         metrics,
 		issues:          issues,
-		keys:            DefaultKeyMap(),
 		scrollPositions: make(map[TabType]int),
-		expandedIssues:  make(map[int]bool),
-		issuesFilter:    getFirstNonEmptyFilter(issues),
-		selectedIssue:   0,
 		metricsSubTab:   GeneralMetrics,
+		issuesState: &IssuesState{
+			selectedSubTab:   selecttedIssuesTab,
+			expandedIssues:   make(map[IssueKey]bool),
+			selectedIssueMap: selectedIssue,
+		},
+		eventsState: &EventsState{
+			selectedEvent: 0,
+			eventFilter:   AllEvent,
+			sortBy:        TimeSortEvent,
+			searchTerm:    "",
+			showDetails:   true,
+		},
+		trendsState: &TrendsState{
+			trendSubTab: PauseTrend,
+			timeWindow:  100,
+		},
 	}
 }
 
@@ -50,6 +68,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case MetricsTab:
 				m.currentTab = IssuesTab
 			case IssuesTab:
+				m.currentTab = EventsTab
+			case EventsTab:
+				m.currentTab = TrendsTab
+			case TrendsTab:
 				m.currentTab = DashboardTab
 			}
 
@@ -59,11 +81,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.currentTab = MetricsTab
 		case "3":
 			m.currentTab = IssuesTab
+		case "4":
+			m.currentTab = EventsTab
+		case "5":
+			m.currentTab = TrendsTab
 
 		case "left", "h":
-			return m.handleLeftNavigation()
+			return m.handleHorizontalNavigation(-1)
 		case "right", "l":
-			return m.handleRightNavigation()
+			return m.handleHorizontalNavigation(1)
 
 		default:
 			// Forward to tab-specific handlers for up/down and other keys
@@ -74,45 +100,30 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleLeftNavigation() (tea.Model, tea.Cmd) {
-	switch m.currentTab {
-	case MetricsTab:
-		// Handle metrics sub-tabs
-		if m.metricsSubTab > GeneralMetrics {
-			m.metricsSubTab--
-			m.scrollPositions[MetricsTab] = 0
-		}
-	case IssuesTab:
-		// Cycle through non-empty filters backwards
-		filters := getAvailableFilters(m.issues)
-		if len(filters) > 1 {
-			currentIndex := getFilterIndex(m.issuesFilter, filters)
-			newIndex := (currentIndex + len(filters) - 1) % len(filters)
-			m.issuesFilter = filters[newIndex]
-			m.selectedIssue = 0
-		}
-	}
-	return m, nil
-}
+func (m *Model) handleHorizontalNavigation(direction int) (tea.Model, tea.Cmd) {
+	var current *int
+	var max int
 
-func (m *Model) handleRightNavigation() (tea.Model, tea.Cmd) {
 	switch m.currentTab {
 	case MetricsTab:
-		// Handle metrics sub-tabs
-		if m.metricsSubTab < ConcurrentMetrics {
-			m.metricsSubTab++
-			m.scrollPositions[MetricsTab] = 0
-		}
+		current, max = (*int)(&m.metricsSubTab), int(ConcurrentMetrics)
 	case IssuesTab:
-		// Cycle through non-empty filters forwards
-		filters := getAvailableFilters(m.issues)
-		if len(filters) > 1 {
-			currentIndex := getFilterIndex(m.issuesFilter, filters)
-			newIndex := (currentIndex + 1) % len(filters)
-			m.issuesFilter = filters[newIndex]
-			m.selectedIssue = 0
-		}
+		current, max = (*int)(&m.issuesState.selectedSubTab), int(InfoIssues)
+	case EventsTab:
+		current, max = (*int)(&m.eventsState.eventFilter), int(ConcurrentEvent)
+	case TrendsTab:
+		current, max = (*int)(&m.trendsState.trendSubTab), int(FrequencyTrend)
+	default:
+		return m, nil
 	}
+
+	*current = (*current + direction + max + 1) % (max + 1)
+	m.scrollPositions[m.currentTab] = 0
+	// if newValue >= 0 && newValue <= max {
+	// 	*current = newValue
+	// 	m.scrollPositions[m.currentTab] = 0
+	// }
+
 	return m, nil
 }
 
@@ -157,34 +168,31 @@ func (m *Model) handleMetricsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleIssuesKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	filteredIssues := m.getFilteredIssues()
+	state := m.issuesState
+	selectedIssueMap := state.selectedIssueMap
+	expandedIssues := state.expandedIssues
+	currentSubTab := state.selectedSubTab
+
+	subTabIssues := m.GetSubTabIssues()
+	selectedIssue := selectedIssueMap[currentSubTab]
 
 	switch msg.String() {
 	case "up", "k":
-		if m.selectedIssue > 0 {
-			m.selectedIssue--
+		if selectedIssue > 0 {
+			selectedIssueMap[currentSubTab] = selectedIssue - 1
 		}
 	case "down", "j":
-		if m.selectedIssue < len(filteredIssues)-1 {
-			m.selectedIssue++
+		if selectedIssue < len(subTabIssues)-1 {
+			selectedIssueMap[currentSubTab] = selectedIssue + 1
 		}
 	case "enter", " ":
-		m.expandedIssues[m.selectedIssue] = !m.expandedIssues[m.selectedIssue]
+		key := IssueKey{
+			SubTab: currentSubTab,
+			ID:     selectedIssue,
+		}
+		expandedIssues[key] = !expandedIssues[key]
 	}
 	return m, nil
-}
-
-func (m *Model) getFilteredIssues() []gc.PerformanceIssue {
-	switch m.issuesFilter {
-	case "critical":
-		return m.issues.Critical
-	case "warning":
-		return m.issues.Warning
-	case "info":
-		return m.issues.Info
-	default:
-		return []gc.PerformanceIssue{}
-	}
 }
 
 func (m *Model) View() string {
@@ -208,7 +216,7 @@ func (m *Model) View() string {
 		content = m.RenderMetrics()
 
 	case IssuesTab:
-		content = RenderIssues(m.issues, m.issuesFilter, m.selectedIssue, m.expandedIssues, m.width, contentHeight)
+		content = m.RenderIssues()
 	}
 
 	// Create a style that ensures content takes up exactly the available height
@@ -301,38 +309,15 @@ func StartTUI(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis) error
 	return err
 }
 
-func getAvailableFilters(issues *gc.Analysis) []string {
-	var filters []string
+func getFirstNonEmptyFilter(issues *gc.Analysis) IssuesSubTab {
 	if len(issues.Critical) > 0 {
-		filters = append(filters, "critical")
+		return CriticalIssues
 	}
 	if len(issues.Warning) > 0 {
-		filters = append(filters, "warning")
+		return WarningIssues
 	}
 	if len(issues.Info) > 0 {
-		filters = append(filters, "info")
+		return InfoIssues
 	}
-	return filters
-}
-
-func getFirstNonEmptyFilter(issues *gc.Analysis) string {
-	if len(issues.Critical) > 0 {
-		return "critical"
-	}
-	if len(issues.Warning) > 0 {
-		return "warning"
-	}
-	if len(issues.Info) > 0 {
-		return "info"
-	}
-	return "critical" // fallback
-}
-
-func getFilterIndex(filter string, filters []string) int {
-	for i, f := range filters {
-		if f == filter {
-			return i
-		}
-	}
-	return 0
+	return CriticalIssues // fallback
 }
