@@ -139,3 +139,18 @@ func (m *Model) IsIssueExpanded(id int) bool {
 	}
 	return m.issuesState.expandedIssues[issueKey]
 }
+
+func CycleEnum[T ~int](current T, direction int, max T) T {
+	next := current + T(direction)
+	if next < 0 {
+		return max
+	}
+	if next > max {
+		return 0
+	}
+	return next
+}
+
+func CycleEnumPtr[T ~int](current *T, direction int, max T) {
+	*current = (*current + T(direction) + max + 1) % (max + 1)
+}

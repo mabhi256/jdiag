@@ -101,28 +101,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleHorizontalNavigation(direction int) (tea.Model, tea.Cmd) {
-	var current *int
-	var max int
-
 	switch m.currentTab {
 	case MetricsTab:
-		current, max = (*int)(&m.metricsSubTab), int(ConcurrentMetrics)
+		CycleEnumPtr(&m.metricsSubTab, direction, ConcurrentMetrics)
 	case IssuesTab:
-		current, max = (*int)(&m.issuesState.selectedSubTab), int(InfoIssues)
-	case EventsTab:
-		current, max = (*int)(&m.eventsState.eventFilter), int(ConcurrentEvent)
+		CycleEnumPtr(&m.issuesState.selectedSubTab, direction, InfoIssues)
 	case TrendsTab:
-		current, max = (*int)(&m.trendsState.trendSubTab), int(FrequencyTrend)
+		CycleEnumPtr(&m.trendsState.trendSubTab, direction, FrequencyTrend)
 	default:
 		return m, nil
 	}
 
-	*current = (*current + direction + max + 1) % (max + 1)
 	m.scrollPositions[m.currentTab] = 0
-	// if newValue >= 0 && newValue <= max {
-	// 	*current = newValue
-	// 	m.scrollPositions[m.currentTab] = 0
-	// }
 
 	return m, nil
 }
@@ -131,12 +121,14 @@ func (m *Model) handleTabSpecificKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.currentTab {
 	case DashboardTab:
 		return m.handleDashboardKeys(msg)
-
 	case MetricsTab:
 		return m.handleMetricsKeys(msg)
-
 	case IssuesTab:
 		return m.handleIssuesKeys(msg)
+	case EventsTab:
+		return m.handleEventsKeys(msg)
+	case TrendsTab:
+		return m.handleTrendsKeys(msg)
 	}
 
 	return m, nil
@@ -195,6 +187,82 @@ func (m *Model) handleIssuesKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) handleEventsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	filteredEvents := m.getFilteredEvents()
+
+	switch msg.String() {
+	case "up", "k":
+		if m.eventsState.selectedEvent > 0 {
+			m.eventsState.selectedEvent--
+		}
+	case "down", "j":
+		if m.eventsState.selectedEvent < len(filteredEvents)-1 {
+			m.eventsState.selectedEvent++
+		}
+	case "f":
+		CycleEnumPtr(&m.eventsState.eventFilter, 1, ConcurrentEvent)
+	case "s":
+		CycleEnumPtr(&m.eventsState.sortBy, 1, TypeSortEvent)
+	}
+	return m, nil
+}
+
+func (m *Model) handleTrendsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		if m.scrollPositions[TrendsTab] > 0 {
+			m.scrollPositions[TrendsTab]--
+		}
+	case "down", "j":
+		m.scrollPositions[TrendsTab]++
+	case "+":
+		// Increase time window
+		if m.trendsState.timeWindow < 1000 {
+			m.trendsState.timeWindow += 50
+		}
+	case "-":
+		// Decrease time window
+		if m.trendsState.timeWindow > 50 {
+			m.trendsState.timeWindow -= 50
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) getFilteredEvents() []gc.GCEvent {
+	if m.gcLog == nil {
+		return []gc.GCEvent{}
+	}
+
+	events := m.gcLog.Events
+	if m.eventsState.eventFilter == AllEvent {
+		return events
+	}
+
+	var filtered []gc.GCEvent
+	for _, event := range events {
+		switch m.eventsState.eventFilter {
+		case YoungEvent:
+			if strings.Contains(strings.ToLower(event.Type), "young") {
+				filtered = append(filtered, event)
+			}
+		case MixedEvent:
+			if strings.Contains(strings.ToLower(event.Type), "mixed") {
+				filtered = append(filtered, event)
+			}
+		case FullEvent:
+			if strings.Contains(strings.ToLower(event.Type), "full") {
+				filtered = append(filtered, event)
+			}
+		case ConcurrentEvent:
+			if strings.Contains(strings.ToLower(event.Type), "concurrent") {
+				filtered = append(filtered, event)
+			}
+		}
+	}
+	return filtered
+}
+
 func (m *Model) View() string {
 	if m.width == 0 {
 		return "Loading..."
@@ -211,12 +279,14 @@ func (m *Model) View() string {
 	switch m.currentTab {
 	case DashboardTab:
 		content = m.RenderDashboard()
-
 	case MetricsTab:
 		content = m.RenderMetrics()
-
 	case IssuesTab:
 		content = m.RenderIssues()
+	case EventsTab:
+		content = m.RenderEvents()
+	case TrendsTab:
+		content = m.RenderTrends()
 	}
 
 	// Create a style that ensures content takes up exactly the available height
@@ -240,8 +310,8 @@ func (m *Model) renderHeader() string {
 	// Enhanced tab navigation with better visual indicators
 	tabs := []string{}
 
-	tabIcons := []string{"📊", "📈", "⚠️"}
-	tabNames := []string{"Dashboard", "Metrics", "Issues"}
+	tabIcons := []string{"📋", "⏱️", "❗", "📍", "📈"}
+	tabNames := []string{"Dashboard", "Metrics", "Issues", "Events", "Trends"}
 
 	for i, name := range tabNames {
 		style := TabInactiveStyle
@@ -256,7 +326,7 @@ func (m *Model) renderHeader() string {
 		tabs = append(tabs, style.Render(tabText))
 	}
 
-	tabLine := strings.Join(tabs, "  ")
+	tabLine := strings.Join(tabs, "")
 
 	border := strings.Repeat("─", m.width)
 
@@ -276,12 +346,14 @@ func GetShortcuts(currentTab TabType) string {
 	switch currentTab {
 	case DashboardTab:
 		tabSpecific = "↑↓:scroll"
-
 	case MetricsTab:
 		tabSpecific = "↑↓:scroll • ←/→:metrics"
-
 	case IssuesTab:
 		tabSpecific = "↑↓:nav • ←/→:filter • space/enter:expand"
+	case EventsTab:
+		tabSpecific = "↑↓:nav • f:filter • s:sort"
+	case TrendsTab:
+		tabSpecific = "↑↓:scroll • ←/→:view • +/-:timespan"
 	}
 
 	if tabSpecific != "" {
