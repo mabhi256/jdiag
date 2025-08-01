@@ -31,6 +31,11 @@ type Parser struct {
 	heapSummaryRegex         *regexp.Regexp
 	metaClassSpaceRegex      *regexp.Regexp
 
+	// Enhanced patterns for before/after tracking
+	heapBeforeRegex           *regexp.Regexp // Heap before GC invocations
+	heapAfterRegex            *regexp.Regexp // Heap after GC invocations
+	metaspaceBeforeAfterRegex *regexp.Regexp // Metaspace: 138K(320K)->138K(320K)
+
 	// Detailed timing patterns
 	preEvacuateRegex    *regexp.Regexp
 	parallelCountRegex  *regexp.Regexp
@@ -121,9 +126,18 @@ func NewParser() *Parser {
 		// garbage-first heap   total 975872K, used 587987K
 		heapSummaryRegex: regexp.MustCompile(`garbage-first heap   total ` + counter + `K, used ` + counter + `K`),
 
+		// Heap before GC invocations=0 (full 0):
+		heapBeforeRegex: regexp.MustCompile(`Heap before GC invocations=\d+ \(full \d+\):`),
+
+		// Heap after GC invocations=1 (full 0):
+		heapAfterRegex: regexp.MustCompile(`Heap after GC invocations=\d+ \(full \d+\):`),
+
 		// Metaspace       used 16279K, capacity 17210K, committed 17408K, reserved 1064960K
 		// class space    used 1773K, capacity 1988K, committed 2048K, reserved 1048576K
 		metaClassSpaceRegex: regexp.MustCompile(`(Metaspace|class space)\s+used ` + counter + `K, capacity ` + counter + `K, committed ` + counter + `K, reserved ` + counter + `K`),
+
+		// Metaspace: 138K(320K)->138K(320K) NonClass: 130K(192K)->130K(192K) Class: 8K(128K)->8K(128K)
+		metaspaceBeforeAfterRegex: regexp.MustCompile(`(Metaspace|NonClass|Class): (\d+)K\((\d+)K\)->(\d+)K\((\d+)K\)`),
 
 		// Pre Evacuate Collection Set: 0.5ms
 		// Post Evacuate Collection Set: 1.2ms
@@ -219,12 +233,28 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 	processingEvents := make(map[int]*GCEvent)
 	concurrentCycles := make(map[int]time.Time)
 
+	// Track parsing state for before/after heap snapshots
+	var currentlyParsingBefore = false
+	var currentlyParsingAfter = false
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		timestamp := p.extractTimestamp(line)
 		p.parseConfiguration(line, log)
+
+		// Check for heap before/after markers
+		if p.heapBeforeRegex.MatchString(line) {
+			currentlyParsingBefore = true
+			currentlyParsingAfter = false
+			continue
+		}
+		if p.heapAfterRegex.MatchString(line) {
+			currentlyParsingBefore = false
+			currentlyParsingAfter = true
+			continue
+		}
 
 		gcId := extractGCId(line)
 		// Skip lines without GC ID for event-specific parsing
@@ -243,7 +273,7 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 		}
 
 		p.parseG1Timing(line, event)
-		p.parseG1RegionDetails(line, event)
+		p.parseG1RegionDetails(line, event, currentlyParsingBefore, currentlyParsingAfter)
 		p.parseG1ConcurrentPhases(line, timestamp, concurrentCycles, event)
 		p.parseGCSummary(line, timestamp, event)
 
@@ -253,6 +283,9 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 				event.UserTime = userTime
 				event.SystemTime = systemTime
 				event.RealTime = realTime
+
+				// Calculate derived values before adding to log
+				p.calculateDerivedValues(event)
 
 				log.Events = append(log.Events, *event)
 				delete(processingEvents, id)
@@ -265,6 +298,199 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 	return log, scanner.Err()
 }
 
+func (p *Parser) parseG1RegionDetails(line string, event *GCEvent, parsingBefore, parsingAfter bool) {
+	// Parse region disbursement (Microsoft pattern)
+	if matches := p.regionDisbursementRegex.FindStringSubmatch(line); len(matches) >= 6 {
+		regionSize, _ := ParseMemorySize(matches[1] + "K")
+		youngRegions, _ := strconv.Atoi(matches[2])
+		youngMemory, _ := ParseMemorySize(matches[3] + "K")
+		survivorRegions, _ := strconv.Atoi(matches[4])
+		survivorMemory, _ := ParseMemorySize(matches[5] + "K")
+
+		event.RegionSize = regionSize
+
+		// Store in before/after fields based on parsing state
+		if parsingBefore {
+			event.YoungRegionsBefore = youngRegions
+			event.YoungMemoryBefore = youngMemory
+			event.SurvivorRegionsBefore = survivorRegions
+			event.SurvivorMemoryBefore = survivorMemory
+			// Calculate Eden from Young - Survivor
+			event.EdenRegionsBefore = youngRegions - survivorRegions
+			event.EdenMemoryBefore = youngMemory - survivorMemory
+		} else if parsingAfter {
+			event.YoungRegionsAfter = youngRegions
+			event.YoungMemoryAfter = youngMemory
+			event.SurvivorRegionsAfter = survivorRegions
+			event.SurvivorMemoryAfter = survivorMemory
+			// Calculate Eden from Young - Survivor
+			event.EdenRegionsAfter = youngRegions - survivorRegions
+			event.EdenMemoryAfter = youngMemory - survivorMemory
+		}
+
+		return
+	}
+
+	// Parse region summary transitions: Eden regions: 64->0(62)
+	if matches := p.regionSummaryRegex.FindStringSubmatch(line); len(matches) >= 4 {
+		regionType := matches[1]
+		regionsBefore, _ := strconv.Atoi(matches[2])
+		regionsAfter, _ := strconv.Atoi(matches[3])
+		var regionsTarget int
+		if len(matches) > 4 && matches[4] != "" {
+			regionsTarget, _ = strconv.Atoi(matches[4])
+		}
+
+		switch regionType {
+		case "Eden":
+			event.EdenRegionsBefore = regionsBefore
+			event.EdenRegionsAfter = regionsAfter
+			event.EdenRegionsTarget = regionsTarget
+			// Calculate memory if we have region size
+			if event.RegionSize > 0 {
+				event.EdenMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
+				event.EdenMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			}
+
+		case "Survivor":
+			event.SurvivorRegionsBefore = regionsBefore
+			event.SurvivorRegionsAfter = regionsAfter
+			event.SurvivorRegionsTarget = regionsTarget
+			// Calculate memory if we have region size
+			if event.RegionSize > 0 {
+				event.SurvivorMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
+				event.SurvivorMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			}
+
+		case "Old":
+			event.OldRegionsBefore = regionsBefore
+			event.OldRegionsAfter = regionsAfter
+			// Calculate memory if we have region size
+			if event.RegionSize > 0 {
+				event.OldMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
+				event.OldMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			}
+
+		case "Humongous":
+			event.HumongousRegionsBefore = regionsBefore
+			event.HumongousRegionsAfter = regionsAfter
+			// Calculate memory if we have region size
+			if event.RegionSize > 0 {
+				event.HumongousMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
+				event.HumongousMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			}
+		}
+		return
+	}
+
+	// Parse heap summary
+	if matches := p.heapSummaryRegex.FindStringSubmatch(line); len(matches) >= 3 {
+		totalMemory, _ := ParseMemorySize(matches[1] + "K")
+		usedMemory, _ := ParseMemorySize(matches[2] + "K")
+
+		if event.RegionSize > 0 {
+			totalRegions := int(totalMemory.Bytes() / event.RegionSize.Bytes())
+			usedRegions := int(usedMemory.Bytes() / event.RegionSize.Bytes())
+
+			event.HeapTotalRegions = totalRegions
+
+			if parsingBefore {
+				event.HeapUsedRegionsBefore = usedRegions
+			} else if parsingAfter {
+				event.HeapUsedRegionsAfter = usedRegions
+			}
+		}
+		return
+	}
+
+	// Parse metaspace information - single line format
+	if matches := p.metaClassSpaceRegex.FindStringSubmatch(line); len(matches) >= 6 {
+		spaceType := matches[1]
+		used, _ := ParseMemorySize(matches[2] + "K")
+		capacity, _ := ParseMemorySize(matches[3] + "K")
+		committed, _ := ParseMemorySize(matches[4] + "K")
+		reserved, _ := ParseMemorySize(matches[5] + "K")
+
+		switch spaceType {
+		case "Metaspace":
+			if parsingBefore {
+				event.MetaspaceUsedBefore = used
+				event.MetaspaceCapacityBefore = capacity
+				event.MetaspaceCommittedBefore = committed
+			} else if parsingAfter {
+				event.MetaspaceUsedAfter = used
+				event.MetaspaceCapacityAfter = capacity
+				event.MetaspaceCommittedAfter = committed
+			}
+			event.MetaspaceReserved = reserved // Static field
+
+		case "class space":
+			if parsingBefore {
+				event.ClassSpaceUsedBefore = used
+				event.ClassSpaceCapacityBefore = capacity
+			} else if parsingAfter {
+				event.ClassSpaceUsedAfter = used
+				event.ClassSpaceCapacityAfter = capacity
+			}
+			event.ClassSpaceReserved = reserved // Static field
+		}
+		return
+	}
+
+	// Parse metaspace before/after format: Metaspace: 138K(320K)->138K(320K)
+	if matches := p.metaspaceBeforeAfterRegex.FindStringSubmatch(line); len(matches) >= 6 {
+		spaceType := matches[1]
+		usedBefore, _ := ParseMemorySize(matches[2] + "K")
+		committedBefore, _ := ParseMemorySize(matches[3] + "K")
+		usedAfter, _ := ParseMemorySize(matches[4] + "K")
+		committedAfter, _ := ParseMemorySize(matches[5] + "K")
+
+		switch spaceType {
+		case "Metaspace":
+			event.MetaspaceUsedBefore = usedBefore
+			event.MetaspaceCommittedBefore = committedBefore
+			event.MetaspaceUsedAfter = usedAfter
+			event.MetaspaceCommittedAfter = committedAfter
+			event.MetaspaceCapacityBefore = committedBefore
+			event.MetaspaceCapacityAfter = committedAfter
+
+		case "Class":
+			event.ClassSpaceUsedBefore = usedBefore
+			event.ClassSpaceCapacityBefore = committedBefore
+			event.ClassSpaceUsedAfter = usedAfter
+			event.ClassSpaceCapacityAfter = committedAfter
+		}
+		return
+	}
+}
+
+// Calculate derived values after parsing is complete
+func (p *Parser) calculateDerivedValues(event *GCEvent) {
+	// Calculate young generation totals from Eden + Survivor
+	event.YoungRegionsBefore = event.EdenRegionsBefore + event.SurvivorRegionsBefore
+	event.YoungRegionsAfter = event.EdenRegionsAfter + event.SurvivorRegionsAfter
+	event.YoungMemoryBefore = event.EdenMemoryBefore + event.SurvivorMemoryBefore
+	event.YoungMemoryAfter = event.EdenMemoryAfter + event.SurvivorMemoryAfter
+
+	// Calculate old memory from total heap - young - humongous (approximation)
+	if event.HeapBefore > 0 && event.HeapAfter > 0 {
+		// Try to derive old memory if not already calculated from regions
+		if event.OldMemoryBefore == 0 {
+			event.OldMemoryBefore = event.HeapBefore - event.YoungMemoryBefore - event.HumongousMemoryBefore
+			if event.OldMemoryBefore < 0 {
+				event.OldMemoryBefore = 0
+			}
+		}
+		if event.OldMemoryAfter == 0 {
+			event.OldMemoryAfter = event.HeapAfter - event.YoungMemoryAfter - event.HumongousMemoryAfter
+			if event.OldMemoryAfter < 0 {
+				event.OldMemoryAfter = 0
+			}
+		}
+	}
+}
+
+// Rest of the parsing functions remain the same...
 func (p *Parser) parseConfiguration(line string, log *GCLog) {
 	// Parse JVM version
 	matches := p.versionRegex.FindStringSubmatch(line)
@@ -457,75 +683,6 @@ func (p *Parser) parseG1Timing(line string, event *GCEvent) {
 
 		event.WorkersUsed = workersUsed
 		event.WorkersAvailable = workersAvailable
-	}
-}
-
-func (p *Parser) parseG1RegionDetails(line string, event *GCEvent) {
-	// Parse region disbursement (Microsoft pattern)
-	if matches := p.regionDisbursementRegex.FindStringSubmatch(line); len(matches) >= 6 {
-		regionSize, _ := ParseMemorySize(matches[1] + "K")
-		youngRegions, _ := strconv.Atoi(matches[2])
-		youngMemory, _ := ParseMemorySize(matches[3] + "K")
-		survivorRegions, _ := strconv.Atoi(matches[4])
-		survivorMemory, _ := ParseMemorySize(matches[5] + "K")
-
-		event.RegionSize = regionSize
-		event.YoungRegions = youngRegions
-		event.YoungRegionsMemory = youngMemory
-		event.SurvivorRegions = survivorRegions
-		event.SurvivorRegionsMemory = survivorMemory
-		return
-	}
-
-	if matches := p.regionSummaryRegex.FindStringSubmatch(line); len(matches) >= 4 {
-		regionType := matches[1]
-		// regionsBefore, _ := strconv.Atoi(matches[2])
-		regionsAfter, _ := strconv.Atoi(matches[3])
-		// regionsConfigured, _ := strconv.Atoi(matches[4])
-
-		switch regionType {
-		case "Eden":
-			event.EdenRegions = regionsAfter
-		case "Survivor":
-			event.SurvivorRegionsAfter = regionsAfter
-		case "Old":
-			event.OldRegions = regionsAfter
-		case "Humongous":
-			event.HumongousRegions = regionsAfter
-		}
-		return
-	}
-
-	// Parse heap summary
-	if matches := p.heapSummaryRegex.FindStringSubmatch(line); len(matches) >= 3 {
-		totalMemory, _ := ParseMemorySize(matches[1] + "K")
-		usedMemory, _ := ParseMemorySize(matches[2] + "K")
-
-		if event.RegionSize > 0 {
-			event.HeapTotalRegions = int(totalMemory.Bytes() / event.RegionSize.Bytes())
-			event.HeapUsedRegions = int(usedMemory.Bytes() / event.RegionSize.Bytes())
-		}
-		return
-	}
-
-	// Parse metaspace information
-	if matches := p.metaClassSpaceRegex.FindStringSubmatch(line); len(matches) >= 6 {
-		spaceType := matches[1]
-		used, _ := ParseMemorySize(matches[2] + "K")
-		capacity, _ := ParseMemorySize(matches[3] + "K")
-		committed, _ := ParseMemorySize(matches[4] + "K")
-		reserved, _ := ParseMemorySize(matches[5] + "K")
-
-		switch spaceType {
-		case "Metaspace":
-			event.MetaspaceUsed = used
-			event.MetaspaceCapacity = capacity
-			event.MetaspaceCommitted = committed
-			event.MetaspaceReserved = reserved
-		case "class space":
-			event.ClassSpaceUsed = used
-			event.ClassSpaceCapacity = capacity
-		}
 	}
 }
 

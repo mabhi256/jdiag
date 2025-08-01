@@ -8,14 +8,14 @@ type GCEvent struct {
 	Type      string // "Young", "Mixed", "Full", "Concurrent"
 	Subtype   string // "Normal", "Concurrent Start", etc.
 	Cause     string // "G1 Evacuation Pause", "Metadata GC Threshold"
-	Duration  time.Duration
 
-	// Heap data from summary line: "9M->2M(16M)"
+	// [gc] GC(0) Pause Young (Normal) (G1 Evacuation Pause) 65M->42M(256M) 26.506ms
 	HeapBefore MemorySize
 	HeapAfter  MemorySize
 	HeapTotal  MemorySize
+	Duration   time.Duration
 
-	// CPU data: "User=0.00s Sys=0.00s Real=0.01s"
+	// [gc,cpu] GC(0) User=0.02s Sys=0.10s Real=0.03s
 	UserTime   time.Duration
 	SystemTime time.Duration
 	RealTime   time.Duration
@@ -33,35 +33,72 @@ type GCEvent struct {
 	ReferenceProcessingTime time.Duration
 	EvacuationFailureTime   time.Duration
 
-	// G1GC region information
-	RegionSize            MemorySize
-	YoungRegions          int
-	YoungRegionsMemory    MemorySize
-	SurvivorRegions       int
-	SurvivorRegionsMemory MemorySize
-	EdenRegions           int
-	SurvivorRegionsAfter  int
-	OldRegions            int
-	HumongousRegions      int
-	HeapTotalRegions      int
-	HeapUsedRegions       int
+	// [gc,heap] GC(0)   region size 1024K, 64 young (65536K), 0 survivors (0K)
+	RegionSize MemorySize
 
-	// Worker thread information
+	// [gc,heap] GC(0) Eden regions: 64->0(62)
+	EdenRegionsBefore int
+	EdenRegionsAfter  int
+	EdenRegionsTarget int
+	EdenMemoryBefore  MemorySize
+	EdenMemoryAfter   MemorySize
+
+	// [gc,heap] GC(0) Survivor regions: 0->2(2)
+	SurvivorRegionsBefore int
+	SurvivorRegionsAfter  int
+	SurvivorRegionsTarget int
+	SurvivorMemoryBefore  MemorySize
+	SurvivorMemoryAfter   MemorySize
+
+	// [gc,heap] GC(0) Old regions: 2->42
+	OldRegionsBefore int
+	OldRegionsAfter  int
+	OldMemoryBefore  MemorySize
+	OldMemoryAfter   MemorySize
+
+	// Young regions total (Eden + Survivor)
+	YoungRegionsBefore int
+	YoungRegionsAfter  int
+	YoungMemoryBefore  MemorySize
+	YoungMemoryAfter   MemorySize
+
+	// [gc,heap] GC(0) Humongous regions: 0->0
+	HumongousRegionsBefore int
+	HumongousRegionsAfter  int
+	HumongousMemoryBefore  MemorySize
+	HumongousMemoryAfter   MemorySize
+
+	// [gc,heap] GC(0)  garbage-first heap   total 262144K, used 66610K
+	HeapTotalRegions      int
+	HeapUsedRegionsBefore int
+	HeapUsedRegionsAfter  int
+
+	// [gc,task] GC(0) Using 6 workers of 10 for evacuation
 	WorkersUsed      int
 	WorkersAvailable int
 
 	// G1GC-specific flags
 	ToSpaceExhausted bool
 
-	// Metaspace information
-	MetaspaceUsed      MemorySize
-	MetaspaceCapacity  MemorySize
-	MetaspaceCommitted MemorySize
-	MetaspaceReserved  MemorySize
-	ClassSpaceUsed     MemorySize
-	ClassSpaceCapacity MemorySize
+	// [gc,metaspace] GC(0) Metaspace: 138K(320K)->138K(320K) NonClass: 130K(192K)->130K(192K) Class: 8K(128K)->8K(128K)
+	// Metaspace: used(committed)->used(committed)
+	// Metaspace used 138K, committed 320K, reserved 1114112K
+	MetaspaceUsedBefore      MemorySize
+	MetaspaceUsedAfter       MemorySize
+	MetaspaceCapacityBefore  MemorySize
+	MetaspaceCapacityAfter   MemorySize
+	MetaspaceCommittedBefore MemorySize
+	MetaspaceCommittedAfter  MemorySize
+	MetaspaceReserved        MemorySize
 
-	// Concurrent marking details
+	// class space    used 8K, committed 128K, reserved 1048576K
+	ClassSpaceUsedBefore     MemorySize
+	ClassSpaceUsedAfter      MemorySize
+	ClassSpaceCapacityBefore MemorySize
+	ClassSpaceCapacityAfter  MemorySize
+	ClassSpaceReserved       MemorySize
+
+	// [gc,marking] GC(5) Concurrent Mark Cycle
 	ConcurrentPhase    string
 	ConcurrentDuration time.Duration
 	ConcurrentCycleId  int

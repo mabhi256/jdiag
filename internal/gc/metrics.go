@@ -66,13 +66,16 @@ func (log *GCLog) CalculateMetrics() *GCMetrics {
 		metrics.P99Pause = calculatePercentile(durations, 99)
 	}
 
-	// Calculate allocation rate (MB/second)
+	// Calculate allocation rate (MB/second) using enhanced before/after data
 	if metrics.TotalRuntime > 0 && len(log.Events) > 0 {
 		var totalAllocated MemorySize
 		for _, event := range log.Events {
+			heapBefore := event.HeapBefore
+			heapAfter := event.HeapAfter
+
 			// Allocation is roughly heap growth + GC collection
-			if event.HeapBefore > event.HeapAfter {
-				totalAllocated += event.HeapBefore.Sub(event.HeapAfter)
+			if heapBefore > heapAfter {
+				totalAllocated += heapBefore.Sub(heapAfter)
 			}
 		}
 
@@ -98,16 +101,13 @@ func (log *GCLog) CalculateMetrics() *GCMetrics {
 		metrics.AvgHeapUtil = totalUtilization / float64(validEvents)
 	}
 
-	// Calculate enhanced metrics from events
 	metrics.calculateAdvancedMetrics(log.Events)
-
-	// Calculate promotion metrics as part of main metrics
 	metrics.calculatePromotionMetrics(log.Events)
+	metrics.calculateEvacuationFailureMetrics(log.Events)
 
 	return metrics
 }
 
-// Calculate all advanced metrics from events
 func (metrics *GCMetrics) calculateAdvancedMetrics(events []GCEvent) {
 	if len(events) == 0 {
 		return
@@ -170,7 +170,13 @@ func (metrics *GCMetrics) calculateAdvancedMetrics(events []GCEvent) {
 
 		// Track region utilization
 		if event.HeapTotalRegions > 0 {
-			utilization := float64(event.HeapUsedRegions) / float64(event.HeapTotalRegions)
+			// Use after values for post-GC utilization
+			var usedRegions int
+			if event.HeapUsedRegionsAfter > 0 {
+				usedRegions = event.HeapUsedRegionsAfter
+			}
+
+			utilization := float64(usedRegions) / float64(event.HeapTotalRegions)
 			totalRegionUtil += utilization
 			regionUtilSamples++
 		}
@@ -264,11 +270,19 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 		prev := youngCollections[i-1]
 		curr := youngCollections[i]
 
-		if prev.OldRegions > 0 && curr.OldRegions >= prev.OldRegions {
-			promoted := float64(curr.OldRegions - prev.OldRegions)
+		var prevOldRegions, currOldRegions int
+		if prev.OldRegionsAfter > 0 {
+			prevOldRegions = prev.OldRegionsAfter
+		}
+		if curr.OldRegionsBefore > 0 {
+			currOldRegions = curr.OldRegionsBefore
+		}
+
+		if prevOldRegions > 0 && currOldRegions >= prevOldRegions {
+			promoted := float64(currOldRegions - prevOldRegions)
 			promotionRates = append(promotionRates, promoted)
 
-			growthRatio := float64(curr.OldRegions) / float64(prev.OldRegions)
+			growthRatio := float64(currOldRegions) / float64(prevOldRegions)
 			oldRegionGrowths = append(oldRegionGrowths, growthRatio)
 
 			// Track consecutive growth spikes
@@ -284,7 +298,7 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 		}
 
 		// Calculate young generation efficiency
-		if curr.HeapBefore > curr.HeapAfter {
+		if curr.HeapBefore > 0 && curr.HeapAfter > 0 {
 			collected := curr.HeapBefore - curr.HeapAfter
 			efficiency := float64(collected) / float64(curr.HeapBefore)
 			youngEfficiencies = append(youngEfficiencies, efficiency)
@@ -295,14 +309,28 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 			lastPromotion := promotionRates[len(promotionRates)-1]
 			lastEfficiency := youngEfficiencies[len(youngEfficiencies)-1]
 
-			// Adjusted threshold for heap-based estimation (regions are estimated, so use higher threshold)
-			promotionThreshold := 5.0
-			if prev.OldRegions == 0 {
-				// If using heap-based estimation, use higher threshold since it's less precise
-				promotionThreshold = 20.0
+			// Enhanced heuristic: check survivor region overflow
+			survivorOverflow := false
+
+			// Method 1: Check if survivors exceeded target
+			if curr.SurvivorRegionsAfter > 0 && curr.SurvivorRegionsTarget > 0 {
+				if curr.SurvivorRegionsAfter >= curr.SurvivorRegionsTarget {
+					survivorOverflow = true
+				}
 			}
 
-			if lastPromotion > promotionThreshold && lastEfficiency < 0.7 {
+			// Method 2: Fallback to promotion rate + efficiency heuristic
+			if !survivorOverflow {
+				promotionThreshold := 5.0
+				if prevOldRegions == 0 {
+					promotionThreshold = 20.0 // Less precise calculation
+				}
+				if lastPromotion > promotionThreshold && lastEfficiency < 0.7 {
+					survivorOverflow = true
+				}
+			}
+
+			if survivorOverflow {
 				survivorOverflows++
 			}
 		}
@@ -335,16 +363,36 @@ func (metrics *GCMetrics) calculatePromotionMetrics(events []GCEvent) {
 		totalMixedCleaned := 0.0
 
 		for _, mixed := range mixedCollections {
-			if mixed.HeapBefore > mixed.HeapAfter {
+			if mixed.HeapBefore > 0 && mixed.HeapAfter > 0 {
 				cleaned := float64(mixed.HeapBefore - mixed.HeapAfter)
 				totalMixedCleaned += cleaned
 			}
 		}
 
 		if totalPromoted > 0 {
-			// Rough approximation - how much mixed collections clean vs what was promoted
-			metrics.PromotionEfficiency = totalMixedCleaned / (totalPromoted * 1024 * 1024) // Convert regions to bytes approximately
+			// Enhanced calculation: use actual region size if available
+			regionSizeBytes := float64(1024 * 1024) // Default 1MB regions
+			if len(mixedCollections) > 0 && mixedCollections[0].RegionSize > 0 {
+				regionSizeBytes = float64(mixedCollections[0].RegionSize.Bytes())
+			}
+
+			totalPromotedBytes := totalPromoted * regionSizeBytes
+			metrics.PromotionEfficiency = totalMixedCleaned / totalPromotedBytes
 		}
+	}
+}
+
+func (metrics *GCMetrics) calculateEvacuationFailureMetrics(events []GCEvent) {
+	evacuationFailures := 0
+
+	for _, event := range events {
+		if event.ToSpaceExhausted || strings.Contains(event.Cause, "Evacuation Failure") {
+			evacuationFailures++
+		}
+	}
+
+	if len(events) > 0 {
+		metrics.EvacuationFailureRate = float64(evacuationFailures) / float64(len(events))
 	}
 }
 
@@ -420,10 +468,9 @@ func assessConcurrentMarkingKeepup(events []GCEvent) bool {
 
 	for _, event := range events {
 		eventType := strings.ToLower(strings.TrimSpace(event.Type))
-		switch eventType {
-		case "young":
+		if strings.Contains(eventType, "young") {
 			youngCollections++
-		case "mixed":
+		} else if strings.Contains(eventType, "mixed") {
 			mixedCollections++
 		}
 	}
@@ -433,10 +480,10 @@ func assessConcurrentMarkingKeepup(events []GCEvent) bool {
 	}
 
 	// If we have reasonable mixed collection activity, marking is likely keeping up
-	expectedMixedRatio := 0.1 // Expect at least 10% mixed collections
+	const ExpectedMixedRatio = 0.1 // Expect at least 10% mixed collections
 	actualRatio := float64(mixedCollections) / float64(youngCollections)
 
-	return actualRatio >= expectedMixedRatio
+	return actualRatio >= ExpectedMixedRatio
 }
 
 func estimateConcurrentCycleDuration(events []GCEvent) time.Duration {

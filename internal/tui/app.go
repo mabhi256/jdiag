@@ -311,7 +311,7 @@ func (m *Model) renderHeader() string {
 	tabs := []string{}
 
 	tabIcons := []string{"📋", "⏱️", "❗", "📍", "📈"}
-	tabNames := []string{"Dashboard", "Metrics", "Issues", "Events", "Trends"}
+	tabNames := []string{"Summary", "Metrics", "Issues", "Events", "Trends"}
 
 	for i, name := range tabNames {
 		style := TabInactiveStyle
@@ -322,7 +322,7 @@ func (m *Model) renderHeader() string {
 			indicator = "●" // Active indicator
 		}
 
-		tabText := fmt.Sprintf("%s %s %s [%d]", indicator, tabIcons[i], name, i+1)
+		tabText := fmt.Sprintf("%s%s %s[%d]", indicator, tabIcons[i], name, i+1)
 		tabs = append(tabs, style.Render(tabText))
 	}
 
@@ -340,7 +340,7 @@ func (m *Model) renderHeader() string {
 }
 
 func GetShortcuts(currentTab TabType) string {
-	base := "q:quit • tab:cycle • 1-3:tabs"
+	base := "q:quit • tab:cycle • 1-5:tabs"
 
 	var tabSpecific string
 	switch currentTab {

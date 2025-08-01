@@ -28,9 +28,9 @@ const (
 	RegionUtilMax    = 0.75 // 75% - optimal for G1 region management
 
 	// Allocation thresholds
-	AllocRateModerate = 100.0  // MB/s
-	AllocRateHigh     = 500.0  //
-	AllocRateCritical = 2000.0 //
+	AllocRateModerate = 100.0 // MB/s
+	AllocRateHigh     = 500.0
+	AllocRateCritical = 2000.0
 
 	// Collection efficiency targets
 	YoungCollectionEff = 0.8  // 80% of young gen should be collected
@@ -45,83 +45,199 @@ const (
 
 	// Leak detection thresholds
 	LeakGrowthCritical = 5.0 // MB/hour
-	LeakGrowthWarning  = 1.0 //
-	LeakGrowthMinimal  = 0.1 //
+	LeakGrowthWarning  = 1.0
+	LeakGrowthMinimal  = 0.1
 
 	// Minimum data points for reliable trend analysis
 	MinEventsForTrend = 20
 	MinTimeForTrend   = 30 * time.Minute
 
 	BaselineGrowthCritical = 0.05 // 5% per hour of total heap
-	BaselineGrowthWarning  = 0.02 //
+	BaselineGrowthWarning  = 0.02
 
 	PromotionRateWarning     = 10.0 // regions per young GC
 	PromotionRateCritical    = 15.0
 	OldRegionGrowthCritical  = 3.0 // 3x growth per young GC
-	OldRegionGrowthWarning   = 1.5 //
-	SurvivorOverflowWarning  = 0.2 // 20% - concerning survivor overflow
+	OldRegionGrowthWarning   = 1.5
+	SurvivorOverflowWarning  = 0.2
 	SurvivorOverflowCritical = 0.3 // 30% of young collections overflow survivors
 
 	HumongousPercentCritical = 80.0 // 80% of heap in humongous objects
-	HumongousPercentWarning  = 50.0 //
-	HumongousPercentModerate = 20.0 //
+	HumongousPercentWarning  = 50.0
+	HumongousPercentModerate = 20.0
 
 	EvacFailureRateCritical = 5.0 // 5% evacuation failure rate
-	EvacFailureRateWarning  = 1.0 //
+	EvacFailureRateWarning  = 1.0
 
 	ConcurrentCycleWarning  = 20 * time.Second // Warning cycle duration
 	ConcurrentCycleCritical = 60 * time.Second
 
-	RegionUtilWarning  = 0.85 // 85% - start monitoring region pressure
-	RegionUtilCritical = 0.95 // 95% - critical region pressure
+	RegionUtilWarning  = 0.85 // 85%
+	RegionUtilCritical = 0.95
 
-	YoungCollectionEffWarning = 0.6  // 60% - suboptimal young collection
-	MixedCollectionEffWarning = 0.25 // 25% - suboptimal mixed collection
+	YoungCollectionEffWarning = 0.6 // 60% - suboptimal young collection
+	MixedCollectionEffWarning = 0.25
 
 	PromotionEfficiencyWarning  = 0.3 // 30% - low promotion efficiency
-	PromotionEfficiencyCritical = 0.1 // 10% - very poor promotion efficiency
+	PromotionEfficiencyCritical = 0.1
 
 	PauseVarianceWarning  = 0.3
 	PauseVarianceCritical = 0.7
+
+	// Additional constants moved from magic numbers
+	EvacFailureHighRate           = 20.0 // 20% failure rate is critical
+	HumongousRegionsStaticThresh  = 100  // Static humongous regions threshold
+	HumongousRegionsGrowingThresh = 50   // Growing humongous regions threshold
+	HeapUtilPostGCCritical        = 0.95 // 95% heap utilization after GC
+	MemoryPressureCritical        = 95.0 // 95% memory pressure at failures
+
+	// Heap size calculation constants
+	HeapSizeAllocFactor = 0.6  // Factor for allocation rate based heap sizing
+	MinRecommendedHeap  = 4.0  // GB - minimum recommended heap
+	MaxRecommendedHeap  = 64.0 // GB - maximum recommended heap
+
+	// Thread calculation constants
+	HighAllocThreads    = 8 // Threads for >1000 MB/s allocation
+	MediumAllocThreads  = 6 // Threads for >500 MB/s allocation
+	DefaultAllocThreads = 4 // Default thread count
+
+	// Pause target adjustment
+	PauseTargetAdjustment = 1.2 // 20% increase for pause target
+
+	// Leak detection confidence threshold
+	LeakConfidenceThreshold = 0.7 // 70% confidence required
+
+	// Leak scoring constants
+	LeakScorePerIndicator   = 1 // Base score per indicator
+	LeakScoreFullGC         = 3 // Additional score for Full GCs
+	LeakScoreHumongous      = 4 // Additional score for humongous leaks
+	LeakScoreEvacFailure    = 2 // Additional score for evacuation failures
+	LeakScoreHighHeapUtil   = 2 // Additional score for high heap utilization
+	LeakScoreCriticalThresh = 4 // Threshold for critical leak
+	LeakScoreWarningThresh  = 2 // Threshold for warning leak
+
+	// Mixed collection analysis
+	MixedCollectionMinYoung = 50  // Minimum young collections before expecting mixed
+	ExpectedMixedRatio      = 0.1 // Expected ratio of mixed to young collections
+	AllocationBurstThresh   = 10  // % of events that can be bursts before flagging
+
 )
+
+type AnalysisState struct {
+	// Use metrics instead of calculating redundantly
+	Metrics *GCMetrics
+
+	// Cached calculations specific to analysis
+	EvacFailureCount int
+	FullGCCount      int
+	HumongousStats   HumongousObjectStats
+	MemoryTrend      MemoryTrend
+
+	// Event categorization
+	YoungCollections int
+	MixedCollections int
+
+	// Processed for reuse
+	Events         []GCEvent
+	TotalEvents    int
+	AnalysisPeriod time.Duration
+}
+
+type HumongousObjectStats struct {
+	MaxRegions      int
+	HeapPercentage  float64
+	StaticCount     int
+	GrowingCount    int
+	DecreasingCount int
+	IsLeak          bool
+}
 
 func (log *GCLog) GetAnalysisData() (*GCLog, *GCMetrics, *Analysis) {
 	metrics := log.CalculateMetrics()
-	analysis := metrics.DetectPerformanceIssues(log.Events)
+
+	// Create shared analysis state to avoid redundant calculations
+	state := buildAnalysisState(log.Events, metrics)
+
+	analysis := detectPerformanceIssuesOptimized(metrics, state)
 	log.Status = log.AssessGCHealth(metrics, analysis)
 
 	return log, metrics, analysis
 }
 
-func (metrics *GCMetrics) DetectPerformanceIssues(events []GCEvent) *Analysis {
+func buildAnalysisState(events []GCEvent, metrics *GCMetrics) *AnalysisState {
+	state := &AnalysisState{
+		Events:      events,
+		TotalEvents: len(events),
+		Metrics:     metrics, // Use calculated metrics instead of recalculating
+	}
+
+	if len(events) == 0 {
+		return state
+	}
+
+	state.AnalysisPeriod = events[len(events)-1].Timestamp.Sub(events[0].Timestamp)
+
+	// Count event types and failures once (these are not in base metrics)
+	for _, event := range events {
+		if strings.Contains(strings.ToLower(event.Type), "full") {
+			state.FullGCCount++
+		}
+		if event.ToSpaceExhausted || strings.Contains(event.Cause, "Evacuation Failure") {
+			state.EvacFailureCount++
+		}
+		if strings.Contains(event.Type, "Mixed") {
+			state.MixedCollections++
+		}
+		if strings.Contains(event.Type, "Young") {
+			state.YoungCollections++
+		}
+	}
+
+	// Analyze humongous objects once
+	state.HumongousStats = analyzeHumongousObjectsOnce(events)
+
+	// Detect memory trends once (only if enough data)
+	if len(events) >= MinEventsForTrend && state.AnalysisPeriod >= MinTimeForTrend {
+		state.MemoryTrend = detectMemoryLeak(events)
+	} else {
+		state.MemoryTrend = MemoryTrend{LeakSeverity: "none"}
+	}
+
+	return state
+}
+
+func detectPerformanceIssuesOptimized(metrics *GCMetrics, state *AnalysisState) *Analysis {
 	var issues []PerformanceIssue
 
-	issues = append(issues, analyzeHumongousObjects(events)...)
-	issues = append(issues, analyzeEvacuationFailures(events)...)
-	issues = append(issues, analyzeMemoryLeaks(events)...)
-	issues = append(issues, analyzeFullGCProblems(metrics)...)
-	issues = append(issues, analyzeThroughputAndPauses(metrics, events)...)
-	issues = append(issues, analyzeMemoryPressure(metrics)...)
-	issues = append(issues, analyzeAllocationPatterns(metrics)...)
+	// Each analyzer now uses shared state to avoid redundant calculations
+	issues = append(issues, analyzeFullGCProblemsOptimized(state)...)
+	issues = append(issues, analyzeEvacuationFailuresOptimized(state)...)
+	issues = append(issues, analyzeHumongousObjectsOptimized(state)...)
+	issues = append(issues, analyzeThroughputAndPauses(metrics, state.Events)...)
+	issues = append(issues, analyzeMemoryPressureOptimized(metrics, state)...)
+	issues = append(issues, analyzeAllocationPatternsOptimized(metrics, state)...)
 	issues = append(issues, analyzeConcurrentMarking(metrics)...)
-	issues = append(issues, analyzePrematurePromotion(metrics, events)...)
-	issues = append(issues, analyzeCollectionEfficiency(metrics, events)...)
-	issues = append(issues, analyzeDetailedPhases(events)...)
+	issues = append(issues, analyzePrematurePromotion(metrics, state.Events)...)
+	issues = append(issues, analyzeCollectionEfficiencyOptimized(metrics, state)...)
+	issues = append(issues, analyzeDetailedPhases(state.Events)...)
+
+	// Memory leak detection now uses results from other analyzers
+	issues = append(issues, analyzeMemoryLeaksOptimized(state)...)
 
 	return groupIssuesBySeverity(issues)
 }
 
-func analyzeFullGCProblems(metrics *GCMetrics) []PerformanceIssue {
+func analyzeFullGCProblemsOptimized(state *AnalysisState) []PerformanceIssue {
 	var issues []PerformanceIssue
 
-	if metrics.FullGCCount == 0 {
+	if state.FullGCCount == 0 {
 		return issues
 	}
 
 	severity := "critical"
 	var recommendations []string
 
-	if metrics.FullGCCount == 1 {
+	if state.FullGCCount == 1 {
 		recommendations = []string{
 			"Check for heap sizing: increase -Xmx by 50-100% if possible",
 			"Enable detailed logging: -XX:+PrintGCDetails -XX:+PrintGCTimeStamps",
@@ -139,13 +255,476 @@ func analyzeFullGCProblems(metrics *GCMetrics) []PerformanceIssue {
 	issues = append(issues, PerformanceIssue{
 		Type:           "Full GC Events",
 		Severity:       severity,
-		Description:    fmt.Sprintf("%d Full GC events detected - G1GC performance severely degraded", metrics.FullGCCount),
+		Description:    fmt.Sprintf("%d Full GC events detected - G1GC performance severely degraded", state.FullGCCount),
 		Recommendation: recommendations,
 	})
 
 	return issues
 }
 
+func analyzeEvacuationFailuresOptimized(state *AnalysisState) []PerformanceIssue {
+	var issues []PerformanceIssue
+
+	if state.EvacFailureCount == 0 {
+		return issues
+	}
+
+	failureRate := float64(state.EvacFailureCount) / float64(state.TotalEvents) * 100
+
+	var evacuationFailureEvents []int
+	var failureMemoryPressure []float64
+
+	// Collect detailed failure information
+	for _, event := range state.Events {
+		if event.ToSpaceExhausted || strings.Contains(event.Cause, "Evacuation Failure") {
+			evacuationFailureEvents = append(evacuationFailureEvents, event.ID)
+
+			if event.HeapTotal > 0 && event.HeapBefore > 0 {
+				pressure := float64(event.HeapBefore) / float64(event.HeapTotal)
+				failureMemoryPressure = append(failureMemoryPressure, pressure)
+			}
+		}
+	}
+
+	severity := "critical"
+	recommendations := []string{
+		fmt.Sprintf("EVACUATION FAILURES detected in %d GC events (%.1f%% failure rate)",
+			state.EvacFailureCount, failureRate),
+		fmt.Sprintf("Failed GC events: %v", evacuationFailureEvents),
+		"Evacuation failure means G1GC couldn't move objects to other regions",
+		"This causes performance degradation and can trigger Full GC",
+		"Heap too full - INCREASE HEAP SIZE immediately: -Xmx<size * 2>",
+		"Too many humongous objects - check for large object allocations",
+		"Insufficient evacuation reserve - increase: -XX:G1ReservePercent=20",
+		"Region fragmentation - consider larger regions: -XX:G1HeapRegionSize=32m",
+		"Enable evacuation failure logging: -XX:+TraceClassLoading",
+		"Take heap dump after failures to analyze object distribution",
+	}
+
+	// Add specific advice based on failure frequency
+	if failureRate > EvacFailureHighRate {
+		recommendations = append(recommendations,
+			fmt.Sprintf("CRITICAL: >%.0f%% failure rate indicates severe memory pressure", EvacFailureHighRate))
+	}
+
+	// Add memory pressure analysis from failure events
+	if len(failureMemoryPressure) > 0 {
+		avgPressure := calculateAverage(failureMemoryPressure) * 100
+		maxPressure := calculateMax(failureMemoryPressure) * 100
+		recommendations = append(recommendations,
+			fmt.Sprintf("Memory pressure at failures: avg %.1f%%, max %.1f%%", avgPressure, maxPressure))
+
+		if avgPressure > MemoryPressureCritical {
+			recommendations = append(recommendations,
+				fmt.Sprintf("Failures occur at >%.0f%% heap utilization - increase heap size immediately", MemoryPressureCritical))
+		}
+	}
+
+	issues = append(issues, PerformanceIssue{
+		Type:           "Evacuation Failures",
+		Severity:       severity,
+		Description:    fmt.Sprintf("%d evacuation failures (%.1f%% of collections)", state.EvacFailureCount, failureRate),
+		Recommendation: recommendations,
+	})
+
+	return issues
+}
+
+func analyzeHumongousObjectsOnce(events []GCEvent) HumongousObjectStats {
+	stats := HumongousObjectStats{}
+
+	if len(events) == 0 {
+		return stats
+	}
+
+	var humongousEvents []GCEvent
+	maxHumongousBefore := 0
+	maxHumongousAfter := 0
+	totalRegions := 0
+
+	for _, event := range events {
+		humongousBefore := event.HumongousRegionsBefore
+		humongousAfter := event.HumongousRegionsAfter
+
+		if humongousBefore > 0 || humongousAfter > 0 {
+			humongousEvents = append(humongousEvents, event)
+			if humongousBefore > maxHumongousBefore {
+				maxHumongousBefore = humongousBefore
+			}
+			if humongousAfter > maxHumongousAfter {
+				maxHumongousAfter = humongousAfter
+			}
+
+			if event.HeapTotal > 0 && event.RegionSize > 0 {
+				totalRegions = int(event.HeapTotal / event.RegionSize)
+			} else if event.HeapTotal > 0 {
+				totalRegions = int(event.HeapTotal / (1024 * 1024))
+			}
+		}
+	}
+
+	if len(humongousEvents) == 0 {
+		return stats
+	}
+
+	stats.MaxRegions = max(maxHumongousBefore, maxHumongousAfter)
+
+	// Calculate percentage of heap consumed
+	if totalRegions > 0 {
+		stats.HeapPercentage = float64(stats.MaxRegions) / float64(totalRegions) * 100
+	} else {
+		latestEvent := humongousEvents[len(humongousEvents)-1]
+		if latestEvent.HeapTotal > 0 {
+			humongousBytes := int64(stats.MaxRegions * 1024 * 1024)
+			stats.HeapPercentage = float64(humongousBytes) / float64(latestEvent.HeapTotal) * 100
+		}
+	}
+
+	// Analyze collection patterns
+	if len(humongousEvents) >= 2 {
+		for i := 1; i < len(humongousEvents); i++ {
+			prev := humongousEvents[i-1]
+			curr := humongousEvents[i]
+
+			var prevHumongous, currHumongous int
+			if prev.HumongousRegionsAfter > 0 {
+				prevHumongous = prev.HumongousRegionsAfter
+			}
+			if curr.HumongousRegionsBefore > 0 {
+				currHumongous = curr.HumongousRegionsBefore
+			} else if curr.HumongousRegionsAfter > 0 {
+				currHumongous = curr.HumongousRegionsAfter
+			}
+
+			if currHumongous > prevHumongous {
+				stats.GrowingCount++
+			} else if currHumongous == prevHumongous {
+				stats.StaticCount++
+			} else {
+				stats.DecreasingCount++
+			}
+		}
+	}
+
+	// Determine if this indicates a leak
+	stats.IsLeak = (stats.HeapPercentage > HumongousPercentWarning) ||
+		(stats.StaticCount > len(humongousEvents)/2 && stats.MaxRegions > HumongousRegionsStaticThresh) ||
+		(stats.GrowingCount > stats.DecreasingCount && stats.MaxRegions > HumongousRegionsGrowingThresh)
+
+	return stats
+}
+
+func analyzeHumongousObjectsOptimized(state *AnalysisState) []PerformanceIssue {
+	var issues []PerformanceIssue
+
+	stats := state.HumongousStats
+	if stats.MaxRegions == 0 {
+		return issues
+	}
+
+	var severity string
+	var recommendations []string
+
+	// Determine severity based on pre-calculated stats
+	if stats.HeapPercentage > HumongousPercentWarning ||
+		(stats.StaticCount > len(state.Events)/2 && stats.MaxRegions > HumongousRegionsStaticThresh) ||
+		(stats.GrowingCount > stats.DecreasingCount && stats.MaxRegions > HumongousRegionsGrowingThresh) {
+		severity = "critical"
+		recommendations = []string{
+			fmt.Sprintf("%d humongous regions consuming %.1f%% of heap", stats.MaxRegions, stats.HeapPercentage),
+			"Humongous objects (>50% of region size) are not being garbage collected",
+			"This indicates a MEMORY LEAK in large object allocation",
+			"Take heap dump immediately: jcmd <pid> GC.run_finalization; jcmd <pid> VM.dump_heap leak.hprof",
+			"Analyze with Eclipse MAT or VisualVM for large objects",
+			"Look for: large arrays, huge strings, oversized collections, cached data",
+			"Check recent code for large object allocations that aren't released",
+			"Increase heap size by 200-300% as temporary relief: -Xmx<current_size * 3>",
+			"Enable OOM dump: -XX:+HeapDumpOnOutOfMemoryError",
+		}
+
+		if stats.StaticCount > stats.GrowingCount {
+			recommendations = append(recommendations,
+				fmt.Sprintf("%d humongous regions unchanged across GC cycles (static: %d, growing: %d, decreasing: %d)",
+					stats.MaxRegions, stats.StaticCount, stats.GrowingCount, stats.DecreasingCount))
+		}
+		if stats.GrowingCount > stats.DecreasingCount {
+			recommendations = append(recommendations,
+				fmt.Sprintf("Humongous objects consistently growing: %d growth vs %d cleanup events",
+					stats.GrowingCount, stats.DecreasingCount))
+		}
+
+	} else if stats.HeapPercentage > HumongousPercentModerate || stats.MaxRegions > HumongousRegionsGrowingThresh {
+		severity = "warning"
+		recommendations = []string{
+			fmt.Sprintf("Significant humongous object usage: %d regions (%.1f%% of heap)", stats.MaxRegions, stats.HeapPercentage),
+			"Large objects are consuming significant heap space",
+			"Monitor for memory leak patterns",
+			"Consider object size optimization or heap size increase",
+		}
+	}
+
+	if severity != "" {
+		issues = append(issues, PerformanceIssue{
+			Type:           "Humongous Objects",
+			Severity:       severity,
+			Description:    fmt.Sprintf("Large objects consuming %.1f%% of heap (%d regions)", stats.HeapPercentage, stats.MaxRegions),
+			Recommendation: recommendations,
+		})
+	}
+
+	return issues
+}
+
+func analyzeMemoryPressureOptimized(metrics *GCMetrics, state *AnalysisState) []PerformanceIssue {
+	var issues []PerformanceIssue
+
+	heapPressure := metrics.AvgHeapUtil
+	regionPressure := metrics.AvgRegionUtilization
+	evacFailures := metrics.EvacuationFailureRate
+
+	if heapPressure > HeapUtilWarning || regionPressure > RegionUtilMax || evacFailures > 0 {
+		severity := "warning"
+		if heapPressure > HeapUtilCritical || evacFailures > EvacFailureMax*2 {
+			severity = "critical"
+		}
+
+		var recommendations []string
+		if evacFailures > 0 {
+			recommendations = []string{
+				fmt.Sprintf("Memory pressure critical: %.1f%% heap, %.1f%% region utilization, %.1f%% evacuation failures",
+					heapPressure*100, regionPressure*100, evacFailures*100),
+				"Increase heap size by at least 50%",
+				"Increase evacuation reserve: -XX:G1ReservePercent=15",
+				fmt.Sprintf("Optimize region size for allocation rate %.1f MB/s", metrics.AllocationRate),
+				getRegionSizeRecommendation(metrics.AllocationRate),
+			}
+		} else {
+			recommendations = []string{
+				fmt.Sprintf("Memory pressure detected: %.1f%% heap utilization (target: <%.0f%%)",
+					heapPressure*100, HeapUtilWarning*100),
+				"Increase heap size to reduce memory pressure",
+				"Target heap utilization: 60-70% for optimal G1 performance",
+				"Monitor allocation patterns for optimization opportunities",
+			}
+		}
+
+		if regionPressure > RegionUtilWarning {
+			recommendations = append(recommendations,
+				fmt.Sprintf("High region utilization (%.1f%%) may cause allocation failures", regionPressure*100))
+			recommendations = append(recommendations,
+				"Consider increasing region size or total heap to reduce region pressure")
+		}
+
+		issues = append(issues, PerformanceIssue{
+			Type:           "Memory Pressure",
+			Severity:       severity,
+			Description:    "High memory utilization affecting GC performance",
+			Recommendation: recommendations,
+		})
+	}
+
+	return issues
+}
+
+func analyzeAllocationPatternsOptimized(metrics *GCMetrics, state *AnalysisState) []PerformanceIssue {
+	var issues []PerformanceIssue
+
+	allocRate := metrics.AllocationRate
+	if allocRate > AllocRateModerate {
+		severity := "info"
+		if allocRate > AllocRateHigh {
+			severity = "warning"
+		}
+		if allocRate > AllocRateCritical {
+			severity = "critical"
+		}
+
+		var recommendations []string
+		if allocRate > AllocRateCritical {
+			recommendations = []string{
+				fmt.Sprintf("Very high allocation rate: %.1f MB/s requires specialized tuning", allocRate),
+				"Use large heap regions: -XX:G1HeapRegionSize=32m",
+				"Increase young generation: -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=70",
+				"Profile allocation hotspots with async-profiler",
+				"Consider object pooling for high-frequency allocations",
+			}
+		} else if allocRate > AllocRateHigh {
+			recommendations = []string{
+				fmt.Sprintf("High allocation rate: %.1f MB/s needs monitoring", allocRate),
+				getRegionSizeRecommendation(allocRate),
+				"Optimize young generation sizing for allocation pattern",
+				"Review object lifecycle and temporary object creation",
+			}
+		} else {
+			recommendations = []string{
+				fmt.Sprintf("Moderate allocation rate: %.1f MB/s is typical", allocRate),
+				"Current allocation rate is manageable",
+				"Monitor for allocation bursts or patterns",
+			}
+		}
+
+		// Add allocation burst information if relevant
+		if metrics.AllocationBurstCount > state.TotalEvents/AllocationBurstThresh {
+			recommendations = append(recommendations,
+				fmt.Sprintf("Note: %d allocation bursts detected - consider batch processing optimization", metrics.AllocationBurstCount))
+		}
+
+		issues = append(issues, PerformanceIssue{
+			Type:           "Allocation Patterns",
+			Severity:       severity,
+			Description:    fmt.Sprintf("Allocation rate %.1f MB/s", allocRate),
+			Recommendation: recommendations,
+		})
+	}
+
+	return issues
+}
+
+func analyzeCollectionEfficiencyOptimized(metrics *GCMetrics, state *AnalysisState) []PerformanceIssue {
+	var issues []PerformanceIssue
+
+	// Check for missing mixed collections using pre-counted values
+	if state.MixedCollections == 0 && state.YoungCollections > MixedCollectionMinYoung {
+		issues = append(issues, PerformanceIssue{
+			Type:     "Missing Mixed Collections",
+			Severity: "warning",
+			Description: fmt.Sprintf("No mixed collections in %d young collections - old generation not being cleaned",
+				state.YoungCollections),
+			Recommendation: []string{
+				"G1GC is not performing mixed collections",
+				"Lower marking threshold: -XX:G1HeapOccupancyPercent=35",
+				"Adjust mixed collection targeting: -XX:G1MixedGCLiveThresholdPercent=75",
+				"Verify concurrent marking completes successfully",
+			},
+		})
+	}
+
+	// Check mixed collection efficiency
+	if metrics.MixedCollectionEfficiency > 0 && metrics.MixedCollectionEfficiency < MixedCollectionEff {
+		issues = append(issues, PerformanceIssue{
+			Type:     "Inefficient Mixed Collections",
+			Severity: "warning",
+			Description: fmt.Sprintf("Mixed collections only %.1f%% efficient (target: >%.0f%%)",
+				metrics.MixedCollectionEfficiency*100, MixedCollectionEff*100),
+			Recommendation: []string{
+				"Mixed collections not reclaiming enough old generation space",
+				"Increase regions per collection: -XX:G1OldCSetRegionThreshold=15",
+				"Spread work over more collections: -XX:G1MixedGCCountTarget=12",
+				"More aggressive cleanup: -XX:G1MixedGCLiveThresholdPercent=65",
+			},
+		})
+	}
+
+	return issues
+}
+
+func analyzeMemoryLeaksOptimized(state *AnalysisState) []PerformanceIssue {
+	var issues []PerformanceIssue
+
+	// Use results from other analyzers instead of re-analyzing
+	leakIndicators := buildLeakIndicators(state)
+	leakScore := calculateLeakScore(leakIndicators, state)
+
+	// Add long-term trend analysis if available
+	if state.MemoryTrend.LeakSeverity != "none" {
+		longTermIssues := analyzeLongTermMemoryLeak(state.MemoryTrend)
+		issues = append(issues, longTermIssues...)
+	}
+
+	// Determine severity based on combined indicators
+	if leakScore >= LeakScoreCriticalThresh {
+		recommendations := []string{
+			"Multiple indicators suggest objects are not being garbage collected",
+		}
+		recommendations = append(recommendations, leakIndicators...)
+		recommendations = append(recommendations, []string{
+			"Take heap dump immediately: jcmd <pid> VM.dump_heap emergency.hprof",
+			"Restart application if possible to prevent OutOfMemoryError",
+			"Increase heap size as emergency measure: -Xmx<current * 3>",
+			"Enable OOM dumps: -XX:+HeapDumpOnOutOfMemoryError",
+			"Analyze heap dump for large objects and reference chains",
+		}...)
+
+		issues = append(issues, PerformanceIssue{
+			Type:           "Severe Memory Leak (Immediate)",
+			Severity:       "critical",
+			Description:    fmt.Sprintf("IMMEDIATE MEMORY LEAK detected with %d critical indicators", len(leakIndicators)),
+			Recommendation: recommendations,
+		})
+	} else if leakScore >= LeakScoreWarningThresh {
+		recommendations := []string{
+			"Potential memory leak detected",
+		}
+		recommendations = append(recommendations, leakIndicators...)
+		recommendations = append(recommendations, []string{
+			"Take baseline heap dump for analysis",
+			"Monitor memory usage over longer period",
+			"Check for unclosed resources or static collections",
+			"Review recent code changes",
+		}...)
+
+		issues = append(issues, PerformanceIssue{
+			Type:           "Suspected Memory Leak",
+			Severity:       "warning",
+			Description:    fmt.Sprintf("Memory leak suspected with %d indicators", len(leakIndicators)),
+			Recommendation: recommendations,
+		})
+	}
+
+	return issues
+}
+
+func buildLeakIndicators(state *AnalysisState) []string {
+	var indicators []string
+
+	// Use pre-analyzed results instead of re-processing events
+	if state.FullGCCount >= 3 {
+		indicators = append(indicators,
+			fmt.Sprintf("%d Full GCs detected", state.FullGCCount))
+	}
+
+	if state.HumongousStats.IsLeak {
+		indicators = append(indicators,
+			fmt.Sprintf("%d humongous regions not being collected", state.HumongousStats.MaxRegions))
+	}
+
+	if state.Metrics.AvgHeapUtil > HeapUtilPostGCCritical {
+		indicators = append(indicators,
+			fmt.Sprintf("Heap at %.1f%% utilization after GC", state.Metrics.AvgHeapUtil*100))
+	}
+
+	if state.EvacFailureCount > 0 {
+		indicators = append(indicators,
+			fmt.Sprintf("%d evacuation failures", state.EvacFailureCount))
+	}
+
+	return indicators
+}
+
+func calculateLeakScore(indicators []string, state *AnalysisState) int {
+	score := 0
+
+	// Score based on indicators
+	score += len(indicators) * LeakScorePerIndicator
+
+	// Additional scoring based on severity
+	if state.FullGCCount >= 3 {
+		score += LeakScoreFullGC
+	}
+	if state.HumongousStats.IsLeak {
+		score += LeakScoreHumongous
+	}
+	if state.EvacFailureCount > 0 {
+		score += LeakScoreEvacFailure
+	}
+	if state.Metrics.AvgHeapUtil > HeapUtilPostGCCritical {
+		score += LeakScoreHighHeapUtil
+	}
+
+	return score
+}
+
+// Remaining functions stay the same as they don't have redundancy issues
 func analyzeThroughputAndPauses(metrics *GCMetrics, events []GCEvent) []PerformanceIssue {
 	var issues []PerformanceIssue
 
@@ -193,7 +772,6 @@ func analyzePausePerformance(metrics *GCMetrics, events []GCEvent) PerformanceIs
 		return PerformanceIssue{}
 	}
 
-	// Determine pause target
 	pauseTarget := estimatePauseTarget(events)
 	if pauseTarget == 0 {
 		pauseTarget = PauseTargetDefault
@@ -203,7 +781,6 @@ func analyzePausePerformance(metrics *GCMetrics, events []GCEvent) PerformanceIs
 	var recommendations []string
 	var description string
 
-	// Prioritize the most severe pause issue
 	if metrics.MaxPause > PauseCritical {
 		severity = "critical"
 		description = fmt.Sprintf("Maximum pause %v exceeds critical threshold (%v)", metrics.MaxPause, PauseCritical)
@@ -219,7 +796,7 @@ func analyzePausePerformance(metrics *GCMetrics, events []GCEvent) PerformanceIs
 			metrics.P99Pause, pauseTarget, metrics.PauseTargetMissRate*100)
 		recommendations = []string{
 			"Pause time consistency needs improvement",
-			fmt.Sprintf("Adjust pause target: -XX:MaxGCPauseMillis=%d", int(float64(pauseTarget.Milliseconds())*1.2)),
+			fmt.Sprintf("Adjust pause target: -XX:MaxGCPauseMillis=%d", int(float64(pauseTarget.Milliseconds())*PauseTargetAdjustment)),
 			"Optimize concurrent marking: -XX:G1HeapOccupancyPercent=30",
 			"Consider mixed collection tuning: -XX:G1MixedGCCountTarget=12",
 		}
@@ -245,103 +822,6 @@ func analyzePausePerformance(metrics *GCMetrics, events []GCEvent) PerformanceIs
 	return PerformanceIssue{}
 }
 
-func analyzeMemoryPressure(metrics *GCMetrics) []PerformanceIssue {
-	var issues []PerformanceIssue
-
-	heapPressure := metrics.AvgHeapUtil
-	regionPressure := metrics.AvgRegionUtilization
-	evacFailures := metrics.EvacuationFailureRate
-
-	if heapPressure > HeapUtilWarning || regionPressure > RegionUtilMax || evacFailures > 0 {
-		severity := "warning"
-		if heapPressure > HeapUtilCritical || evacFailures > EvacFailureMax*2 {
-			severity = "critical"
-		}
-
-		var recommendations []string
-		if evacFailures > 0 {
-			recommendations = []string{
-				fmt.Sprintf("Memory pressure critical: %.1f%% heap, %.1f%% region utilization, %.1f%% evacuation failures",
-					heapPressure*100, regionPressure*100, evacFailures*100),
-				"Increase heap size by at least 50%",
-				"Increase evacuation reserve: -XX:G1ReservePercent=15",
-				fmt.Sprintf("Optimize region size for allocation rate %.1f MB/s", metrics.AllocationRate),
-				getRegionSizeRecommendation(metrics.AllocationRate),
-			}
-		} else {
-			recommendations = []string{
-				fmt.Sprintf("Memory pressure detected: %.1f%% heap utilization (target: <%.0f%%)",
-					heapPressure*100, HeapUtilWarning*100),
-				"Increase heap size to reduce memory pressure",
-				"Target heap utilization: 60-70% for optimal G1 performance",
-				"Monitor allocation patterns for optimization opportunities",
-			}
-		}
-
-		issues = append(issues, PerformanceIssue{
-			Type:           "Memory Pressure",
-			Severity:       severity,
-			Description:    "High memory utilization affecting GC performance",
-			Recommendation: recommendations,
-		})
-	}
-
-	return issues
-}
-
-func analyzeAllocationPatterns(metrics *GCMetrics) []PerformanceIssue {
-	var issues []PerformanceIssue
-
-	if metrics.AllocationRate > AllocRateModerate {
-		severity := "info"
-		if metrics.AllocationRate > AllocRateHigh {
-			severity = "warning"
-		}
-		if metrics.AllocationRate > AllocRateCritical {
-			severity = "critical"
-		}
-
-		var recommendations []string
-		if metrics.AllocationRate > AllocRateCritical {
-			recommendations = []string{
-				fmt.Sprintf("Very high allocation rate: %.1f MB/s requires specialized tuning", metrics.AllocationRate),
-				"Use large heap regions: -XX:G1HeapRegionSize=32m",
-				"Increase young generation: -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=70",
-				"Profile allocation hotspots with async-profiler",
-				"Consider object pooling for high-frequency allocations",
-			}
-		} else if metrics.AllocationRate > AllocRateHigh {
-			recommendations = []string{
-				fmt.Sprintf("High allocation rate: %.1f MB/s needs monitoring", metrics.AllocationRate),
-				getRegionSizeRecommendation(metrics.AllocationRate),
-				"Optimize young generation sizing for allocation pattern",
-				"Review object lifecycle and temporary object creation",
-			}
-		} else {
-			recommendations = []string{
-				fmt.Sprintf("Moderate allocation rate: %.1f MB/s is typical", metrics.AllocationRate),
-				"Current allocation rate is manageable",
-				"Monitor for allocation bursts or patterns",
-			}
-		}
-
-		// Add allocation burst information if relevant
-		if metrics.AllocationBurstCount > metrics.TotalEvents/10 {
-			recommendations = append(recommendations,
-				fmt.Sprintf("Note: %d allocation bursts detected - consider batch processing optimization", metrics.AllocationBurstCount))
-		}
-
-		issues = append(issues, PerformanceIssue{
-			Type:           "Allocation Patterns",
-			Severity:       severity,
-			Description:    fmt.Sprintf("Allocation rate %.1f MB/s", metrics.AllocationRate),
-			Recommendation: recommendations,
-		})
-	}
-
-	return issues
-}
-
 func analyzeConcurrentMarking(metrics *GCMetrics) []PerformanceIssue {
 	var issues []PerformanceIssue
 
@@ -362,58 +842,17 @@ func analyzeConcurrentMarking(metrics *GCMetrics) []PerformanceIssue {
 		})
 	}
 
-	if metrics.ConcurrentCycleDuration > 30*time.Second {
+	if metrics.ConcurrentCycleDuration > ConcurrentCycleWarning {
 		issues = append(issues, PerformanceIssue{
 			Type:     "Long Concurrent Cycles",
 			Severity: "warning",
-			Description: fmt.Sprintf("Concurrent cycles taking %v (target: <30s)",
-				metrics.ConcurrentCycleDuration),
+			Description: fmt.Sprintf("Concurrent cycles taking %v (target: <%v)",
+				metrics.ConcurrentCycleDuration, ConcurrentCycleWarning),
 			Recommendation: []string{
 				"Concurrent marking cycles are too long",
 				"Optimize concurrent thread count for workload",
 				"Check for memory pressure causing slow progress",
 				"Consider incremental marking improvements",
-			},
-		})
-	}
-
-	return issues
-}
-
-func analyzeCollectionEfficiency(metrics *GCMetrics, events []GCEvent) []PerformanceIssue {
-	var issues []PerformanceIssue
-
-	mixedCollections := countMixedCollections(events)
-	youngCollections := countYoungCollections(events)
-
-	// Check for missing mixed collections
-	if mixedCollections == 0 && youngCollections > 50 {
-		issues = append(issues, PerformanceIssue{
-			Type:     "Missing Mixed Collections",
-			Severity: "warning",
-			Description: fmt.Sprintf("No mixed collections in %d young collections - old generation not being cleaned",
-				youngCollections),
-			Recommendation: []string{
-				"G1GC is not performing mixed collections",
-				"Lower marking threshold: -XX:G1HeapOccupancyPercent=35",
-				"Adjust mixed collection targeting: -XX:G1MixedGCLiveThresholdPercent=75",
-				"Verify concurrent marking completes successfully",
-			},
-		})
-	}
-
-	// Check mixed collection efficiency
-	if metrics.MixedCollectionEfficiency > 0 && metrics.MixedCollectionEfficiency < MixedCollectionEff {
-		issues = append(issues, PerformanceIssue{
-			Type:     "Inefficient Mixed Collections",
-			Severity: "warning",
-			Description: fmt.Sprintf("Mixed collections only %.1f%% efficient (target: >%.0f%%)",
-				metrics.MixedCollectionEfficiency*100, MixedCollectionEff*100),
-			Recommendation: []string{
-				"Mixed collections not reclaiming enough old generation space",
-				"Increase regions per collection: -XX:G1OldCSetRegionThreshold=15",
-				"Spread work over more collections: -XX:G1MixedGCCountTarget=12",
-				"More aggressive cleanup: -XX:G1MixedGCLiveThresholdPercent=65",
 			},
 		})
 	}
@@ -485,7 +924,6 @@ func analyzePrematurePromotion(metrics *GCMetrics, events []GCEvent) []Performan
 		return issues
 	}
 
-	// Check for critical premature promotion
 	if metrics.MaxOldGrowthRatio > OldRegionGrowthCritical ||
 		metrics.AvgPromotionRate > PromotionRateCritical {
 
@@ -530,7 +968,6 @@ func analyzePrematurePromotion(metrics *GCMetrics, events []GCEvent) []Performan
 		})
 	}
 
-	// Check for survivor space issues
 	if metrics.SurvivorOverflowRate > SurvivorOverflowCritical {
 		issues = append(issues, PerformanceIssue{
 			Type:     "Survivor Space Overflow",
@@ -548,8 +985,7 @@ func analyzePrematurePromotion(metrics *GCMetrics, events []GCEvent) []Performan
 		})
 	}
 
-	// Check concurrent marking effectiveness
-	if metrics.PromotionEfficiency < 0.5 && metrics.MixedGCCount > 0 {
+	if metrics.PromotionEfficiency < PromotionEfficiencyWarning && metrics.MixedGCCount > 0 {
 		issues = append(issues, PerformanceIssue{
 			Type:     "Ineffective Concurrent Marking",
 			Severity: "warning",
@@ -564,93 +1000,6 @@ func analyzePrematurePromotion(metrics *GCMetrics, events []GCEvent) []Performan
 				"Review mixed collection targeting: -XX:G1MixedGCLiveThresholdPercent=75",
 			},
 		})
-	}
-
-	return issues
-}
-
-func analyzeEvacuationFailures(events []GCEvent) []PerformanceIssue {
-	var issues []PerformanceIssue
-
-	evacuationFailures := 0
-	evacuationFailureEvents := []int{}
-
-	// Count evacuation failures
-	for _, event := range events {
-		if event.ToSpaceExhausted || strings.Contains(event.Cause, "Evacuation Failure") {
-			evacuationFailures++
-			evacuationFailureEvents = append(evacuationFailureEvents, event.ID)
-		}
-	}
-
-	if evacuationFailures == 0 {
-		return issues
-	}
-
-	failureRate := float64(evacuationFailures) / float64(len(events)) * 100
-
-	var severity string
-	var recommendations []string
-
-	if evacuationFailures > 0 {
-		severity = "critical"
-		recommendations = []string{
-			fmt.Sprintf("EVACUATION FAILURES detected in %d GC events (%.1f%% failure rate)",
-				evacuationFailures, failureRate),
-			fmt.Sprintf("Failed GC events: %v", evacuationFailureEvents),
-			"Evacuation failure means G1GC couldn't move objects to other regions",
-			"This causes performance degradation and can trigger Full GC",
-			"Heap too full - INCREASE HEAP SIZE immediately: -Xmx<size * 2>",
-			"Too many humongous objects - check for large object allocations",
-			"Insufficient evacuation reserve - increase: -XX:G1ReservePercent=20",
-			"Region fragmentation - consider larger regions: -XX:G1HeapRegionSize=32m",
-			"Enable evacuation failure logging: -XX:+TraceClassLoading",
-			"Take heap dump after failures to analyze object distribution",
-		}
-
-		// Add specific advice based on failure frequency
-		if failureRate > 20 {
-			recommendations = append(recommendations,
-				"CRITICAL: >20% failure rate indicates severe memory pressure")
-		}
-	}
-
-	if severity != "" {
-		issues = append(issues, PerformanceIssue{
-			Type:           "Evacuation Failures",
-			Severity:       severity,
-			Description:    fmt.Sprintf("%d evacuation failures (%.1f%% of collections)", evacuationFailures, failureRate),
-			Recommendation: recommendations,
-		})
-	}
-
-	return issues
-}
-
-func analyzeMemoryLeaks(events []GCEvent) []PerformanceIssue {
-	var issues []PerformanceIssue
-
-	if len(events) < 5 {
-		return issues
-	}
-
-	// Always run short-term detection first for immediate issues
-	shortTermIssues := detectShortTermMemoryLeaks(events)
-	issues = append(issues, shortTermIssues...)
-
-	// Only run long-term analysis if we have enough data AND time
-	if len(events) >= MinEventsForTrend {
-		startTime := events[0].Timestamp
-		endTime := events[len(events)-1].Timestamp
-		duration := endTime.Sub(startTime)
-
-		if duration >= MinTimeForTrend {
-			trend := detectMemoryLeak(events)
-			if trend.LeakSeverity != "none" {
-				longTermIssues := analyzeLongTermMemoryLeak(trend)
-				issues = append(issues, longTermIssues...)
-			}
-		}
 	}
 
 	return issues
@@ -696,57 +1045,36 @@ func analyzeLongTermMemoryLeak(trend MemoryTrend) []PerformanceIssue {
 	return issues
 }
 
-// Helper functions
+// Helper functions remain the same
 func calculateRecommendedHeapSize(allocRate float64) float64 {
-	// Rule of thumb: heap should handle 10-15 minutes of allocation
-	baseGB := allocRate * 0.6 // 10 minutes of allocation in GB
-	if baseGB < 4 {
-		return 4 // Minimum 4GB
+	baseGB := allocRate * HeapSizeAllocFactor
+	if baseGB < MinRecommendedHeap {
+		return MinRecommendedHeap
 	}
-	if baseGB > 64 {
-		return 64 // Practical maximum for most applications
+	if baseGB > MaxRecommendedHeap {
+		return MaxRecommendedHeap
 	}
 	return baseGB
 }
 
 func getRegionSizeRecommendation(allocRate float64) string {
-	if allocRate > 1000 {
+	if allocRate > AllocRateCritical/2 { // 1000 MB/s
 		return "Use large regions: -XX:G1HeapRegionSize=32m"
-	} else if allocRate > 500 {
+	} else if allocRate > AllocRateHigh {
 		return "Use medium regions: -XX:G1HeapRegionSize=16m"
-	} else if allocRate < 100 {
+	} else if allocRate < AllocRateModerate {
 		return "Use small regions: -XX:G1HeapRegionSize=8m"
 	}
 	return "Keep default region size: -XX:G1HeapRegionSize=16m"
 }
 
 func calculateOptimalConcThreads(allocRate float64) int {
-	if allocRate > 1000 {
-		return 8
-	} else if allocRate > 500 {
-		return 6
+	if allocRate > AllocRateCritical/2 { // 1000 MB/s
+		return HighAllocThreads
+	} else if allocRate > AllocRateHigh {
+		return MediumAllocThreads
 	}
-	return 4
-}
-
-func countMixedCollections(events []GCEvent) int {
-	count := 0
-	for _, event := range events {
-		if strings.Contains(event.Type, "Mixed") {
-			count++
-		}
-	}
-	return count
-}
-
-func countYoungCollections(events []GCEvent) int {
-	count := 0
-	for _, event := range events {
-		if strings.Contains(event.Type, "Young") {
-			count++
-		}
-	}
-	return count
+	return DefaultAllocThreads
 }
 
 func estimatePauseTarget(events []GCEvent) time.Duration {
@@ -772,18 +1100,18 @@ func calculateAveragePhaseTime(events []GCEvent, timeExtractor func(GCEvent) tim
 }
 
 func generateRegionSizeRecommendation(metrics *GCMetrics) string {
-	if metrics.MaxPromotionRate > 20 {
+	if metrics.MaxPromotionRate > PromotionRateCritical+5 { // 20
 		return "Consider larger heap regions for high allocation: -XX:G1HeapRegionSize=32m"
-	} else if metrics.MaxPromotionRate > 10 {
+	} else if metrics.MaxPromotionRate > PromotionRateWarning {
 		return "Consider medium heap regions: -XX:G1HeapRegionSize=16m"
 	}
 	return "Current region size likely appropriate"
 }
 
 func generateAllocationAdvice(metrics *GCMetrics) string {
-	if metrics.YoungCollectionEfficiency < 0.6 {
+	if metrics.YoungCollectionEfficiency < YoungCollectionEffWarning {
 		return "LOW young generation efficiency - investigate object lifecycle patterns"
-	} else if metrics.SurvivorOverflowRate > 0.2 {
+	} else if metrics.SurvivorOverflowRate > SurvivorOverflowWarning {
 		return "Frequent survivor overflow detected - increase survivor space"
 	}
 	return "Monitor allocation patterns and object lifecycle"
@@ -827,7 +1155,6 @@ func detectMemoryLeak(events []GCEvent) MemoryTrend {
 
 	// Extract post-GC heap usage and timestamps
 	var timePoints []float64
-	var heapUsages []float64
 	var baselineUsages []float64
 
 	startTime := events[0].Timestamp
@@ -840,10 +1167,9 @@ func detectMemoryLeak(events []GCEvent) MemoryTrend {
 
 		timeHours := event.Timestamp.Sub(startTime).Hours()
 		timePoints = append(timePoints, timeHours)
-		heapUsages = append(heapUsages, float64(event.HeapAfter)/1024/1024) // Convert to MB
-
+		heapUsageMB := float64(event.HeapAfter) / 1024 / 1024
 		// Track baseline (post-GC) usage - this is key for leak detection
-		baselineUsages = append(baselineUsages, float64(event.HeapAfter)/1024/1024)
+		baselineUsages = append(baselineUsages, heapUsageMB)
 	}
 
 	if len(timePoints) < MinEventsForTrend {
@@ -858,16 +1184,13 @@ func detectMemoryLeak(events []GCEvent) MemoryTrend {
 	// Calculate linear regression for baseline memory growth
 	slope, correlation := linearRegression(timePoints, baselineUsages)
 
-	// Estimate total heap size from maximum heap usage
-	maxHeap := 0.0
 	totalHeap := 0.0
-	for i := range events {
-		if i < len(heapUsages) {
-			if heapUsages[i] > maxHeap {
-				maxHeap = heapUsages[i]
+	for _, event := range events {
+		if event.HeapTotal > 0 {
+			totalHeapMB := float64(event.HeapTotal) / 1024 / 1024
+			if totalHeapMB > totalHeap {
+				totalHeap = totalHeapMB
 			}
-			// Estimate total heap as ~1.3x max usage (typical headroom)
-			totalHeap = maxHeap * 1.3
 		}
 	}
 
@@ -880,7 +1203,7 @@ func detectMemoryLeak(events []GCEvent) MemoryTrend {
 		EventCount:          len(timePoints),
 	}
 
-	// Project time to heap exhaustion
+	// Project time to heap exhaustion using actual heap total
 	if slope > 0 && totalHeap > 0 {
 		remainingHeap := totalHeap - baselineUsages[len(baselineUsages)-1]
 		hoursToFull := remainingHeap / slope
@@ -888,7 +1211,7 @@ func detectMemoryLeak(events []GCEvent) MemoryTrend {
 	}
 
 	// Determine severity based on growth rate and confidence
-	if trend.TrendConfidence > 0.7 { // Only flag if we're confident in the trend
+	if trend.TrendConfidence > LeakConfidenceThreshold { // Only flag if we're confident in the trend
 		switch {
 		case slope > LeakGrowthCritical || trend.GrowthRatePercent > BaselineGrowthCritical:
 			trend.LeakSeverity = "critical"
@@ -940,267 +1263,6 @@ func linearRegression(x, y []float64) (slope, correlation float64) {
 	}
 
 	return slope, correlation
-}
-
-func analyzeHumongousObjects(events []GCEvent) []PerformanceIssue {
-	var issues []PerformanceIssue
-
-	if len(events) == 0 {
-		return issues
-	}
-
-	// Find events with humongous data and analyze the pattern
-	var humongousEvents []GCEvent
-	maxHumongous := 0
-	totalRegions := 0
-
-	for _, event := range events {
-		if event.HumongousRegions > 0 {
-			humongousEvents = append(humongousEvents, event)
-			if event.HumongousRegions > maxHumongous {
-				maxHumongous = event.HumongousRegions
-			}
-
-			// Calculate total regions from heap total and region size
-			if event.HeapTotal > 0 && event.RegionSize > 0 {
-				totalRegions = int(event.HeapTotal / event.RegionSize)
-			} else if event.HeapTotal > 0 {
-				// Fallback: assume 1MB regions (G1 default)
-				totalRegions = int(event.HeapTotal / (1024 * 1024))
-			}
-		}
-	}
-
-	if len(humongousEvents) == 0 {
-		return issues
-	}
-
-	// Calculate percentage of heap consumed by humongous objects
-	humongousPercent := 0.0
-	if totalRegions > 0 {
-		humongousPercent = float64(maxHumongous) / float64(totalRegions) * 100
-	} else {
-		// Fallback calculation using heap size
-		latestEvent := humongousEvents[len(humongousEvents)-1]
-		if latestEvent.HeapTotal > 0 {
-			// Assume each humongous region is ~1MB
-			humongousBytes := int64(maxHumongous * 1024 * 1024)
-			humongousPercent = float64(humongousBytes) / float64(latestEvent.HeapTotal) * 100
-		}
-	}
-
-	// Analyze if humongous objects are being collected
-	humongousGrowth := 0
-	humongousStatic := 0
-
-	if len(humongousEvents) >= 2 {
-		for i := 1; i < len(humongousEvents); i++ {
-			prev := humongousEvents[i-1].HumongousRegions
-			curr := humongousEvents[i].HumongousRegions
-
-			if curr > prev {
-				humongousGrowth++
-			} else if curr == prev {
-				humongousStatic++
-			}
-		}
-	}
-
-	// Determine severity and recommendations
-	var severity string
-	var recommendations []string
-
-	// Critical: >50% of heap OR never being collected
-	if humongousPercent > HumongousPercentWarning || (humongousStatic > len(humongousEvents)/2 && maxHumongous > 100) {
-		severity = "critical"
-		recommendations = []string{
-			fmt.Sprintf("%d humongous regions consuming %.1f%% of heap", maxHumongous, humongousPercent),
-			"Humongous objects (>50% of region size) are not being garbage collected",
-			"This indicates a MEMORY LEAK in large object allocation",
-			"Take heap dump immediately: jcmd <pid> GC.run_finalization; jcmd <pid> VM.dump_heap leak.hprof",
-			"Analyze with Eclipse MAT or VisualVM for large objects",
-			"Look for: large arrays, huge strings, oversized collections, cached data",
-			"Check recent code for large object allocations that aren't released",
-			"Increase heap size by 200-300% as temporary relief: -Xmx<current_size * 3>",
-			"Enable OOM dump: -XX:+HeapDumpOnOutOfMemoryError",
-		}
-
-		// Add specific leak indicators
-		if humongousStatic > humongousGrowth {
-			recommendations = append(recommendations,
-				fmt.Sprintf("%d humongous regions unchanged across %d GC cycles",
-					maxHumongous, humongousStatic))
-		}
-
-	} else if humongousPercent > HumongousPercentModerate || maxHumongous > 50 {
-		severity = "warning"
-		recommendations = []string{
-			fmt.Sprintf("Significant humongous object usage: %d regions (%.1f%% of heap)", maxHumongous, humongousPercent),
-			"Large objects are consuming significant heap space",
-			"Monitor for memory leak patterns",
-			"Consider object size optimization or heap size increase",
-		}
-	}
-
-	// Always report if we have ANY humongous objects with static behavior
-	if maxHumongous > 10 && humongousStatic > 0 {
-		if severity == "" {
-			severity = "info"
-			recommendations = []string{
-				fmt.Sprintf("Humongous objects detected: %d regions", maxHumongous),
-				"Monitor large object allocation patterns",
-				"Consider optimizing large data structures",
-			}
-		}
-
-		recommendations = append(recommendations,
-			fmt.Sprintf("%d regions static, %d growing across %d GC events",
-				humongousStatic, humongousGrowth, len(humongousEvents)))
-	}
-
-	if severity != "" {
-		issues = append(issues, PerformanceIssue{
-			Type:           "Humongous Objects",
-			Severity:       severity,
-			Description:    fmt.Sprintf("Large objects consuming %.1f%% of heap (%d regions)", humongousPercent, maxHumongous),
-			Recommendation: recommendations,
-		})
-	}
-
-	return issues
-}
-
-func detectShortTermMemoryLeaks(events []GCEvent) []PerformanceIssue {
-	var issues []PerformanceIssue
-
-	if len(events) < 5 {
-		return issues
-	}
-
-	// Collect leak indicators
-	var heapAfterGC []int64
-	var humongousRegions []int
-	fullGCCount := 0
-	evacuationFailures := 0
-
-	for _, event := range events {
-		if event.HeapAfter > 0 {
-			heapAfterGC = append(heapAfterGC, int64(event.HeapAfter))
-		}
-		if event.HumongousRegions > 0 {
-			humongousRegions = append(humongousRegions, event.HumongousRegions)
-		}
-		if strings.Contains(strings.ToLower(event.Type), "full") {
-			fullGCCount++
-		}
-		if event.ToSpaceExhausted || strings.Contains(event.Cause, "Evacuation Failure") {
-			evacuationFailures++
-		}
-	}
-
-	// Immediate leak indicators
-	var leakIndicators []string
-	leakScore := 0
-
-	// 1. Multiple Full GCs with no memory recovery
-	if fullGCCount >= 3 && len(heapAfterGC) >= 3 {
-		lastThree := heapAfterGC[len(heapAfterGC)-3:]
-		if lastThree[2] >= lastThree[1] && lastThree[1] >= lastThree[0] {
-			leakIndicators = append(leakIndicators,
-				fmt.Sprintf("%d Full GCs with no memory recovery", fullGCCount))
-			leakScore += 3
-		}
-	}
-
-	// 2. Humongous objects not being collected (CRITICAL INDICATOR)
-	if len(humongousRegions) >= 3 {
-		allSame := true
-		first := humongousRegions[0]
-		for _, count := range humongousRegions[1:] {
-			if count < first-5 { // Allow small variation
-				allSame = false
-				break
-			}
-		}
-		if allSame && first > 20 {
-			leakIndicators = append(leakIndicators,
-				fmt.Sprintf("%d humongous regions never collected", first))
-			leakScore += 4
-		}
-	}
-
-	// 3. Heap utilization at maximum despite GCs
-	if len(heapAfterGC) >= 2 {
-		lastEvent := events[len(events)-1]
-		if lastEvent.HeapTotal > 0 {
-			utilization := float64(lastEvent.HeapAfter) / float64(lastEvent.HeapTotal)
-			if utilization > 0.95 {
-				leakIndicators = append(leakIndicators,
-					fmt.Sprintf("Heap at %.1f%% utilization after GC", utilization*100))
-				leakScore += 2
-			}
-		}
-	}
-
-	// 4. Evacuation failures
-	if evacuationFailures > 0 {
-		leakIndicators = append(leakIndicators,
-			fmt.Sprintf("%d evacuation failures", evacuationFailures))
-		leakScore += 2
-	}
-
-	// 5. Memory growth despite aggressive collection
-	if len(heapAfterGC) >= 3 {
-		start := heapAfterGC[0]
-		end := heapAfterGC[len(heapAfterGC)-1]
-		if end > start+50*1024*1024 { // 50MB growth threshold
-			leakIndicators = append(leakIndicators,
-				fmt.Sprintf("Memory grew from %d to %d MB despite GC", start/1024/1024, end/1024/1024))
-			leakScore += 2
-		}
-	}
-
-	// Determine severity based on leak score
-	if leakScore >= 4 {
-		recommendations := []string{
-			"Multiple indicators suggest objects are not being garbage collected",
-		}
-		recommendations = append(recommendations, leakIndicators...)
-		recommendations = append(recommendations, []string{
-			"Take heap dump immediately: jcmd <pid> VM.dump_heap emergency.hprof",
-			"Restart application if possible to prevent OutOfMemoryError",
-			"Increase heap size as emergency measure: -Xmx<current * 3>",
-			"Enable OOM dumps: -XX:+HeapDumpOnOutOfMemoryError",
-			"Analyze heap dump for large objects and reference chains",
-		}...)
-
-		issues = append(issues, PerformanceIssue{
-			Type:           "Severe Memory Leak (Immediate)",
-			Severity:       "critical",
-			Description:    fmt.Sprintf("IMMEDIATE MEMORY LEAK detected with %d critical indicators", len(leakIndicators)),
-			Recommendation: recommendations,
-		})
-	} else if leakScore >= 2 {
-		recommendations := []string{
-			"Potential memory leak detected",
-		}
-		recommendations = append(recommendations, leakIndicators...)
-		recommendations = append(recommendations, []string{
-			"Take baseline heap dump for analysis",
-			"Monitor memory usage over longer period",
-			"Check for unclosed resources or static collections",
-			"Review recent code changes",
-		}...)
-
-		issues = append(issues, PerformanceIssue{
-			Type:           "Suspected Memory Leak",
-			Severity:       "warning",
-			Description:    fmt.Sprintf("Memory leak suspected with %d indicators", len(leakIndicators)),
-			Recommendation: recommendations,
-		})
-	}
-
-	return issues
 }
 
 func groupIssuesBySeverity(allIssues []PerformanceIssue) *Analysis {
