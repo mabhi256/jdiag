@@ -51,7 +51,7 @@ func (m *Model) RenderIssues() string {
 	)
 }
 
-func renderIssuesHeader(issues *gc.Analysis, subTab IssuesSubTab) string {
+func renderIssuesHeader(issues *gc.GCIssues, subTab IssuesSubTab) string {
 	criticalCount := len(issues.Critical)
 	warningCount := len(issues.Warning)
 	infoCount := len(issues.Info)

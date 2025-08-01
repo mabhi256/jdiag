@@ -10,7 +10,7 @@ import (
 )
 
 func (m *Model) RenderEvents() string {
-	if m.gcLog == nil || len(m.gcLog.Events) == 0 {
+	if len(m.events) == 0 {
 		return renderNoEvents()
 	}
 
@@ -69,7 +69,7 @@ func (m *Model) renderEventsHeader(events []gc.GCEvent) string {
 
 	filterText := fmt.Sprintf("Filter: %s", filterNames[m.eventsState.eventFilter])
 	sortText := fmt.Sprintf("Sort: %s", sortNames[m.eventsState.sortBy])
-	countText := fmt.Sprintf("%d/%d events", len(events), len(m.gcLog.Events))
+	countText := fmt.Sprintf("%d/%d events", len(events), len(m.events))
 
 	statusLine := fmt.Sprintf("%s | %s | %s",
 		filterStyle.Render(filterText),

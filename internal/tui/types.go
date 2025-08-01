@@ -6,9 +6,9 @@ import (
 
 type Model struct {
 	// Data
-	gcLog   *gc.GCLog
-	metrics *gc.GCMetrics
-	issues  *gc.Analysis
+	events   []gc.GCEvent
+	analysis *gc.GCAnalysis
+	issues   *gc.GCIssues
 
 	// UI State
 	currentTab TabType

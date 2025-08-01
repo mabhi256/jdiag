@@ -48,26 +48,26 @@ var gcAnalyzeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Analyzing GC log: %s\n", args[0])
 		parser := gc.NewParser()
-		rawLog, err := parser.ParseFile(args[0])
+		events, analysis, err := parser.ParseFile(args[0])
+		gc.AnalyzeGCLogs(events, analysis)
 		if err != nil {
 			fmt.Printf("Error parsing GC log: %v\n", err)
 			return
 		}
-
-		analyzedLog, metrics, issues := rawLog.GetAnalysisData()
+		recommendations := gc.GetRecommendations(analysis)
 
 		switch outputFormat {
 		case "cli":
-			analyzedLog.PrintSummary(metrics)
+			analysis.PrintSummary()
 		case "cli-more":
-			analyzedLog.PrintDetailed(metrics)
-			analyzedLog.PrintRecommendations(issues)
+			analysis.PrintDetailed()
+			recommendations.Print()
 		case "tui":
-			tui.StartTUI(analyzedLog, metrics, issues)
+			tui.StartTUI(events, analysis, recommendations)
 		case "html":
 			fmt.Println("HTML format not yet implemented")
 		default:
-			analyzedLog.PrintSummary(metrics)
+			analysis.PrintSummary()
 		}
 	},
 }

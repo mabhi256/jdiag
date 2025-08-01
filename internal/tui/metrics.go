@@ -9,12 +9,8 @@ import (
 )
 
 func (m *Model) RenderMetrics() string {
-	if m.metrics == nil {
-		return "Loading metrics..."
-	}
-
 	tabs := renderMetricsSubTabs(m.metricsSubTab)
-	content := renderMetricsContent(m.metrics, m.metricsSubTab)
+	content := renderMetricsContent(m.analysis, m.metricsSubTab)
 
 	// Apply scrolling if needed
 	contentLines := strings.Split(content, "\n")
@@ -53,18 +49,18 @@ func renderMetricsSubTabs(currentSub MetricsSubTab) string {
 	return strings.Join(rendered, "  ")
 }
 
-func renderMetricsContent(metrics *gc.GCMetrics, subTab MetricsSubTab) string {
+func renderMetricsContent(analysis *gc.GCAnalysis, subTab MetricsSubTab) string {
 	switch subTab {
 	case GeneralMetrics:
-		return renderGeneralMetrics(metrics)
+		return renderGeneralMetrics(analysis)
 	case TimingMetrics:
-		return renderTimingMetrics(metrics)
+		return renderTimingMetrics(analysis)
 	case MemoryMetrics:
-		return renderMemoryMetrics(metrics)
+		return renderMemoryMetrics(analysis)
 	case G1GCMetrics:
-		return renderG1GCMetrics(metrics)
+		return renderG1GCAnalysis(analysis)
 	case ConcurrentMetrics:
-		return renderConcurrentMetrics(metrics)
+		return renderConcurrentMetrics(analysis)
 	default:
 		return "Unknown metrics tab"
 	}
@@ -118,47 +114,47 @@ func getStatusIndicator(current, warning, critical float64) string {
 	return "" // Good - no indicator needed
 }
 
-func renderGeneralMetrics(metrics *gc.GCMetrics) string {
-	total := float64(metrics.TotalEvents)
+func renderGeneralMetrics(analysis *gc.GCAnalysis) string {
+	total := float64(analysis.TotalEvents)
 
 	// Performance Section
-	throughputStatus := getStatusIndicator(metrics.Throughput, gc.ThroughputPoor, gc.ThroughputCritical)
-	throughputStr := fmt.Sprintf("• Throughput: %.1f%%", metrics.Throughput)
+	throughputStatus := getStatusIndicator(analysis.Throughput, gc.ThroughputPoor, gc.ThroughputCritical)
+	throughputStr := fmt.Sprintf("• Throughput: %.1f%%", analysis.Throughput)
 	if throughputStatus != "" {
 		throughputStr += " " + throughputStatus
 	}
 
 	perf := []string{
-		fmt.Sprintf("• Total Events: %d", metrics.TotalEvents),
-		fmt.Sprintf("• Runtime: %s", FormatDuration(metrics.TotalRuntime)),
+		fmt.Sprintf("• Total Events: %d", analysis.TotalEvents),
+		fmt.Sprintf("• Runtime: %s", FormatDuration(analysis.TotalRuntime)),
 		throughputStr,
-		fmt.Sprintf("• Total GC Time: %s", FormatDuration(metrics.TotalGCTime)),
+		fmt.Sprintf("• Total GC Time: %s", FormatDuration(analysis.TotalGCTime)),
 	}
 
 	// Collection Breakdown
 	collection := []string{
-		fmt.Sprintf("• Young GCs: %d (%.1f%%)", metrics.YoungGCCount, float64(metrics.YoungGCCount)/total*100),
-		fmt.Sprintf("• Mixed GCs: %d (%.1f%%)", metrics.MixedGCCount, float64(metrics.MixedGCCount)/total*100),
+		fmt.Sprintf("• Young GCs: %d (%.1f%%)", analysis.YoungGCCount, float64(analysis.YoungGCCount)/total*100),
+		fmt.Sprintf("• Mixed GCs: %d (%.1f%%)", analysis.MixedGCCount, float64(analysis.MixedGCCount)/total*100),
 	}
-	if metrics.FullGCCount > 0 {
-		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%) %s", metrics.FullGCCount, float64(metrics.FullGCCount)/total*100, CriticalStyle.Render("🔴 Critical")))
+	if analysis.FullGCCount > 0 {
+		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%) %s", analysis.FullGCCount, float64(analysis.FullGCCount)/total*100, CriticalStyle.Render("🔴 Critical")))
 	} else {
-		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%)", metrics.FullGCCount, float64(metrics.FullGCCount)/total*100))
+		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%)", analysis.FullGCCount, float64(analysis.FullGCCount)/total*100))
 	}
 
 	// Allocation Statistics
-	allocRateStatus := getStatusIndicator(metrics.AllocationRate, gc.AllocRateHigh, gc.AllocRateCritical)
-	allocRateStr := fmt.Sprintf("• Allocation Rate: %.1f MB/s", metrics.AllocationRate)
+	allocRateStatus := getStatusIndicator(analysis.AllocationRate, gc.AllocRateHigh, gc.AllocRateCritical)
+	allocRateStr := fmt.Sprintf("• Allocation Rate: %.1f MB/s", analysis.AllocationRate)
 	if allocRateStatus != "" {
 		allocRateStr += " " + allocRateStatus
 	}
 
 	alloc := []string{
 		allocRateStr,
-		fmt.Sprintf("• Avg Heap Util: %.1f%%", metrics.AvgHeapUtil*100),
+		fmt.Sprintf("• Avg Heap Util: %.1f%%", analysis.AvgHeapUtil*100),
 	}
-	if metrics.AllocationBurstCount > 0 {
-		alloc = append(alloc, fmt.Sprintf("• Allocation Bursts: %d", metrics.AllocationBurstCount))
+	if analysis.AllocationBurstCount > 0 {
+		alloc = append(alloc, fmt.Sprintf("• Allocation Bursts: %d", analysis.AllocationBurstCount))
 	}
 
 	return strings.Join([]string{
@@ -168,7 +164,7 @@ func renderGeneralMetrics(metrics *gc.GCMetrics) string {
 	}, "\n\n")
 }
 
-func renderTimingMetrics(metrics *gc.GCMetrics) string {
+func renderTimingMetrics(metrics *gc.GCAnalysis) string {
 	// Maximum pause with status
 	maxPauseStatus := getStatusIndicator(float64(metrics.MaxPause.Milliseconds()), float64(gc.PausePoor.Milliseconds()), float64(gc.PauseCritical.Milliseconds()))
 	maxPauseStr := fmt.Sprintf("• Maximum: %s", FormatDuration(metrics.MaxPause))
@@ -235,7 +231,7 @@ func renderTimingMetrics(metrics *gc.GCMetrics) string {
 	return renderSection("Pause Time Statistics", lines)
 }
 
-func renderMemoryMetrics(metrics *gc.GCMetrics) string {
+func renderMemoryMetrics(metrics *gc.GCAnalysis) string {
 	var sections []string
 
 	// Memory Utilization
@@ -316,7 +312,7 @@ func renderMemoryMetrics(metrics *gc.GCMetrics) string {
 	return strings.Join(sections, "\n\n")
 }
 
-func renderG1GCMetrics(metrics *gc.GCMetrics) string {
+func renderG1GCAnalysis(metrics *gc.GCAnalysis) string {
 	var sections []string
 
 	// Collection Efficiency
@@ -378,7 +374,7 @@ func renderG1GCMetrics(metrics *gc.GCMetrics) string {
 	return strings.Join(sections, "\n\n")
 }
 
-func renderConcurrentMetrics(metrics *gc.GCMetrics) string {
+func renderConcurrentMetrics(metrics *gc.GCAnalysis) string {
 	lines := []string{}
 
 	if !metrics.ConcurrentMarkingKeepup {

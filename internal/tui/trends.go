@@ -11,7 +11,7 @@ import (
 )
 
 func (m *Model) RenderTrends() string {
-	if m.gcLog == nil || len(m.gcLog.Events) == 0 {
+	if len(m.events) == 0 {
 		return renderNoTrendsData()
 	}
 
@@ -129,7 +129,7 @@ func (m *Model) renderHeapTrends(events []gc.GCEvent) string {
 	}
 
 	// Create heap usage chart
-	chartHeight := 10
+	chartHeight := 6
 	chartWidth := max(10, m.width-15) // Ensure minimum width
 
 	beforeChart := m.createAreaChart(beforeUtil, labels, chartWidth, chartHeight, "Before GC")
@@ -441,14 +441,13 @@ func (m *Model) createAreaChart(values []float64, labels []string, width, height
 }
 
 func (m *Model) getRecentEvents() []gc.GCEvent {
-	events := m.gcLog.Events
-	if len(events) <= m.trendsState.timeWindow {
-		return events
+	if len(m.events) <= m.trendsState.timeWindow {
+		return m.events
 	}
 
 	// Return the most recent events
-	start := len(events) - m.trendsState.timeWindow
-	return events[start:]
+	start := len(m.events) - m.trendsState.timeWindow
+	return m.events[start:]
 }
 
 // Helper functions

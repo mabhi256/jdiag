@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"os"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -53,6 +52,7 @@ type Parser struct {
 	concurrentMarkEndRegex    *regexp.Regexp
 	pauseRemarkRegex          *regexp.Regexp
 	pauseCleanupRegex         *regexp.Regexp
+	concurrentAbortRegex      *regexp.Regexp
 
 	// Full GC patterns (should be rare in G1)
 	fullPhaseRegex *regexp.Regexp
@@ -200,6 +200,8 @@ func NewParser() *Parser {
 		// Pause Cleanup 223M->213M(256M) 0.271ms
 		pauseCleanupRegex: regexp.MustCompile(`Pause Cleanup ` + beforeAfter + ` ` + pauseTime),
 
+		concurrentAbortRegex: regexp.MustCompile(`Concurrent Mark Abort`),
+
 		// Phase 1: Mark live objects
 		// Phase 2: Compute new object addresses 15.2ms
 		// Phase 3: Adjust pointers 8.7ms
@@ -214,16 +216,15 @@ func NewParser() *Parser {
 	}
 }
 
-func (p *Parser) ParseFile(filename string) (*GCLog, error) {
+func (p *Parser) ParseFile(filename string) ([]GCEvent, *GCAnalysis, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer file.Close()
 
-	log := &GCLog{
-		Events: make([]GCEvent, 0),
-	}
+	events := make([]GCEvent, 0)
+	analysis := &GCAnalysis{}
 
 	// GC events are split across multiple lines:
 	// Line 1: GC(0) Pause Young ... 9M->2M(16M) 5.326ms  (summary info)
@@ -242,7 +243,7 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 		line := scanner.Text()
 
 		timestamp := p.extractTimestamp(line)
-		p.parseConfiguration(line, log)
+		p.parseConfiguration(line, analysis)
 
 		// Check for heap before/after markers
 		if p.heapBeforeRegex.MatchString(line) {
@@ -262,6 +263,9 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 			continue
 		}
 
+		// Handle concurrent cycles
+		p.parseG1ConcurrentPhases(line, timestamp, gcId, concurrentCycles, &events)
+
 		// Get or create event
 		var event *GCEvent
 		if existingEvent, exists := processingEvents[gcId]; exists {
@@ -272,9 +276,9 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 			event = newEvent
 		}
 
+		event.RegionSize = analysis.HeapRegionSize
 		p.parseG1Timing(line, event)
 		p.parseG1RegionDetails(line, event, currentlyParsingBefore, currentlyParsingAfter)
-		p.parseG1ConcurrentPhases(line, timestamp, concurrentCycles, event)
 		p.parseGCSummary(line, timestamp, event)
 
 		// Finalize events with CPU info
@@ -287,15 +291,13 @@ func (p *Parser) ParseFile(filename string) (*GCLog, error) {
 				// Calculate derived values before adding to log
 				p.calculateDerivedValues(event)
 
-				log.Events = append(log.Events, *event)
+				events = append(events, *event)
 				delete(processingEvents, id)
 			}
 		}
-
 	}
 
-	p.setLogBounds(log)
-	return log, scanner.Err()
+	return events, analysis, scanner.Err()
 }
 
 func (p *Parser) parseG1RegionDetails(line string, event *GCEvent, parsingBefore, parsingAfter bool) {
@@ -490,26 +492,25 @@ func (p *Parser) calculateDerivedValues(event *GCEvent) {
 	}
 }
 
-// Rest of the parsing functions remain the same...
-func (p *Parser) parseConfiguration(line string, log *GCLog) {
+func (p *Parser) parseConfiguration(line string, analysis *GCAnalysis) {
 	// Parse JVM version
 	matches := p.versionRegex.FindStringSubmatch(line)
 	if len(matches) > 1 {
-		log.JVMVersion = matches[1]
+		analysis.JVMVersion = matches[1]
 		return
 	}
 
 	// Parse heap region size
 	matches = p.heapRegionRegex.FindStringSubmatch(line)
 	if len(matches) > 1 {
-		log.HeapRegionSize, _ = ParseMemorySize(matches[1])
+		analysis.HeapRegionSize, _ = ParseMemorySize(matches[1])
 		return
 	}
 
 	// Parse maximum heap size
 	matches = p.heapMaxRegex.FindStringSubmatch(line)
 	if len(matches) > 1 {
-		log.HeapMax, _ = ParseMemorySize(matches[1])
+		analysis.HeapMax, _ = ParseMemorySize(matches[1])
 		return
 	}
 }
@@ -533,15 +534,14 @@ func (p *Parser) extractTimestamp(line string) time.Time {
 
 func (p *Parser) parseGCSummary(line string, ts time.Time, event *GCEvent) {
 	/*
+		GC\((\d+)\)\s+Pause\s+(.+?)\s+(\d+[KMGT])->(\d+[KMGT])\((\d+[KMGT])\)\s+([\d.]+)ms
 		matches[0] = "GC(0) Pause Young (Normal) (G1 Evacuation Pause) 9M->2M(16M) 5.326ms"  // Full match
 		matches[1] = "0"                    // GC ID: (\d+)
-		matches[2] = "Young "               // GC Type: ([^(]+)
-		matches[3] = "Normal"               // Subtype: (?:\(([^)]+)\))?
-		matches[4] = "G1 Evacuation Pause"  // Cause: (?:\(([^)]+)\))?
-		matches[5] = "9M"                   // Heap Before: (\d+[MGK])
-		matches[6] = "2M"                   // Heap After: (\d+[MGK])
-		matches[7] = "16M"                  // Heap Total: (\d+[MGK])
-		matches[8] = "5.326"                // Duration: ([\d.]+)
+		matches[2] = "Young ..."            // GC Type: (.+?)
+		matches[3] = "9M"                   // Heap Before: (\d+[MGK])
+		matches[4] = "2M"                   // Heap After: (\d+[MGK])
+		matches[5] = "16M"                  // Heap Total: (\d+[MGK])
+		matches[6] = "5.326"                // Duration: ([\d.]+)
 	*/
 	matches := p.gcSummaryRegex.FindStringSubmatch(line)
 	if len(matches) < 7 {
@@ -686,30 +686,49 @@ func (p *Parser) parseG1Timing(line string, event *GCEvent) {
 	}
 }
 
-func (p *Parser) parseG1ConcurrentPhases(line string, timestamp time.Time, cycles map[int]time.Time, event *GCEvent) {
+func (p *Parser) parseG1ConcurrentPhases(line string, timestamp time.Time, gcId int, concurrentCycles map[int]time.Time, events *[]GCEvent) {
 	// Track concurrent cycle starts
 	if p.concurrentCycleStartRegex.MatchString(line) {
-		cycles[event.ID] = timestamp
+		concurrentCycles[gcId] = timestamp
+		return
 	}
 
-	// Track concurrent cycle ends
+	// Concurrent cycle end - finalize and add event
 	if matches := p.concurrentCycleEndRegex.FindStringSubmatch(line); len(matches) >= 2 {
-		delete(cycles, event.ID)
-	}
+		if startTime, exists := concurrentCycles[gcId]; exists {
+			duration, _ := strconv.ParseFloat(matches[1], 64)
 
-	// Track concurrent phases
-	if matches := p.concurrentPhaseRegex.FindStringSubmatch(line); len(matches) >= 2 {
-		phaseName := matches[1]
-		event.ConcurrentPhase = phaseName
-	}
+			event := &GCEvent{
+				ID:        gcId,
+				Type:      "Concurrent Cycle",
+				Timestamp: startTime,
+				Duration:  time.Duration(duration * float64(time.Millisecond)),
+			}
 
-	if matches := p.concurrentPhaseEndRegex.FindStringSubmatch(line); len(matches) >= 3 {
-		phaseName := matches[1]
-		duration, _ := strconv.ParseFloat(matches[2], 64)
-
-		if event.ConcurrentPhase == phaseName {
-			event.ConcurrentDuration = time.Duration(duration * float64(time.Millisecond))
+			*events = append(*events, *event)
+			delete(concurrentCycles, gcId)
 		}
+		return
+	}
+
+	// Concurrent mark abort - finalize and add event
+	if p.concurrentAbortRegex.MatchString(line) {
+		// Use start time if available, otherwise current timestamp
+		eventTime := timestamp
+		if startTime, exists := concurrentCycles[gcId]; exists {
+			eventTime = startTime
+			delete(concurrentCycles, gcId)
+		}
+
+		event := &GCEvent{
+			ID:                    gcId,
+			Type:                  "Concurrent Mark Abort",
+			Timestamp:             eventTime,
+			ConcurrentMarkAborted: true,
+		}
+
+		*events = append(*events, *event)
+		return
 	}
 }
 
@@ -735,29 +754,39 @@ func parseGCTypeString(typeString string) (gcType, subType, cause string) {
 		return "", "", ""
 	}
 
-	gcType = parts[0] // "Young", "Full", "Remark", etc.
+	causePatterns := []string{
+		"Allocation", "Pause", "System.gc", "Compaction",
+		"Periodic Collection", "Ergonomics", "GCLocker",
+	}
 
-	// Extract all parenthetical expressions
+	// Start with the base type from first word
+	gcType = parts[0] // "Young", "Full", "Remark", etc.
 	parentheticals := extractParentheses(typeString)
 
-	if len(parentheticals) > 0 {
-		// First parenthetical is usually subtype
-		subType = parentheticals[0]
+	if len(parentheticals) == 0 {
+		return gcType, "", ""
+	}
 
-		// Look for common cause patterns
-		for _, paren := range parentheticals {
-			if strings.Contains(paren, "Allocation") ||
-				strings.Contains(paren, "Pause") ||
-				strings.Contains(paren, "System.gc") {
-				cause = paren
-				break
-			}
+	// Check for type overrides
+	for _, paren := range parentheticals {
+		if strings.Contains(strings.ToLower(paren), "mixed") {
+			gcType = "Mixed"
+			break
 		}
+	}
 
-		// If no specific cause found, use the last parenthetical
-		if cause == "" && len(parentheticals) > 1 {
-			cause = parentheticals[len(parentheticals)-1]
+	// Find cause and subtype
+	for _, paren := range parentheticals {
+		if ContainsAny(paren, causePatterns) {
+			cause = paren
+		} else if subType == "" && !strings.Contains(strings.ToLower(paren), "mixed") {
+			subType = paren
 		}
+	}
+
+	// Fallback: if no cause found, use last parenthetical
+	if cause == "" && len(parentheticals) > 0 {
+		cause = parentheticals[len(parentheticals)-1]
 	}
 
 	return gcType, subType, cause
@@ -779,16 +808,11 @@ func extractParentheses(text string) []string {
 	return results
 }
 
-func (p *Parser) setLogBounds(log *GCLog) {
-	if len(log.Events) == 0 {
-		return
+func ContainsAny(s string, patterns []string) bool {
+	for _, pattern := range patterns {
+		if strings.Contains(s, pattern) {
+			return true
+		}
 	}
-
-	// Sort events by timestamp to ensure correct ordering
-	sort.Slice(log.Events, func(i, j int) bool {
-		return log.Events[i].Timestamp.Before(log.Events[j].Timestamp)
-	})
-
-	log.StartTime = log.Events[0].Timestamp
-	log.EndTime = log.Events[len(log.Events)-1].Timestamp
+	return false
 }

@@ -325,3 +325,9 @@ jdiag gc watch gc.log
 jdiag jfr watch recording.jfr
 
 ```
+
+Use sensible pause time target default
+    - 10ms: realtime, trading, gaming
+    - 50ms: web, api, microservices
+    - 100ms: enterprise, application
+    - 200ms: batch, analytics, etl

@@ -9,21 +9,17 @@ import (
 )
 
 func (m *Model) RenderDashboard() string {
-	if m.metrics == nil {
-		return "Loading dashboard..."
-	}
-
 	var headerContent []string
 
 	// Add JVM info if available, otherwise add empty line to maintain height
 	jvmInfo := ""
-	if m.gcLog.JVMVersion != "" {
-		jvmInfo = fmt.Sprintf("JVM: %s", m.gcLog.JVMVersion)
-		if m.gcLog.HeapMax > 0 {
-			jvmInfo += fmt.Sprintf("  Heap: %s", m.gcLog.HeapMax.String())
+	if m.analysis.JVMVersion != "" {
+		jvmInfo = fmt.Sprintf("JVM: %s", m.analysis.JVMVersion)
+		if m.analysis.HeapMax > 0 {
+			jvmInfo += fmt.Sprintf("  Heap: %s", m.analysis.HeapMax.String())
 		}
-		if !m.gcLog.StartTime.IsZero() && !m.gcLog.EndTime.IsZero() {
-			runtime := m.gcLog.EndTime.Sub(m.gcLog.StartTime)
+		if !m.analysis.StartTime.IsZero() && !m.analysis.EndTime.IsZero() {
+			runtime := m.analysis.EndTime.Sub(m.analysis.StartTime)
 			jvmInfo += fmt.Sprintf("  Runtime: %s", FormatDuration(runtime))
 		}
 
@@ -43,8 +39,8 @@ func (m *Model) RenderDashboard() string {
 	leftWidth := m.width/2 - 2
 	rightWidth := m.width - leftWidth - 6
 
-	leftColumn := renderDashboardLeft(m.metrics, leftWidth)
-	rightColumn := renderDashboardRight(m.metrics, m.issues, rightWidth)
+	leftColumn := renderDashboardLeft(m.analysis, leftWidth)
+	rightColumn := renderDashboardRight(m.analysis, m.issues, rightWidth)
 
 	// Join columns horizontally
 	columnsContent := lipgloss.JoinHorizontal(
@@ -64,48 +60,48 @@ func (m *Model) RenderDashboard() string {
 	return content
 }
 
-func renderDashboardLeft(metrics *gc.GCMetrics, width int) string {
+func renderDashboardLeft(analysis *gc.GCAnalysis, width int) string {
 	sections := []string{
-		renderPerformanceOverview(metrics),
+		renderPerformanceOverview(analysis),
 		"", // spacing
-		renderCollectionBreakdown(metrics, width),
+		renderCollectionBreakdown(analysis, width),
 	}
 
 	return strings.Join(sections, "\n")
 }
 
-func renderDashboardRight(metrics *gc.GCMetrics, issues *gc.Analysis, width int) string {
+func renderDashboardRight(analysis *gc.GCAnalysis, issues *gc.GCIssues, width int) string {
 	sections := []string{
 		renderIssuesSummary(issues, width),
 		"", // spacing
-		renderMemoryPressure(metrics, width),
+		renderMemoryPressure(analysis, width),
 	}
 
 	return strings.Join(sections, "\n")
 }
 
-func renderPerformanceOverview(metrics *gc.GCMetrics) string {
+func renderPerformanceOverview(analysis *gc.GCAnalysis) string {
 	title := TitleStyle.Render("Performance Overview")
 
 	var rows []string
 
 	// Throughput - only show if warning/critical
 	throughputTarget := 95.0
-	if metrics.Throughput < throughputTarget {
+	if analysis.Throughput < throughputTarget {
 		status := "⚠️"
-		if metrics.Throughput < 90.0 {
+		if analysis.Throughput < 90.0 {
 			status = "🔴"
 		}
 		throughputRow := fmt.Sprintf("%-15s %s %s",
 			"Throughput",
-			fmt.Sprintf("%.1f%%", metrics.Throughput),
+			fmt.Sprintf("%.1f%%", analysis.Throughput),
 			status)
 		rows = append(rows, throughputRow)
 	}
 
 	// P99 Pause - only show if warning/critical
 	p99Target := 200.0 // ms
-	p99Ms := float64(metrics.P99Pause.Nanoseconds()) / 1000000
+	p99Ms := float64(analysis.P99Pause.Nanoseconds()) / 1000000
 	if p99Ms > p99Target {
 		status := "⚠️"
 		if p99Ms > 500 {
@@ -119,7 +115,7 @@ func renderPerformanceOverview(metrics *gc.GCMetrics) string {
 	}
 
 	// Always show key metrics without status
-	avgMs := float64(metrics.AvgPause.Nanoseconds()) / 1000000
+	avgMs := float64(analysis.AvgPause.Nanoseconds()) / 1000000
 	avgRow := fmt.Sprintf("%-15s %-12s",
 		"Avg Pause",
 		fmt.Sprintf("%.1fms", avgMs))
@@ -128,10 +124,10 @@ func renderPerformanceOverview(metrics *gc.GCMetrics) string {
 	// Allocation Rate - only show status if high
 	allocRow := fmt.Sprintf("%-15s %s",
 		"Allocation",
-		fmt.Sprintf("%.0f MB/s", metrics.AllocationRate))
-	if metrics.AllocationRate > 100 {
+		fmt.Sprintf("%.0f MB/s", analysis.AllocationRate))
+	if analysis.AllocationRate > 100 {
 		status := "⚠️"
-		if metrics.AllocationRate > 500 {
+		if analysis.AllocationRate > 500 {
 			status = "🔴"
 		}
 		allocRow += fmt.Sprintf(" %s", status)
@@ -141,13 +137,13 @@ func renderPerformanceOverview(metrics *gc.GCMetrics) string {
 	// Total Events and Runtime - simple display
 	eventsRow := fmt.Sprintf("%-15s %-12s",
 		"Total Events",
-		fmt.Sprintf("%d", metrics.TotalEvents))
+		fmt.Sprintf("%d", analysis.TotalEvents))
 	rows = append(rows, eventsRow)
 
-	if metrics.TotalRuntime > 0 {
+	if analysis.TotalRuntime > 0 {
 		runtimeRow := fmt.Sprintf("%-15s %-12s",
 			"Runtime",
-			FormatDuration(metrics.TotalRuntime))
+			FormatDuration(analysis.TotalRuntime))
 		rows = append(rows, runtimeRow)
 	}
 
@@ -167,10 +163,10 @@ func renderPerformanceOverview(metrics *gc.GCMetrics) string {
 	)
 }
 
-func renderCollectionBreakdown(metrics *gc.GCMetrics, width int) string {
+func renderCollectionBreakdown(analysis *gc.GCAnalysis, width int) string {
 	title := TitleStyle.Render("Collection Types")
 
-	total := float64(metrics.TotalEvents)
+	total := float64(analysis.TotalEvents)
 	if total == 0 {
 		return lipgloss.JoinVertical(lipgloss.Left, title, "No GC events")
 	}
@@ -178,19 +174,19 @@ func renderCollectionBreakdown(metrics *gc.GCMetrics, width int) string {
 	barWidth := width - 20 // Reserve space for labels
 
 	// Young GC percentage
-	youngPct := float64(metrics.YoungGCCount) / total
+	youngPct := float64(analysis.YoungGCCount) / total
 	youngBar := CreateProgressBar(youngPct, barWidth, GoodColor)
 	youngLine := fmt.Sprintf("Young  %s %d%%", youngBar, int(youngPct*100))
 
 	// Mixed GC percentage
-	mixedPct := float64(metrics.MixedGCCount) / total
+	mixedPct := float64(analysis.MixedGCCount) / total
 	mixedBar := CreateProgressBar(mixedPct, barWidth, InfoColor)
 	mixedLine := fmt.Sprintf("Mixed  %s %d%%", mixedBar, int(mixedPct*100))
 
 	// Full GC percentage
-	fullPct := float64(metrics.FullGCCount) / total
+	fullPct := float64(analysis.FullGCCount) / total
 	fullColor := GoodColor
-	if metrics.FullGCCount > 0 {
+	if analysis.FullGCCount > 0 {
 		fullColor = CriticalColor
 	}
 	fullBar := CreateProgressBar(fullPct, barWidth, fullColor)
@@ -206,7 +202,7 @@ func renderCollectionBreakdown(metrics *gc.GCMetrics, width int) string {
 	)
 }
 
-func renderIssuesSummary(issues *gc.Analysis, width int) string {
+func renderIssuesSummary(issues *gc.GCIssues, width int) string {
 	title := TitleStyle.Render("Issues Summary")
 
 	criticalCount := len(issues.Critical)
@@ -250,7 +246,7 @@ func renderIssuesSummary(issues *gc.Analysis, width int) string {
 	)
 }
 
-func renderMemoryPressure(metrics *gc.GCMetrics, width int) string {
+func renderMemoryPressure(analysis *gc.GCAnalysis, width int) string {
 	title := TitleStyle.Render("Memory Pressure")
 
 	var lines []string
@@ -259,56 +255,56 @@ func renderMemoryPressure(metrics *gc.GCMetrics, width int) string {
 	// Heap Utilization
 	heapTarget := 0.70 // 70%
 	heapColor := GoodColor
-	if metrics.AvgHeapUtil > 0.90 {
+	if analysis.AvgHeapUtil > 0.90 {
 		heapColor = CriticalColor
-	} else if metrics.AvgHeapUtil > heapTarget {
+	} else if analysis.AvgHeapUtil > heapTarget {
 		heapColor = WarningColor
 	}
 
-	heapBar := CreateProgressBar(metrics.AvgHeapUtil, barWidth, heapColor)
+	heapBar := CreateProgressBar(analysis.AvgHeapUtil, barWidth, heapColor)
 	heapStatus := "✅"
-	if metrics.AvgHeapUtil > 0.90 {
+	if analysis.AvgHeapUtil > 0.90 {
 		heapStatus = "🔴"
-	} else if metrics.AvgHeapUtil > heapTarget {
+	} else if analysis.AvgHeapUtil > heapTarget {
 		heapStatus = "⚠️"
 	}
 
 	heapLine := fmt.Sprintf("Heap     %s %.0f%% %s",
-		heapBar, metrics.AvgHeapUtil*100, heapStatus)
+		heapBar, analysis.AvgHeapUtil*100, heapStatus)
 	lines = append(lines, heapLine)
 
 	// Region Utilization (if available)
-	if metrics.AvgRegionUtilization > 0 {
+	if analysis.AvgRegionUtilization > 0 {
 		regionTarget := 0.75 // 75%
 		regionColor := GoodColor
-		if metrics.AvgRegionUtilization > 0.85 {
+		if analysis.AvgRegionUtilization > 0.85 {
 			regionColor = CriticalColor
-		} else if metrics.AvgRegionUtilization > regionTarget {
+		} else if analysis.AvgRegionUtilization > regionTarget {
 			regionColor = WarningColor
 		}
 
-		regionBar := CreateProgressBar(metrics.AvgRegionUtilization, barWidth, regionColor)
+		regionBar := CreateProgressBar(analysis.AvgRegionUtilization, barWidth, regionColor)
 		regionStatus := "✅"
-		if metrics.AvgRegionUtilization > 0.85 {
+		if analysis.AvgRegionUtilization > 0.85 {
 			regionStatus = "🔴"
-		} else if metrics.AvgRegionUtilization > regionTarget {
+		} else if analysis.AvgRegionUtilization > regionTarget {
 			regionStatus = "⚠️"
 		}
 
 		regionLine := fmt.Sprintf("Regions  %s %.0f%% %s",
-			regionBar, metrics.AvgRegionUtilization*100, regionStatus)
+			regionBar, analysis.AvgRegionUtilization*100, regionStatus)
 		lines = append(lines, regionLine)
 	}
 
 	// Allocation Rate indicator
-	allocLine := fmt.Sprintf("Alloc Rate: %.0f MB/s", metrics.AllocationRate)
+	allocLine := fmt.Sprintf("Alloc Rate: %.0f MB/s", analysis.AllocationRate)
 	lines = append(lines, "")
 	lines = append(lines, allocLine)
 
 	// Evacuation Failures
-	if metrics.EvacuationFailureRate > 0 {
-		evacLine := fmt.Sprintf("Evac Failures: %.1f%%", metrics.EvacuationFailureRate*100)
-		if metrics.EvacuationFailureRate > 0.01 {
+	if analysis.EvacuationFailureRate > 0 {
+		evacLine := fmt.Sprintf("Evac Failures: %.1f%%", analysis.EvacuationFailureRate*100)
+		if analysis.EvacuationFailureRate > 0.01 {
 			evacLine = CriticalStyle.Render(evacLine)
 		} else {
 			evacLine = WarningStyle.Render(evacLine)
@@ -327,7 +323,7 @@ func renderMemoryPressure(metrics *gc.GCMetrics, width int) string {
 }
 
 // Helper function to get the most severe issue
-func getTopIssue(issues *gc.Analysis) *gc.PerformanceIssue {
+func getTopIssue(issues *gc.GCIssues) *gc.PerformanceIssue {
 	// Priority: critical > warning > info
 	if len(issues.Critical) > 0 {
 		return &issues.Critical[0]

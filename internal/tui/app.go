@@ -12,7 +12,7 @@ import (
 
 const PageSize = 10 // Number of lines to scroll per page
 
-func initialModel(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis) *Model {
+func initialModel(events []gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) *Model {
 	selecttedIssuesTab := getFirstNonEmptyFilter(issues)
 	selectedIssue := make(map[IssuesSubTab]int)
 	selectedIssue[CriticalIssues] = 0
@@ -21,8 +21,8 @@ func initialModel(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis) *
 
 	return &Model{
 		currentTab:      DashboardTab,
-		gcLog:           gcLog,
-		metrics:         metrics,
+		events:          events,
+		analysis:        analysis,
 		issues:          issues,
 		scrollPositions: make(map[TabType]int),
 		metricsSubTab:   GeneralMetrics,
@@ -230,11 +230,7 @@ func (m *Model) handleTrendsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) getFilteredEvents() []gc.GCEvent {
-	if m.gcLog == nil {
-		return []gc.GCEvent{}
-	}
-
-	events := m.gcLog.Events
+	events := m.events
 	if m.eventsState.eventFilter == AllEvent {
 		return events
 	}
@@ -243,19 +239,19 @@ func (m *Model) getFilteredEvents() []gc.GCEvent {
 	for _, event := range events {
 		switch m.eventsState.eventFilter {
 		case YoungEvent:
-			if strings.Contains(strings.ToLower(event.Type), "young") {
+			if event.Type == "Young" {
 				filtered = append(filtered, event)
 			}
 		case MixedEvent:
-			if strings.Contains(strings.ToLower(event.Type), "mixed") {
+			if event.Type == "Mixed" {
 				filtered = append(filtered, event)
 			}
 		case FullEvent:
-			if strings.Contains(strings.ToLower(event.Type), "full") {
+			if event.Type == "Full" {
 				filtered = append(filtered, event)
 			}
 		case ConcurrentEvent:
-			if strings.Contains(strings.ToLower(event.Type), "concurrent") {
+			if event.Type == "Concurrent" {
 				filtered = append(filtered, event)
 			}
 		}
@@ -368,8 +364,8 @@ func (m *Model) renderFooter() string {
 	return HelpBarStyle.Width(m.width).Render(shortcuts)
 }
 
-func StartTUI(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis) error {
-	model := initialModel(gcLog, metrics, issues)
+func StartTUI(events []gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) error {
+	model := initialModel(events, analysis, issues)
 
 	program := tea.NewProgram(
 		model,
@@ -381,7 +377,7 @@ func StartTUI(gcLog *gc.GCLog, metrics *gc.GCMetrics, issues *gc.Analysis) error
 	return err
 }
 
-func getFirstNonEmptyFilter(issues *gc.Analysis) IssuesSubTab {
+func getFirstNonEmptyFilter(issues *gc.GCIssues) IssuesSubTab {
 	if len(issues.Critical) > 0 {
 		return CriticalIssues
 	}

@@ -20,7 +20,7 @@ type GCEvent struct {
 	SystemTime time.Duration
 	RealTime   time.Duration
 
-	// G1GC timing fields (Microsoft GC Toolkit patterns)
+	// G1GC detailed timing
 	PreEvacuateTime         time.Duration
 	PostEvacuateTime        time.Duration
 	ExtRootScanTime         time.Duration
@@ -102,71 +102,189 @@ type GCEvent struct {
 	ConcurrentPhase    string
 	ConcurrentDuration time.Duration
 	ConcurrentCycleId  int
+
+	// ===== ANALYSIS FLAGS (computed during traversal) =====
+
+	// Performance issue flags
+	HasEvacuationFailure  bool
+	HasHighPauseTime      bool
+	HasMemoryPressure     bool
+	HasSurvivorOverflow   bool
+	HasHumongousGrowth    bool
+	IsPrematurePromotion  bool
+	HasLongPhases         bool
+	ConcurrentMarkAborted bool
+	HasAllocationBurst    bool // unused
+
+	// Computed metrics for this event
+	CollectionEfficiency  float64 // Amount collected / heap before
+	HeapUtilizationBefore float64 // Heap used / heap total (before GC)
+	HeapUtilizationAfter  float64 // Heap used / heap total (after GC)
+	RegionUtilization     float64 // Used regions / total regions
+	PromotionRate         float64 // Regions promoted to old gen
+	AllocationRateToEvent float64 // MB/s since last event
+	PauseTargetExceeded   bool    // Duration > estimated pause target
+
+	// Phase analysis flags
+	HasSlowObjectCopy    bool
+	HasSlowRootScanning  bool
+	HasSlowTermination   bool
+	HasSlowRefProcessing bool
 }
 
-type GCLog struct {
-	// Configuration from init lines
+type GCAnalysis struct {
+	// ===== BASIC INFO ====
 	JVMVersion     string
 	HeapRegionSize MemorySize
 	HeapMax        MemorySize
+	TotalEvents    int
+	YoungGCCount   int
+	MixedGCCount   int
+	FullGCCount    int
 
-	// GC
-	Events    []GCEvent
-	StartTime time.Time
-	EndTime   time.Time
+	StartTime    time.Time
+	EndTime      time.Time
+	Status       string
+	TotalRuntime time.Duration
+	TotalGCTime  time.Duration
 
-	Status string
-}
-
-type GCMetrics struct {
-	TotalEvents  int
-	YoungGCCount int
-	MixedGCCount int
-	FullGCCount  int
-
+	// ===== PERFORMANCE METRICS =====
 	Throughput     float64 // percentage of time NOT spent in GC
 	AvgHeapUtil    float64
 	AllocationRate float64
 
-	TotalRuntime time.Duration
-	TotalGCTime  time.Duration
-	AvgPause     time.Duration
-	MinPause     time.Duration
-	MaxPause     time.Duration
-	P95Pause     time.Duration
-	P99Pause     time.Duration
+	// Pause time metrics
+	AvgPause time.Duration
+	MinPause time.Duration
+	MaxPause time.Duration
+	P95Pause time.Duration
+	P99Pause time.Duration
 
-	// G1GC collection analysis
+	// ===== G1GC SPECIFIC METRICS =====
+
+	// Collection efficiency
 	YoungCollectionEfficiency float64
 	MixedCollectionEfficiency float64
 	MixedToYoungRatio         float64
-	ConcurrentCycleDuration   time.Duration
-	ConcurrentCycleFrequency  float64
 
-	// G1GC pause time analysis
-	PauseTimeVariance   float64
-	PauseTargetMissRate float64
-	LongPauseCount      int
+	// Pause analysis
+	PauseTimeVariance    float64
+	PauseTargetMissRate  float64
+	LongPauseCount       int
+	EstimatedPauseTarget time.Duration
 
-	// G1GC region analysis
+	// Region management
 	AvgRegionUtilization   float64
 	RegionExhaustionEvents int
 	EvacuationFailureRate  float64
+	EvacuationFailureCount int
 
-	// G1GC concurrent marking
+	// Concurrent marking
 	ConcurrentMarkingKeepup  bool
+	ConcurrentCycleDuration  time.Duration
+	ConcurrentCycleFrequency float64
 	ConcurrentCycleFailures  int
-	IHOPTriggeredCollections int
+	ConcurrentMarkAbortCount int
 
-	// G1GC allocation patterns
+	// Allocation patterns
 	AllocationBurstCount    int
-	AvgPromotionRate        float64 // regions promoted per young GC
+	AvgPromotionRate        float64
 	MaxPromotionRate        float64
 	AvgOldGrowthRatio       float64
 	MaxOldGrowthRatio       float64
-	SurvivorOverflowRate    float64 // % of collections with survivor overflow
-	PromotionEfficiency     float64 // how much promoted data survives concurrent mark
-	ConsecutiveGrowthSpikes int     // consecutive high-growth young GCs
+	SurvivorOverflowRate    float64
+	PromotionEfficiency     float64
+	ConsecutiveGrowthSpikes int
+
+	// ===== AGGREGATE ANALYSIS RESULTS =====
+
+	// Humongous object analysis
+	HumongousStats HumongousObjectStats
+
+	// Memory leak analysis
+	MemoryTrend          MemoryTrend
+	MemoryLeakIndicators []string
+	LeakScore            int
+
+	// Promotion analysis
+	PromotionStats PromotionAnalysis
+
+	// Phase timing analysis
+	PhaseStats PhaseAnalysis
+
+	// ===== ISSUE FLAGS FOR RECOMMENDATIONS =====
+
+	// Critical issues
+	HasCriticalMemoryLeak          bool
+	HasCriticalEvacFailures        bool
+	HasCriticalThroughput          bool
+	HasCriticalPauseTimes          bool
+	HasCriticalPromotion           bool
+	HasCriticalHumongousLeak       bool
+	HasCriticalConcurrentMarkAbort bool
+
+	// Warning issues
+	HasWarningMemoryLeak     bool
+	HasWarningEvacFailures   bool
+	HasWarningThroughput     bool
+	HasWarningPauseTimes     bool
+	HasWarningPromotion      bool
+	HasWarningHumongousUsage bool
+	HasWarningConcurrentMark bool
+	HasWarningAllocationRate bool
+	HasWarningCollectionEff  bool
+
+	// Info issues
+	HasInfoAllocationPattern bool
+	HasInfoPhaseOptimization bool
+}
+
+type HumongousObjectStats struct {
+	MaxRegions      int
+	HeapPercentage  float64
+	StaticCount     int
+	GrowingCount    int
+	DecreasingCount int
+	IsLeak          bool
+	TotalEvents     int
+}
+
+type PromotionAnalysis struct {
+	TotalPromotionEvents   int
+	AvgPromotionRate       float64
+	MaxPromotionRate       float64
+	AvgOldGrowthRatio      float64
+	MaxOldGrowthRatio      float64
+	SurvivorOverflowCount  int
+	SurvivorOverflowRate   float64
+	PromotionEfficiency    float64
+	ConsecutiveSpikes      int
+	PrematurePromotionRate float64
+}
+
+type PhaseAnalysis struct {
+	AvgObjectCopyTime    time.Duration
+	AvgRootScanTime      time.Duration
+	AvgTerminationTime   time.Duration
+	AvgRefProcessingTime time.Duration
+
+	SlowObjectCopyCount    int
+	SlowRootScanCount      int
+	SlowTerminationCount   int
+	SlowRefProcessingCount int
+
+	HasPhaseIssues bool
+}
+
+type MemoryTrend struct {
+	GrowthRateMBPerHour   float64
+	GrowthRatePercent     float64
+	BaselineGrowthRate    float64
+	TrendConfidence       float64
+	ProjectedFullHeapTime time.Duration
+	LeakSeverity          string
+	SamplePeriod          time.Duration
+	EventCount            int
 }
 
 type PerformanceIssue struct {
@@ -176,19 +294,8 @@ type PerformanceIssue struct {
 	Recommendation []string
 }
 
-type Analysis struct {
+type GCIssues struct {
 	Critical []PerformanceIssue
 	Warning  []PerformanceIssue
 	Info     []PerformanceIssue
-}
-
-type MemoryTrend struct {
-	GrowthRateMBPerHour   float64       // Raw memory growth rate
-	GrowthRatePercent     float64       // Growth as % of heap per hour
-	BaselineGrowthRate    float64       // Growth of post-GC baseline
-	TrendConfidence       float64       // R-squared correlation (0-1)
-	ProjectedFullHeapTime time.Duration // Time until heap exhaustion
-	LeakSeverity          string        // none, warning, critical
-	SamplePeriod          time.Duration // Duration of analysis
-	EventCount            int           // Number of GC events analyzed
 }
