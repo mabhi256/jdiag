@@ -107,7 +107,6 @@ type TrendSubTab int
 const (
 	PauseTrend TrendSubTab = iota
 	HeapTrend
-	AllocationTrend
 	FrequencyTrend
 )
 

@@ -29,10 +29,9 @@ func (m *Model) RenderTrends() string {
 
 func (m *Model) renderTrendsHeader() string {
 	trendNames := map[TrendSubTab]string{
-		PauseTrend:      "Pause Times",
-		HeapTrend:       "Heap Usage",
-		AllocationTrend: "Allocation Rate",
-		FrequencyTrend:  "Collection Freq",
+		PauseTrend:     "Pause Times",
+		HeapTrend:      "Heap Usage",
+		FrequencyTrend: "Collection Freq",
 	}
 
 	var tabs []string
@@ -56,8 +55,6 @@ func (m *Model) renderTrendsContent(events []*gc.GCEvent) string {
 		return m.renderPauseTrends(events)
 	case HeapTrend:
 		return m.renderHeapTrends(events)
-	case AllocationTrend:
-		return m.renderAllocationTrends(events)
 	case FrequencyTrend:
 		return m.renderFrequencyTrends(events)
 	default:
@@ -70,20 +67,20 @@ func (m *Model) renderPauseTrends(events []*gc.GCEvent) string {
 
 	// Extract pause times
 	var pauses []float64
-	var labels []string
+	var timestamps []time.Time
 	var maxPause float64
 
 	for _, event := range events {
 		pauseMs := float64(event.Duration.Nanoseconds()) / 1000000
 		pauses = append(pauses, pauseMs)
+		timestamps = append(timestamps, event.Timestamp)
 		maxPause = math.Max(maxPause, pauseMs)
-		labels = append(labels, event.Timestamp.Format("15:04"))
 	}
 
-	// Create ASCII chart
+	// Create ASCII chart with full width utilization
 	chartHeight := 12
-	chartWidth := max(10, m.width-10) // Ensure minimum width
-	chart := m.createLineChart(pauses, labels, chartWidth, chartHeight, "ms")
+	chartWidth := m.calculateChartWidth()
+	chart := m.createImprovedLineChart(pauses, timestamps, chartWidth, chartHeight, "ms", "Pause Time")
 
 	// Calculate statistics
 	avg := average(pauses)
@@ -93,126 +90,175 @@ func (m *Model) renderPauseTrends(events []*gc.GCEvent) string {
 	stats := fmt.Sprintf("Avg: %.1fms  P95: %.1fms  P99: %.1fms  Max: %.1fms",
 		avg, p95, p99, maxPause)
 
-	// Trend analysis
-	trend := analyzeTrend(pauses)
-	trendText := fmt.Sprintf("Trend: %s", trend)
-
 	return lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		"",
 		chart,
-		"",
-		InfoStyle.Render(stats),
-		MutedStyle.Render(trendText))
-}
-
-func (m *Model) renderHeapTrends(events []*gc.GCEvent) string {
-	title := TitleStyle.Render("Heap Usage Pattern")
-
-	// Extract heap utilization data
-	var beforeUtil, afterUtil []float64
-	var labels []string
-
-	for _, event := range events {
-		if event.HeapTotal.Bytes() > 0 {
-			beforePct := float64(event.HeapBefore.Bytes()) / float64(event.HeapTotal.Bytes()) * 100
-			afterPct := float64(event.HeapAfter.Bytes()) / float64(event.HeapTotal.Bytes()) * 100
-
-			beforeUtil = append(beforeUtil, beforePct)
-			afterUtil = append(afterUtil, afterPct)
-			labels = append(labels, event.Timestamp.Format("15:04"))
-		}
-	}
-
-	if len(beforeUtil) == 0 {
-		return "No heap utilization data available"
-	}
-
-	// Create heap usage chart
-	chartHeight := 6
-	chartWidth := max(10, m.width-15) // Ensure minimum width
-
-	beforeChart := m.createAreaChart(beforeUtil, labels, chartWidth, chartHeight, "Before GC")
-	afterChart := m.createAreaChart(afterUtil, labels, chartWidth, chartHeight, "After GC")
-
-	// Statistics
-	avgBefore := average(beforeUtil)
-	avgAfter := average(afterUtil)
-	efficiency := (avgBefore - avgAfter) / avgBefore * 100
-
-	stats := fmt.Sprintf("Avg Before: %.1f%%  Avg After: %.1f%%  Efficiency: %.1f%%",
-		avgBefore, avgAfter, efficiency)
-
-	return lipgloss.JoinVertical(lipgloss.Left,
-		title,
-		"",
-		InfoStyle.Render("Before GC:"),
-		beforeChart,
-		"",
-		InfoStyle.Render("After GC:"),
-		afterChart,
 		"",
 		InfoStyle.Render(stats))
 }
 
-func (m *Model) renderAllocationTrends(events []*gc.GCEvent) string {
-	title := TitleStyle.Render("Allocation Rate Over Time")
+func (m *Model) renderHeapTrends(events []*gc.GCEvent) string {
+	title := TitleStyle.Render("Heap Usage Over Time")
 
-	// Calculate allocation rates between GC events
-	var rates []float64
-	var labels []string
+	// Extract heap usage data as MemorySize
+	var beforeHeap, afterHeap []gc.MemorySize
+	var timestamps []time.Time
 
-	for i := 1; i < len(events); i++ {
-		prev := events[i-1]
-		curr := events[i]
-
-		timeDiff := curr.Timestamp.Sub(prev.Timestamp)
-		if timeDiff > 0 {
-			// Allocation = heap growth + collected memory
-			allocated := curr.HeapBefore.Bytes() - prev.HeapAfter.Bytes()
-			if allocated > 0 {
-				rateMBPerSec := float64(allocated) / timeDiff.Seconds() / (1024 * 1024)
-				rates = append(rates, rateMBPerSec)
-				labels = append(labels, curr.Timestamp.Format("15:04"))
-			}
+	for _, event := range events {
+		if event.HeapTotal.Bytes() > 0 {
+			beforeHeap = append(beforeHeap, event.HeapBefore)
+			afterHeap = append(afterHeap, event.HeapAfter)
+			timestamps = append(timestamps, event.Timestamp)
 		}
 	}
 
-	if len(rates) == 0 {
-		return "Insufficient data for allocation rate calculation"
+	if len(beforeHeap) == 0 {
+		return "No heap utilization data available"
 	}
 
-	// Create chart
-	chartHeight := 10
-	chartWidth := max(10, m.width-15) // Ensure minimum width
-	chart := m.createLineChart(rates, labels, chartWidth, chartHeight, "MB/s")
+	// Create heap usage chart
+	chartHeight := 15
+	chartWidth := m.calculateChartWidth()
+	chart := m.createHeapBarsChart(beforeHeap, afterHeap, timestamps, chartWidth, chartHeight)
 
 	// Statistics
-	avgRate := average(rates)
-	maxRate := maxOf(rates)
-	minRate := minOf(rates)
+	avgBefore := averageMemorySize(beforeHeap)
+	avgAfter := averageMemorySize(afterHeap)
+	avgFreed := avgBefore.Sub(avgAfter)
+	efficiency := avgFreed.Ratio(avgBefore) * 100
 
-	stats := fmt.Sprintf("Avg: %.1f MB/s  Min: %.1f MB/s  Max: %.1f MB/s",
-		avgRate, minRate, maxRate)
+	stats := fmt.Sprintf("Avg Before: %s  Avg After: %s  Avg Freed: %s  Efficiency: %.1f%%",
+		avgBefore.String(), avgAfter.String(), avgFreed.String(), efficiency)
 
-	// Classification
-	var classification string
-	switch {
-	case avgRate > 500:
-		classification = CriticalStyle.Render("🔴 Very High")
-	case avgRate > 100:
-		classification = WarningStyle.Render("⚠️ High")
-	default:
-		classification = GoodStyle.Render("✅ Normal")
-	}
+	// Legend
+	legend := fmt.Sprintf("%s Before GC  %s After GC  %s GC Event",
+		CriticalStyle.Render("█"),
+		GoodStyle.Render("█"),
+		MutedStyle.Render("│"))
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		"",
+		legend,
+		"",
 		chart,
 		"",
-		InfoStyle.Render(stats),
-		fmt.Sprintf("Classification: %s", classification))
+		InfoStyle.Render(stats))
+}
+
+// Create heap bars chart where full height = before, colored portion = after
+func (m *Model) createHeapBarsChart(beforeHeap, afterHeap []gc.MemorySize, timestamps []time.Time, width, height int) string {
+	if len(beforeHeap) == 0 || len(afterHeap) == 0 {
+		return "No data"
+	}
+
+	maxVal := maxMemorySize(beforeHeap)
+	if maxVal == 0 {
+		maxVal = gc.MemorySize(1) // Avoid division by zero
+	}
+
+	var lines []string
+
+	// Chart area
+	for row := range height {
+		line := ""
+		// Calculate the heap threshold for this row (from top to bottom)
+		threshold := maxVal.Mul(float64(height-row) / float64(height))
+
+		// Y-axis label
+		label := fmt.Sprintf("%6s", threshold.String())
+		line += MutedStyle.Render(label + " ┤")
+
+		// Data points spread across full width
+		for col := range width {
+			// Map column to data point index
+			dataIndex := int(float64(col) * float64(len(beforeHeap)-1) / float64(width-1))
+			if dataIndex >= len(beforeHeap) {
+				dataIndex = len(beforeHeap) - 1
+			}
+
+			beforeVal := beforeHeap[dataIndex]
+			afterVal := afterHeap[dataIndex]
+
+			// Show heap usage as overlapping bars: before (CriticalStyle) with after (GoodStyle) overlaid
+			var char string
+			if beforeVal >= threshold {
+				// We're within the "before" heap usage area
+				if afterVal >= threshold {
+					// After GC still uses this memory - show in GoodStyle (overlaid)
+					char = GoodStyle.Render("█")
+				} else {
+					// This memory was freed by GC - show in CriticalStyle
+					char = CriticalStyle.Render("█")
+				}
+			} else {
+				// Above the heap usage - empty space
+				char = " "
+			}
+
+			line += char
+		}
+
+		lines = append(lines, line)
+	}
+
+	// Time axis
+	if len(timestamps) > 0 {
+		axisLine := strings.Repeat(" ", 9) + "└" + strings.Repeat("─", width)
+		lines = append(lines, MutedStyle.Render(axisLine))
+
+		// Time labels spread across width
+		timeLine := strings.Repeat(" ", 10)
+		numLabels := min(6, width/10)
+
+		for i := 0; i < numLabels; i++ {
+			timeIndex := int(float64(i) * float64(len(timestamps)-1) / float64(numLabels-1))
+			if timeIndex >= len(timestamps) {
+				timeIndex = len(timestamps) - 1
+			}
+
+			label := timestamps[timeIndex].Format("15:04")
+
+			// Calculate position for this label
+			pos := int(float64(i) * float64(width) / float64(numLabels-1))
+
+			// Add spacing to reach the correct position
+			for len(timeLine)-10 < pos {
+				timeLine += " "
+			}
+			timeLine += label
+		}
+		lines = append(lines, MutedStyle.Render(timeLine))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// Helper function to calculate average of MemorySize values
+func averageMemorySize(values []gc.MemorySize) gc.MemorySize {
+	if len(values) == 0 {
+		return 0
+	}
+	sum := gc.MemorySize(0)
+	for _, v := range values {
+		sum = sum.Add(v)
+	}
+	return sum.Div(float64(len(values)))
+}
+
+// Helper function to find maximum MemorySize
+func maxMemorySize(values []gc.MemorySize) gc.MemorySize {
+	if len(values) == 0 {
+		return 0
+	}
+	maxVal := values[0]
+	for _, v := range values {
+		if v > maxVal {
+			maxVal = v
+		}
+	}
+	return maxVal
 }
 
 func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
@@ -244,16 +290,8 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 	mixedPct := float64(mixedCount) / float64(total) * 100
 	fullPct := float64(fullCount) / float64(total) * 100
 
-	// Calculate bar width - ensure we have enough width for the bars
-	minWidth := 50 // Minimum width needed for meaningful bars
-	if m.width < minWidth {
-		return fmt.Sprintf("Terminal too narrow (need at least %d chars)", minWidth)
-	}
-
-	barAreaWidth := m.width - 30 // Reserve space for labels
-	if barAreaWidth <= 0 {
-		barAreaWidth = 20 // Fallback minimum
-	}
+	// Calculate bar width with better space utilization
+	barAreaWidth := m.calculateChartWidth() - 10 // Reserve space for labels and bars
 
 	var lines []string
 	lines = append(lines, fmt.Sprintf("Event Distribution (last %d events):", total))
@@ -261,7 +299,7 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 
 	// Young GC bar
 	if youngCount > 0 {
-		barWidth := max(0, int(youngPct*float64(barAreaWidth)/100))
+		barWidth := max(1, int(youngPct*float64(barAreaWidth)/100))
 		emptyWidth := max(0, barAreaWidth-barWidth)
 		youngBar := strings.Repeat("█", barWidth) + strings.Repeat("░", emptyWidth)
 		lines = append(lines, fmt.Sprintf("Young   │%s│ %d (%4.1f%%)",
@@ -270,7 +308,7 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 
 	// Mixed GC bar
 	if mixedCount > 0 {
-		barWidth := max(0, int(mixedPct*float64(barAreaWidth)/100))
+		barWidth := max(1, int(mixedPct*float64(barAreaWidth)/100))
 		emptyWidth := max(0, barAreaWidth-barWidth)
 		mixedBar := strings.Repeat("█", barWidth) + strings.Repeat("░", emptyWidth)
 		lines = append(lines, fmt.Sprintf("Mixed   │%s│ %d (%4.1f%%)",
@@ -279,7 +317,7 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 
 	// Full GC bar
 	if fullCount > 0 {
-		barWidth := max(0, int(fullPct*float64(barAreaWidth)/100))
+		barWidth := max(1, int(fullPct*float64(barAreaWidth)/100))
 		emptyWidth := max(0, barAreaWidth-barWidth)
 		fullBar := strings.Repeat("█", barWidth) + strings.Repeat("░", emptyWidth)
 		lines = append(lines, fmt.Sprintf("Full    │%s│ %d (%4.1f%%)",
@@ -322,14 +360,19 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 		strings.Join(lines, "\n"))
 }
 
-func (m *Model) createLineChart(values []float64, labels []string, width, height int, unit string) string {
+// Calculate usable chart width accounting for margins and borders
+func (m *Model) calculateChartWidth() int {
+	// Account for Y-axis labels (8 chars), border chars (2), and some margin (4)
+	minWidth := 20
+	usableWidth := m.width - 14 // Y-axis + margins
+	return max(minWidth, usableWidth)
+}
+
+// Improved line chart that spreads data across full width
+func (m *Model) createImprovedLineChart(values []float64, timestamps []time.Time, width, height int, unit, title string) string {
 	if len(values) == 0 {
 		return "No data"
 	}
-
-	// Ensure minimum dimensions
-	width = max(10, width)
-	height = max(3, height)
 
 	maxVal := maxOf(values)
 	minVal := minOf(values)
@@ -338,51 +381,71 @@ func (m *Model) createLineChart(values []float64, labels []string, width, height
 	}
 
 	var lines []string
+	lines = append(lines, MutedStyle.Render(title+":"))
 
 	// Chart area
 	for row := 0; row < height; row++ {
 		line := ""
 		threshold := maxVal - (maxVal-minVal)*float64(row)/float64(height-1)
 
-		// Y-axis label
+		// Y-axis label with better formatting
 		label := fmt.Sprintf("%6.0f%s", threshold, unit)
 		line += MutedStyle.Render(label + " ┤")
 
-		// Data points
-		for i, val := range values {
-			if i >= width {
-				break
+		// Spread data points across full width
+		for col := 0; col < width; col++ {
+			// Map column to data point index
+			dataIndex := int(float64(col) * float64(len(values)-1) / float64(width-1))
+			if dataIndex >= len(values) {
+				dataIndex = len(values) - 1
 			}
 
+			val := values[dataIndex]
+
+			// Color code based on value relative to max
+			var char string
 			if val >= threshold {
-				line += "█"
-			} else if len(values) > 1 && i > 0 && values[i-1] >= threshold {
-				line += "╲"
-			} else if len(values) > 1 && i < len(values)-1 && values[i+1] >= threshold {
-				line += "╱"
+				if val >= maxVal*0.9 {
+					char = CriticalStyle.Render("█")
+				} else if val >= maxVal*0.7 {
+					char = WarningStyle.Render("█")
+				} else {
+					char = InfoStyle.Render("█")
+				}
 			} else {
-				line += " "
+				char = "░"
 			}
+			line += char
 		}
 
 		lines = append(lines, line)
 	}
 
 	// Time axis
-	if len(labels) > 0 {
+	if len(timestamps) > 0 {
 		axisLine := strings.Repeat(" ", 9) + "└" + strings.Repeat("─", width)
 		lines = append(lines, MutedStyle.Render(axisLine))
 
-		// Time labels (show every few labels to avoid crowding)
+		// Time labels spread across width
 		timeLine := strings.Repeat(" ", 10)
-		step := max(1, len(labels)/8) // Show ~8 time labels
-		for i := 0; i < len(labels) && i < width; i += step {
-			if i > 0 {
-				// Ensure we don't have negative spacing
-				spacing := max(0, step-len(labels[i]))
-				timeLine += strings.Repeat(" ", spacing)
+		numLabels := min(8, width/8) // Show reasonable number of time labels
+
+		for i := 0; i < numLabels; i++ {
+			timeIndex := int(float64(i) * float64(len(timestamps)-1) / float64(numLabels-1))
+			if timeIndex >= len(timestamps) {
+				timeIndex = len(timestamps) - 1
 			}
-			timeLine += labels[i]
+
+			label := timestamps[timeIndex].Format("15:04")
+
+			// Calculate position for this label
+			pos := int(float64(i) * float64(width) / float64(numLabels-1))
+
+			// Add spacing to reach the correct position
+			for len(timeLine)-10 < pos {
+				timeLine += " "
+			}
+			timeLine += label
 		}
 		lines = append(lines, MutedStyle.Render(timeLine))
 	}
@@ -390,23 +453,35 @@ func (m *Model) createLineChart(values []float64, labels []string, width, height
 	return strings.Join(lines, "\n")
 }
 
-func (m *Model) createAreaChart(values []float64, labels []string, width, height int, title string) string {
-	if len(values) == 0 {
+// Combined heap chart showing before/after on same timeline
+func (m *Model) createCombinedHeapChart(beforeUtil, afterUtil []float64, timestamps []time.Time, width, height int) string {
+	if len(beforeUtil) == 0 || len(afterUtil) == 0 {
 		return "No data"
 	}
 
-	// Ensure minimum dimensions
-	width = max(10, width)
-	height = max(3, height)
-
 	maxVal := 100.0 // Percentage chart
-
 	var lines []string
 
-	// Chart title
-	lines = append(lines, MutedStyle.Render(title+":"))
+	// Calculate how many events we can show based on width
+	// Reserve some space between bars
+	availableWidth := width
+	numEvents := len(beforeUtil)
 
-	// Chart area - simplified area chart
+	// If we have more events than can fit, sample them evenly
+	eventIndices := make([]int, 0)
+	if numEvents <= availableWidth {
+		for i := 0; i < numEvents; i++ {
+			eventIndices = append(eventIndices, i)
+		}
+	} else {
+		// Sample events evenly across the dataset
+		for i := 0; i < availableWidth; i++ {
+			idx := int(float64(i) * float64(numEvents-1) / float64(availableWidth-1))
+			eventIndices = append(eventIndices, idx)
+		}
+	}
+
+	// Chart area
 	for row := 0; row < height; row++ {
 		line := ""
 		threshold := maxVal - maxVal*float64(row)/float64(height-1)
@@ -415,26 +490,71 @@ func (m *Model) createAreaChart(values []float64, labels []string, width, height
 		label := fmt.Sprintf("%3.0f%%", threshold)
 		line += MutedStyle.Render(label + " ┤")
 
-		// Data area
-		for i, val := range values {
-			if i >= width {
-				break
-			}
+		// Draw bars for each event
+		for col := 0; col < len(eventIndices) && col < width; col++ {
+			eventIdx := eventIndices[col]
+			beforeVal := beforeUtil[eventIdx]
+			afterVal := afterUtil[eventIdx]
 
-			if val >= threshold {
-				if val >= 90 {
-					line += CriticalStyle.Render("█")
-				} else if val >= 70 {
-					line += WarningStyle.Render("█")
+			var char string
+			if beforeVal >= threshold {
+				// We're within the "before GC" range
+				if afterVal >= threshold {
+					// After GC level - this portion remains after GC (colored)
+					char = GoodStyle.Render("█")
 				} else {
-					line += GoodStyle.Render("█")
+					// This portion was freed by GC (empty/lighter)
+					char = MutedStyle.Render("░")
 				}
 			} else {
-				line += "░"
+				// Below the before GC usage level
+				char = " "
 			}
+
+			line += char
+		}
+
+		// Fill remaining width with spaces if needed
+		for len(line) < width+6 {
+			line += " "
 		}
 
 		lines = append(lines, line)
+	}
+
+	// Time axis
+	if len(timestamps) > 0 {
+		axisLine := strings.Repeat(" ", 6) + "└" + strings.Repeat("─", len(eventIndices))
+		lines = append(lines, MutedStyle.Render(axisLine))
+
+		// Time labels - show labels for some of the events
+		timeLine := strings.Repeat(" ", 7)
+		numLabels := 6
+		if len(eventIndices) < numLabels {
+			numLabels = len(eventIndices)
+		}
+
+		for i := 0; i < numLabels; i++ {
+			labelIdx := int(float64(i) * float64(len(eventIndices)-1) / float64(numLabels-1))
+			if labelIdx >= len(eventIndices) {
+				labelIdx = len(eventIndices) - 1
+			}
+
+			eventIdx := eventIndices[labelIdx]
+			if eventIdx < len(timestamps) {
+				label := timestamps[eventIdx].Format("15:04")
+
+				// Calculate position
+				pos := int(float64(i) * float64(len(eventIndices)) / float64(numLabels-1))
+
+				// Add spacing
+				for len(timeLine)-7 < pos {
+					timeLine += " "
+				}
+				timeLine += label
+			}
+		}
+		lines = append(lines, MutedStyle.Render(timeLine))
 	}
 
 	return strings.Join(lines, "\n")
@@ -512,39 +632,6 @@ func percentile(values []float64, p float64) float64 {
 	}
 
 	return sorted[index]
-}
-
-func analyzeTrend(values []float64) string {
-	if len(values) < 3 {
-		return "Insufficient data"
-	}
-
-	// Simple linear trend analysis
-	n := len(values)
-	sumX, sumY, sumXY, sumX2 := 0.0, 0.0, 0.0, 0.0
-
-	for i, v := range values {
-		x := float64(i)
-		sumX += x
-		sumY += v
-		sumXY += x * v
-		sumX2 += x * x
-	}
-
-	slope := (float64(n)*sumXY - sumX*sumY) / (float64(n)*sumX2 - sumX*sumX)
-
-	switch {
-	case slope > 1:
-		return CriticalStyle.Render("📈 Strongly Increasing")
-	case slope > 0.1:
-		return WarningStyle.Render("📈 Increasing")
-	case slope < -1:
-		return GoodStyle.Render("📉 Strongly Decreasing")
-	case slope < -0.1:
-		return InfoStyle.Render("📉 Decreasing")
-	default:
-		return MutedStyle.Render("➡️ Stable")
-	}
 }
 
 func renderNoTrendsData() string {
