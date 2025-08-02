@@ -638,7 +638,7 @@ func groupRecsBySeverity(allIssues []PerformanceIssue) *GCIssues {
 }
 
 // Main entry point for the optimized analysis
-func AnalyzeAndRecommend(events []GCEvent, analysis *GCAnalysis) *GCIssues {
+func AnalyzeAndRecommend(events []*GCEvent, analysis *GCAnalysis) *GCIssues {
 	AnalyzeGCLogs(events, analysis)
 
 	return GetRecommendations(analysis)

@@ -6,7 +6,7 @@ import (
 
 type Model struct {
 	// Data
-	events   []gc.GCEvent
+	events   []*gc.GCEvent
 	analysis *gc.GCAnalysis
 	issues   *gc.GCIssues
 

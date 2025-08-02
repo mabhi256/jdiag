@@ -70,9 +70,6 @@ const (
 )
 
 const (
-	BaselineGrowthCritical = 0.05 // 5% per hour of total heap
-	BaselineGrowthWarning  = 0.02
-
 	EvacFailureRateCritical = 5.0 // 5% evacuation failure rate
 	EvacFailureRateWarning  = 1.0
 
@@ -91,41 +88,13 @@ const (
 	PauseVarianceWarning  = 0.3
 	PauseVarianceCritical = 0.7
 
-	// Additional constants moved from magic numbers
-	EvacFailureHighRate           = 20.0 // 20% failure rate is critical
-	HumongousRegionsStaticThresh  = 100  // Static humongous regions threshold
-	HumongousRegionsGrowingThresh = 50   // Growing humongous regions threshold
-	HeapUtilPostGCCritical        = 0.95 // 95% heap utilization after GC
-	MemoryPressureCritical        = 95.0 // 95% memory pressure at failures
-
-	// Heap size calculation constants
-	HeapSizeAllocFactor = 0.6  // Factor for allocation rate based heap sizing
-	MinRecommendedHeap  = 4.0  // GB - minimum recommended heap
-	MaxRecommendedHeap  = 64.0 // GB - maximum recommended heap
-
-	// Thread calculation constants
-	HighAllocThreads    = 8 // Threads for >1000 MB/s allocation
-	MediumAllocThreads  = 6 // Threads for >500 MB/s allocation
-	DefaultAllocThreads = 4 // Default thread count
-
-	// Pause target adjustment
-	PauseTargetAdjustment = 1.2 // 20% increase for pause target
-
-	// Leak scoring constants
-	LeakScorePerIndicator = 1 // Base score per indicator
-	LeakScoreFullGC       = 3 // Additional score for Full GCs
-	LeakScoreHumongous    = 4 // Additional score for humongous leaks
-	LeakScoreEvacFailure  = 2 // Additional score for evacuation failures
-	LeakScoreHighHeapUtil = 2 // Additional score for high heap utilization
-
 	// Mixed collection analysis
 	MixedCollectionMinYoung = 50  // Minimum young collections before expecting mixed
 	ExpectedMixedRatio      = 0.1 // Expected ratio of mixed to young collections
 	AllocationBurstThresh   = 10  // % of events that can be bursts before flagging
-
 )
 
-func AnalyzeGCLogs(events []GCEvent, analysis *GCAnalysis) {
+func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 	if len(events) == 0 {
 		return
 	}
@@ -162,9 +131,7 @@ func AnalyzeGCLogs(events []GCEvent, analysis *GCAnalysis) {
 	// Previous event for delta calculations
 	var prevEvent *GCEvent
 
-	for i := range events {
-		event := &events[i]
-
+	for _, event := range events {
 		// ===== CLASSIFY EVENT TYPE =====
 
 		switch event.Type {
@@ -305,7 +272,7 @@ func AnalyzeGCLogs(events []GCEvent, analysis *GCAnalysis) {
 		analysis.EstimatedPauseTarget = estimatePauseTarget()
 
 		// Calculate pause target misses and long pauses
-		calculatePauseAnalysis(&events, analysis)
+		calculatePauseAnalysis(events, analysis)
 	}
 
 	// Collection efficiency
@@ -542,12 +509,11 @@ func getDefaultTargetForAppType(appType string) time.Duration {
 	}
 }
 
-func calculatePauseAnalysis(events *[]GCEvent, analysis *GCAnalysis) {
+func calculatePauseAnalysis(events []*GCEvent, analysis *GCAnalysis) {
 	pauseTargetMisses := 0
 	longPauseCount := 0
 
-	for i := range *events {
-		event := &(*events)[i]
+	for _, event := range events {
 
 		if event.Duration > analysis.EstimatedPauseTarget {
 			event.PauseTargetExceeded = true
@@ -786,7 +752,7 @@ func assessConcurrentMarkingKeepup(youngGCCount, mixedGCCount int) bool {
 	return actualRatio >= ExpectedMixedRatio
 }
 
-func estimateConcurrentCycleDuration(events []GCEvent) time.Duration {
+func estimateConcurrentCycleDuration(events []*GCEvent) time.Duration {
 	var mixedCollectionTimestamps []time.Time
 	for _, event := range events {
 		if strings.Contains(strings.ToLower(event.Type), "mixed") {

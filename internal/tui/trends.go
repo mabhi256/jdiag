@@ -50,7 +50,7 @@ func (m *Model) renderTrendsHeader() string {
 	return lipgloss.JoinVertical(lipgloss.Left, tabLine, infoLine)
 }
 
-func (m *Model) renderTrendsContent(events []gc.GCEvent) string {
+func (m *Model) renderTrendsContent(events []*gc.GCEvent) string {
 	switch m.trendsState.trendSubTab {
 	case PauseTrend:
 		return m.renderPauseTrends(events)
@@ -65,7 +65,7 @@ func (m *Model) renderTrendsContent(events []gc.GCEvent) string {
 	}
 }
 
-func (m *Model) renderPauseTrends(events []gc.GCEvent) string {
+func (m *Model) renderPauseTrends(events []*gc.GCEvent) string {
 	title := TitleStyle.Render("Pause Times Over Time")
 
 	// Extract pause times
@@ -106,7 +106,7 @@ func (m *Model) renderPauseTrends(events []gc.GCEvent) string {
 		MutedStyle.Render(trendText))
 }
 
-func (m *Model) renderHeapTrends(events []gc.GCEvent) string {
+func (m *Model) renderHeapTrends(events []*gc.GCEvent) string {
 	title := TitleStyle.Render("Heap Usage Pattern")
 
 	// Extract heap utilization data
@@ -155,7 +155,7 @@ func (m *Model) renderHeapTrends(events []gc.GCEvent) string {
 		InfoStyle.Render(stats))
 }
 
-func (m *Model) renderAllocationTrends(events []gc.GCEvent) string {
+func (m *Model) renderAllocationTrends(events []*gc.GCEvent) string {
 	title := TitleStyle.Render("Allocation Rate Over Time")
 
 	// Calculate allocation rates between GC events
@@ -215,7 +215,7 @@ func (m *Model) renderAllocationTrends(events []gc.GCEvent) string {
 		fmt.Sprintf("Classification: %s", classification))
 }
 
-func (m *Model) renderFrequencyTrends(events []gc.GCEvent) string {
+func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 	title := TitleStyle.Render("Collection Frequency Analysis")
 
 	// Group events by type and calculate frequencies
@@ -440,7 +440,7 @@ func (m *Model) createAreaChart(values []float64, labels []string, width, height
 	return strings.Join(lines, "\n")
 }
 
-func (m *Model) getRecentEvents() []gc.GCEvent {
+func (m *Model) getRecentEvents() []*gc.GCEvent {
 	if len(m.events) <= m.trendsState.timeWindow {
 		return m.events
 	}

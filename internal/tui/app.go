@@ -12,7 +12,7 @@ import (
 
 const PageSize = 10 // Number of lines to scroll per page
 
-func initialModel(events []gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) *Model {
+func initialModel(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) *Model {
 	selecttedIssuesTab := getFirstNonEmptyFilter(issues)
 	selectedIssue := make(map[IssuesSubTab]int)
 	selectedIssue[CriticalIssues] = 0
@@ -229,13 +229,13 @@ func (m *Model) handleTrendsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) getFilteredEvents() []gc.GCEvent {
+func (m *Model) getFilteredEvents() []*gc.GCEvent {
 	events := m.events
 	if m.eventsState.eventFilter == AllEvent {
 		return events
 	}
 
-	var filtered []gc.GCEvent
+	var filtered []*gc.GCEvent
 	for _, event := range events {
 		switch m.eventsState.eventFilter {
 		case YoungEvent:
@@ -364,7 +364,7 @@ func (m *Model) renderFooter() string {
 	return HelpBarStyle.Width(m.width).Render(shortcuts)
 }
 
-func StartTUI(events []gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) error {
+func StartTUI(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) error {
 	model := initialModel(events, analysis, issues)
 
 	program := tea.NewProgram(

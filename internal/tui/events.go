@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -45,7 +46,7 @@ func (m *Model) RenderEvents() string {
 	return content
 }
 
-func (m *Model) renderEventsHeader(events []gc.GCEvent) string {
+func (m *Model) renderEventsHeader(events []*gc.GCEvent) string {
 	// Filter and sort status
 	filterStyle := TabInactiveStyle
 	if m.eventsState.eventFilter != AllEvent {
@@ -82,13 +83,13 @@ func (m *Model) renderEventsHeader(events []gc.GCEvent) string {
 	)
 }
 
-func (m *Model) renderEventsTable(events []gc.GCEvent, maxHeight int) string {
+func (m *Model) renderEventsTable(events []*gc.GCEvent, maxHeight int) string {
 	if len(events) == 0 {
 		return "No events to display"
 	}
 
 	// Table header
-	headerLine := fmt.Sprintf(" %-6s │ %-8s │ %-22s │ %-9s │ %-20s",
+	headerLine := fmt.Sprintf(" %-6s │ %-8s │ %-24s │ %-9s │ %-20s",
 		"ID", "Time", "Type", "Duration", "Heap Before→After")
 
 	separator := strings.Repeat("─", m.width)
@@ -133,58 +134,7 @@ type eventIssues struct {
 	warning  []string
 }
 
-func (m *Model) analyzeEventIssues(event gc.GCEvent) eventIssues {
-	var issues eventIssues
-
-	// Critical issues
-	if event.Duration > gc.PauseCritical {
-		issues.critical = append(issues.critical, "PAUSE")
-	}
-	if strings.Contains(strings.ToLower(event.Type), "full") {
-		issues.critical = append(issues.critical, "FULL")
-	}
-	if event.ToSpaceExhausted {
-		issues.critical = append(issues.critical, "EVAC")
-	}
-
-	// Calculate heap utilization
-	if event.HeapTotal > 0 {
-		heapUtil := float64(event.HeapAfter) / float64(event.HeapTotal)
-		if heapUtil > gc.HeapUtilCritical {
-			issues.critical = append(issues.critical, "HEAP")
-		} else if heapUtil > gc.HeapUtilWarning {
-			issues.warning = append(issues.warning, "heap")
-		}
-	}
-
-	// Warning issues
-	if event.Duration > gc.PausePoor && event.Duration <= gc.PauseCritical {
-		issues.warning = append(issues.warning, "pause")
-	}
-
-	// Phase analysis
-	if event.ObjectCopyTime > gc.ObjectCopyTarget {
-		issues.warning = append(issues.warning, "copy")
-	}
-	if event.ExtRootScanTime > gc.RootScanTarget {
-		issues.warning = append(issues.warning, "roots")
-	}
-	if event.TerminationTime > gc.TerminationTarget {
-		issues.warning = append(issues.warning, "term")
-	}
-
-	// Worker utilization
-	if event.WorkersUsed > 0 && event.WorkersAvailable > 0 {
-		utilization := float64(event.WorkersUsed) / float64(event.WorkersAvailable)
-		if utilization < 0.5 {
-			issues.warning = append(issues.warning, "workers")
-		}
-	}
-
-	return issues
-}
-
-func (m *Model) renderEventRow(event gc.GCEvent, isSelected bool) string {
+func (m *Model) renderEventRow(event *gc.GCEvent, isSelected bool) string {
 	// Format time
 	timeStr := event.Timestamp.Format("15:04:05")
 
@@ -194,20 +144,26 @@ func (m *Model) renderEventRow(event gc.GCEvent, isSelected bool) string {
 		typeStr = fmt.Sprintf("%s %s", event.Type, event.Subtype)
 	}
 
-	// Format duration
-	durationStr := FormatDuration(event.Duration)
-
+	var durationStr string
 	const heapFieldWidth = 4     // 3 digits + 1 suffix (K/M/G/T)
 	const durationFieldWidth = 9 // 123.45 ms
+	heapStr := ""
 
-	// Format heap changes
-	heapStr := fmt.Sprintf("%*s → %-*s (%s)",
-		heapFieldWidth, event.HeapBefore.String(),
-		heapFieldWidth, event.HeapAfter.String(),
-		event.HeapTotal.String())
+	// Format duration & heap
+	if event.ConcurrentDuration != 0 {
+		durationStr = FormatDuration(event.ConcurrentDuration)
+	} else {
+		durationStr = FormatDuration(event.Duration)
+
+		// Format heap changes
+		heapStr = fmt.Sprintf("%*s → %-*s (%s)",
+			heapFieldWidth, event.HeapBefore.String(),
+			heapFieldWidth, event.HeapAfter.String(),
+			event.HeapTotal.String())
+	}
 
 	// Create the row
-	row := fmt.Sprintf("%-6d │ %-8s │ %-22s │ %*s │ %-20s",
+	row := fmt.Sprintf("%-6d │ %-8s │ %-24s │ %*s │ %-20s",
 		event.ID,
 		timeStr,
 		typeStr,
@@ -234,7 +190,130 @@ func (m *Model) renderEventRow(event gc.GCEvent, isSelected bool) string {
 	return style.Render("  " + row)
 }
 
-func (m *Model) renderEventDetails(event gc.GCEvent) string {
+func (m *Model) analyzeEventIssues(event *gc.GCEvent) eventIssues {
+	var issues eventIssues
+
+	// ===== CRITICAL ISSUES =====
+
+	// Pause time issues
+	if event.HasHighPauseTime || event.Duration > gc.PauseCritical {
+		issues.critical = append(issues.critical, "PAUSE")
+	}
+
+	// Full GC - always critical
+	if strings.Contains(strings.ToLower(event.Type), "full") {
+		issues.critical = append(issues.critical, "FULL")
+	}
+
+	// Evacuation failure - critical
+	if event.HasEvacuationFailure || event.ToSpaceExhausted {
+		issues.critical = append(issues.critical, "EVAC")
+	}
+
+	// Memory pressure - critical heap utilization
+	if event.HasMemoryPressure || (event.HeapTotal > 0 && float64(event.HeapAfter)/float64(event.HeapTotal) > gc.HeapUtilCritical) {
+		issues.critical = append(issues.critical, "HEAP")
+	}
+
+	// Concurrent mark aborted
+	if event.ConcurrentMarkAborted {
+		issues.critical = append(issues.critical, "MARK")
+	}
+
+	// Pause target significantly exceeded
+	if event.PauseTargetExceeded && event.Duration > gc.PauseCritical {
+		issues.critical = append(issues.critical, "TARGET")
+	}
+
+	// ===== WARNING ISSUES =====
+
+	// Warning level pause times
+	if event.Duration > gc.PausePoor && event.Duration <= gc.PauseCritical {
+		issues.warning = append(issues.warning, "pause")
+	}
+
+	// Warning level heap utilization
+	if event.HeapTotal > 0 {
+		heapUtil := float64(event.HeapAfter) / float64(event.HeapTotal)
+		if heapUtil > gc.HeapUtilWarning && heapUtil <= gc.HeapUtilCritical {
+			issues.warning = append(issues.warning, "heap")
+		}
+	}
+
+	// Survivor overflow
+	if event.HasSurvivorOverflow {
+		issues.warning = append(issues.warning, "survivor")
+	}
+
+	// Premature promotion
+	if event.IsPrematurePromotion {
+		issues.warning = append(issues.warning, "promotion")
+	}
+
+	// Humongous object growth
+	if event.HasHumongousGrowth {
+		issues.warning = append(issues.warning, "humongous")
+	}
+
+	// Allocation burst
+	if event.HasAllocationBurst {
+		issues.warning = append(issues.warning, "alloc")
+	}
+
+	// ===== PHASE TIMING ISSUES =====
+
+	// Individual phase issues (can be warning or critical based on severity)
+	if event.HasSlowObjectCopy || event.ObjectCopyTime > gc.ObjectCopyTarget {
+		if event.ObjectCopyTime > gc.ObjectCopyTarget*2 {
+			issues.critical = append(issues.critical, "COPY")
+		} else {
+			issues.warning = append(issues.warning, "copy")
+		}
+	}
+
+	if event.HasSlowRootScanning || event.ExtRootScanTime > gc.RootScanTarget {
+		if event.ExtRootScanTime > gc.RootScanTarget*2 {
+			issues.critical = append(issues.critical, "ROOTS")
+		} else {
+			issues.warning = append(issues.warning, "roots")
+		}
+	}
+
+	if event.HasSlowTermination || event.TerminationTime > gc.TerminationTarget {
+		if event.TerminationTime > gc.TerminationTarget*2 {
+			issues.critical = append(issues.critical, "TERM")
+		} else {
+			issues.warning = append(issues.warning, "term")
+		}
+	}
+
+	if event.HasSlowRefProcessing || event.ReferenceProcessingTime > gc.RefProcessingTarget {
+		if event.ReferenceProcessingTime > gc.RefProcessingTarget*2 {
+			issues.critical = append(issues.critical, "REFS")
+		} else {
+			issues.warning = append(issues.warning, "refs")
+		}
+	}
+
+	// General long phases flag
+	if event.HasLongPhases && len(issues.critical) == 0 && len(issues.warning) == 0 {
+		issues.warning = append(issues.warning, "phases")
+	}
+
+	// Worker utilization
+	if event.WorkersUsed > 0 && event.WorkersAvailable > 0 {
+		utilization := float64(event.WorkersUsed) / float64(event.WorkersAvailable)
+		if utilization < 0.3 {
+			issues.critical = append(issues.critical, "WORKERS")
+		} else if utilization < 0.5 {
+			issues.warning = append(issues.warning, "workers")
+		}
+	}
+
+	return issues
+}
+
+func (m *Model) renderEventDetails(event *gc.GCEvent) string {
 	title := fmt.Sprintf("GC(%d) %s (%s)", event.ID, event.Type, event.Cause)
 
 	// Basic timing info
@@ -242,8 +321,11 @@ func (m *Model) renderEventDetails(event gc.GCEvent) string {
 	sysMs := float64(event.SystemTime.Nanoseconds()) / 1000000
 	realMs := float64(event.RealTime.Nanoseconds()) / 1000000
 
-	timingLine := fmt.Sprintf("Duration: %s  User: %.2fms  Sys: %.2fms  Real: %.2fms",
-		FormatDuration(event.Duration), userMs, sysMs, realMs)
+	timingLine := ""
+	if event.ConcurrentDuration == 0 {
+		timingLine = fmt.Sprintf("Duration: %s  User: %.2fms  Sys: %.2fms  Real: %.2fms",
+			FormatDuration(event.Duration), userMs, sysMs, realMs)
+	}
 
 	// Region information
 	regionLine := ""
@@ -262,12 +344,44 @@ func (m *Model) renderEventDetails(event gc.GCEvent) string {
 			event.WorkersUsed, event.WorkersAvailable, utilization)
 	}
 
-	// Build exactly 5 lines of content
+	// Analyze issues for this event
+	issues := m.analyzeEventIssues(event)
+	issuesLine := ""
+
+	if len(issues.critical) > 0 || len(issues.warning) > 0 {
+		var issueParts []string
+
+		// Add critical issues in red
+		if len(issues.critical) > 0 {
+			criticalText := fmt.Sprintf("Critical: %s", strings.Join(issues.critical, ", "))
+			issueParts = append(issueParts, CriticalStyle.Render(criticalText))
+		}
+
+		// Add warning issues in orange
+		if len(issues.warning) > 0 {
+			warningText := fmt.Sprintf("Warning: %s", strings.Join(issues.warning, ", "))
+			issueParts = append(issueParts, WarningStyle.Render(warningText))
+		}
+
+		issuesLine = fmt.Sprintf("Issues: %s", strings.Join(issueParts, " | "))
+	}
+
+	// Build content lines - filter out empty lines
 	lines := []string{
 		TitleStyle.Render(title),
 		timingLine,
-		regionLine,
-		workerLine,
+	}
+
+	if regionLine != "" {
+		lines = append(lines, regionLine)
+	}
+
+	if workerLine != "" {
+		lines = append(lines, workerLine)
+	}
+
+	if issuesLine != "" {
+		lines = append(lines, issuesLine)
 	}
 
 	content := strings.Join(lines, "\n")
@@ -278,22 +392,20 @@ func (m *Model) renderEventDetails(event gc.GCEvent) string {
 		BorderForeground(BorderColor).
 		Padding(0, 1).
 		Width(m.width - 2).
-		Height(4) // Fixed height
+		Height(5)
 
 	return detailsStyle.Render(content)
 }
 
-func (m *Model) getSortedEvents(events []gc.GCEvent) []gc.GCEvent {
+func (m *Model) getSortedEvents(events []*gc.GCEvent) []*gc.GCEvent {
 	// Make a copy to avoid modifying the original
-	sorted := make([]gc.GCEvent, len(events))
+	sorted := make([]*gc.GCEvent, len(events))
 	copy(sorted, events)
 
 	switch m.eventsState.sortBy {
 	case TimeSortEvent:
 		// Default order (chronological) - reverse for newest first
-		sort.Slice(sorted, func(i, j int) bool {
-			return sorted[i].Timestamp.After(sorted[j].Timestamp)
-		})
+		slices.Reverse(sorted)
 	case DurationSortEvent:
 		sort.Slice(sorted, func(i, j int) bool {
 			return sorted[i].Duration > sorted[j].Duration

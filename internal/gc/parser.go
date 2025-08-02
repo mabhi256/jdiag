@@ -216,14 +216,14 @@ func NewParser() *Parser {
 	}
 }
 
-func (p *Parser) ParseFile(filename string) ([]GCEvent, *GCAnalysis, error) {
+func (p *Parser) ParseFile(filename string) ([]*GCEvent, *GCAnalysis, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer file.Close()
 
-	events := make([]GCEvent, 0)
+	events := make([]*GCEvent, 0)
 	analysis := &GCAnalysis{}
 
 	// GC events are split across multiple lines:
@@ -232,7 +232,7 @@ func (p *Parser) ParseFile(filename string) ([]GCEvent, *GCAnalysis, error) {
 	// Line 10: GC(0) User=0.00s Sys=0.00s Real=0.01s      (CPU timing)
 	// We collect partial events here until we have both parts
 	processingEvents := make(map[int]*GCEvent)
-	concurrentCycles := make(map[int]time.Time)
+	concurrentCycles := make(map[int]*GCEvent)
 
 	// Track parsing state for before/after heap snapshots
 	var currentlyParsingBefore = false
@@ -263,37 +263,45 @@ func (p *Parser) ParseFile(filename string) ([]GCEvent, *GCAnalysis, error) {
 			continue
 		}
 
-		// Handle concurrent cycles
-		p.parseG1ConcurrentPhases(line, timestamp, gcId, concurrentCycles, &events)
-
 		// Get or create event
 		var event *GCEvent
-		if existingEvent, exists := processingEvents[gcId]; exists {
-			event = existingEvent
-		} else {
-			newEvent := &GCEvent{ID: gcId}
-			processingEvents[gcId] = newEvent
-			event = newEvent
-		}
-
-		event.RegionSize = analysis.HeapRegionSize
-		p.parseG1Timing(line, event)
-		p.parseG1RegionDetails(line, event, currentlyParsingBefore, currentlyParsingAfter)
-		p.parseGCSummary(line, timestamp, event)
-
-		// Finalize events with CPU info
-		if id, userTime, systemTime, realTime := p.parseGCCpu(line); id != -1 {
-			if event, exists := processingEvents[id]; exists {
-				event.UserTime = userTime
-				event.SystemTime = systemTime
-				event.RealTime = realTime
-
-				// Calculate derived values before adding to log
-				p.calculateDerivedValues(event)
-
-				events = append(events, *event)
-				delete(processingEvents, id)
+		if p.concurrentCycleStartRegex.MatchString(line) {
+			event = &GCEvent{
+				ID:         gcId,
+				Type:       "Concurrent Mark Cycle",
+				Timestamp:  timestamp,
+				RegionSize: analysis.HeapRegionSize,
 			}
+			concurrentCycles[gcId] = event
+			events = append(events, event)
+		} else if existingEvent, exists := concurrentCycles[gcId]; exists {
+			event = existingEvent
+			p.parseG1ConcurrentPhases(line, event, concurrentCycles)
+		} else if existingEvent, exists := processingEvents[gcId]; exists {
+			event = existingEvent
+			p.parseG1Timing(line, event)
+			p.parseG1RegionDetails(line, event, currentlyParsingBefore, currentlyParsingAfter)
+			p.parseGCSummary(line, timestamp, event)
+			if id, userTime, systemTime, realTime := p.parseGCCpu(line); id != -1 {
+				if event, exists := processingEvents[id]; exists {
+					event.UserTime = userTime
+					event.SystemTime = systemTime
+					event.RealTime = realTime
+
+					// Calculate derived values before adding to log
+					p.calculateDerivedValues(event)
+
+					delete(processingEvents, id)
+				}
+			}
+		} else {
+			event := &GCEvent{
+				ID:         gcId,
+				Timestamp:  timestamp,
+				RegionSize: analysis.HeapRegionSize,
+			}
+			processingEvents[gcId] = event
+			events = append(events, event)
 		}
 	}
 
@@ -686,49 +694,19 @@ func (p *Parser) parseG1Timing(line string, event *GCEvent) {
 	}
 }
 
-func (p *Parser) parseG1ConcurrentPhases(line string, timestamp time.Time, gcId int, concurrentCycles map[int]time.Time, events *[]GCEvent) {
-	// Track concurrent cycle starts
-	if p.concurrentCycleStartRegex.MatchString(line) {
-		concurrentCycles[gcId] = timestamp
-		return
+func (p *Parser) parseG1ConcurrentPhases(line string, event *GCEvent, concurrentCycles map[int]*GCEvent) {
+	// Concurrent mark abort
+	if p.concurrentAbortRegex.MatchString(line) {
+		event.Type = "Concurrent Mark Abort"
+		event.ConcurrentMarkAborted = true
 	}
 
 	// Concurrent cycle end - finalize and add event
 	if matches := p.concurrentCycleEndRegex.FindStringSubmatch(line); len(matches) >= 2 {
-		if startTime, exists := concurrentCycles[gcId]; exists {
-			duration, _ := strconv.ParseFloat(matches[1], 64)
+		duration, _ := strconv.ParseFloat(matches[1], 64)
+		event.ConcurrentDuration = time.Duration(duration * float64(time.Millisecond))
 
-			event := &GCEvent{
-				ID:        gcId,
-				Type:      "Concurrent Cycle",
-				Timestamp: startTime,
-				Duration:  time.Duration(duration * float64(time.Millisecond)),
-			}
-
-			*events = append(*events, *event)
-			delete(concurrentCycles, gcId)
-		}
-		return
-	}
-
-	// Concurrent mark abort - finalize and add event
-	if p.concurrentAbortRegex.MatchString(line) {
-		// Use start time if available, otherwise current timestamp
-		eventTime := timestamp
-		if startTime, exists := concurrentCycles[gcId]; exists {
-			eventTime = startTime
-			delete(concurrentCycles, gcId)
-		}
-
-		event := &GCEvent{
-			ID:                    gcId,
-			Type:                  "Concurrent Mark Abort",
-			Timestamp:             eventTime,
-			ConcurrentMarkAborted: true,
-		}
-
-		*events = append(*events, *event)
-		return
+		delete(concurrentCycles, event.ID)
 	}
 }
 
