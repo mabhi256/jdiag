@@ -59,7 +59,7 @@ func (m *Model) renderEventsHeader(events []*gc.GCEvent) string {
 		YoungEvent:      "Young",
 		MixedEvent:      "Mixed",
 		FullEvent:       "Full",
-		ConcurrentEvent: "Concurrent",
+		ConcurrentAbort: "Concurrent",
 	}
 
 	sortNames := map[EventSortBy]string{

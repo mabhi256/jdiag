@@ -39,7 +39,7 @@ func initialModel(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIs
 			showDetails:   true,
 		},
 		trendsState: &TrendsState{
-			trendSubTab: PauseTrend,
+			trendSubTab: HeapAfterTrend,
 			timeWindow:  100,
 		},
 	}
@@ -200,7 +200,7 @@ func (m *Model) handleEventsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.eventsState.selectedEvent++
 		}
 	case "f":
-		CycleEnumPtr(&m.eventsState.eventFilter, 1, ConcurrentEvent)
+		CycleEnumPtr(&m.eventsState.eventFilter, 1, ConcurrentAbort)
 	case "s":
 		CycleEnumPtr(&m.eventsState.sortBy, 1, TypeSortEvent)
 	}
@@ -250,8 +250,8 @@ func (m *Model) getFilteredEvents() []*gc.GCEvent {
 			if event.Type == "Full" {
 				filtered = append(filtered, event)
 			}
-		case ConcurrentEvent:
-			if event.Type == "Concurrent" {
+		case ConcurrentAbort:
+			if event.Type == "Concurrent Mark Abort" {
 				filtered = append(filtered, event)
 			}
 		}
@@ -349,7 +349,7 @@ func GetShortcuts(currentTab TabType) string {
 	case EventsTab:
 		tabSpecific = "↑↓:nav • f:filter • s:sort"
 	case TrendsTab:
-		tabSpecific = "↑↓:scroll • ←/→:view • +/-:timespan"
+		tabSpecific = "←/→:view"
 	}
 
 	if tabSpecific != "" {

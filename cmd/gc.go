@@ -46,7 +46,6 @@ var gcAnalyzeCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Analyzing GC log: %s\n", args[0])
 		parser := gc.NewParser()
 		events, analysis, err := parser.ParseFile(args[0])
 		gc.AnalyzeGCLogs(events, analysis)

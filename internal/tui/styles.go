@@ -19,6 +19,11 @@ var (
 	TextColor     = lipgloss.Color("#CCCCCC") // Light gray
 	MutedColor    = lipgloss.Color("#888888") // Medium gray
 	BorderColor   = lipgloss.Color("#666666") // Dark gray
+
+	CriticalLightColor = lipgloss.Color("#FF6666") // Lighter red
+	WarningLightColor  = lipgloss.Color("#FFAA44") // Lighter orange
+	GoodLightColor     = lipgloss.Color("#66BB66") // Lighter green
+	InfoLightColor     = lipgloss.Color("#88AACC") // Lighter blue
 )
 
 var (
@@ -28,6 +33,11 @@ var (
 	InfoStyle     = lipgloss.NewStyle().Foreground(InfoColor)
 	MutedStyle    = lipgloss.NewStyle().Foreground(MutedColor)
 	TextStyle     = lipgloss.NewStyle().Foreground(TextColor)
+
+	CriticalLightStyle = lipgloss.NewStyle().Foreground(CriticalLightColor)
+	WarningLightStyle  = lipgloss.NewStyle().Foreground(WarningLightColor)
+	GoodLightStyle     = lipgloss.NewStyle().Foreground(GoodLightColor)
+	InfoLightStyle     = lipgloss.NewStyle().Foreground(InfoLightColor)
 )
 
 var (

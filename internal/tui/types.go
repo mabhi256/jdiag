@@ -86,7 +86,7 @@ const (
 	YoungEvent
 	MixedEvent
 	FullEvent
-	ConcurrentEvent
+	ConcurrentAbort
 )
 
 type EventSortBy int
@@ -105,8 +105,12 @@ type TrendsState struct {
 type TrendSubTab int
 
 const (
-	PauseTrend TrendSubTab = iota
-	HeapTrend
+	HeapAfterTrend TrendSubTab = iota
+	HeapBeforeTrend
+	MemReclaimedTrend
+	GCDurationTrend
+	PauseDurationTrend
+	PromotionTrend
 	FrequencyTrend
 )
 
