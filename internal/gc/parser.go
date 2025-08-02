@@ -223,7 +223,7 @@ func (gp *GCEventParser) Parse(line string, context *ParseContext) error {
 	}
 
 	event := gp.getOrCreateEvent(gcID, context)
-	return gp.populateEvent(event, matches, context)
+	return gp.populateEvent(event, matches)
 }
 
 func (gp *GCEventParser) getOrCreateEvent(gcID int, context *ParseContext) *GCEvent {
@@ -244,7 +244,7 @@ func (gp *GCEventParser) getOrCreateEvent(gcID int, context *ParseContext) *GCEv
 	return event
 }
 
-func (gp *GCEventParser) populateEvent(event *GCEvent, matches []string, context *ParseContext) error {
+func (gp *GCEventParser) populateEvent(event *GCEvent, matches []string) error {
 	// Parse type information
 	typeInfo := NewGCTypeParser().Parse(matches[2])
 	event.Type = typeInfo.Type
@@ -797,7 +797,6 @@ func (gtp *GCTypeParser) Parse(typeString string) GCTypeInfo {
 	parentheticals := gtp.extractParentheses(typeString)
 
 	// Apply parsing rules
-	info = gtp.applyTypeOverrides(info, parentheticals)
 	info = gtp.extractCauseAndSubtype(info, parentheticals)
 
 	return info
@@ -819,24 +818,15 @@ func (gtp *GCTypeParser) extractParentheses(text string) []string {
 	return results
 }
 
-func (gtp *GCTypeParser) applyTypeOverrides(info GCTypeInfo, parentheticals []string) GCTypeInfo {
-	for _, paren := range parentheticals {
-		if strings.Contains(strings.ToLower(paren), "mixed") {
-			info.Type = GCTypeMixed
-			break
-		}
-	}
-	return info
-}
-
 func (gtp *GCTypeParser) extractCauseAndSubtype(info GCTypeInfo, parentheticals []string) GCTypeInfo {
-	causePatterns := []string{"Allocation", "Pause", "System.gc", "Compaction", "Periodic Collection", "Ergonomics", "GCLocker"}
+	knownSubTypes := []string{"Normal", "Prepare Mixed", "Mixed", "Concurrent Start"}
+	causePatterns := []string{"Failure", "Allocation", "Threshold", "System.gc()", "Compaction", "Periodic Collection", "Ergonomics", "GCLocker"}
 
 	for _, paren := range parentheticals {
-		if gtp.containsAny(paren, causePatterns) {
-			info.Cause = paren
-		} else if info.Subtype == "" && !strings.Contains(strings.ToLower(paren), "mixed") {
+		if containsAny(paren, knownSubTypes) {
 			info.Subtype = paren
+		} else if containsAny(paren, causePatterns) {
+			info.Cause = paren
 		}
 	}
 
@@ -848,7 +838,7 @@ func (gtp *GCTypeParser) extractCauseAndSubtype(info GCTypeInfo, parentheticals 
 	return info
 }
 
-func (gtp *GCTypeParser) containsAny(s string, patterns []string) bool {
+func containsAny(s string, patterns []string) bool {
 	for _, pattern := range patterns {
 		if strings.Contains(s, pattern) {
 			return true
