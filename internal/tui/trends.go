@@ -155,31 +155,15 @@ func (m *Model) renderHeapTrends(
 func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 	title := TitleStyle.Render("Collection Time Analysis")
 
-	// Calculate stats by GC type
-	stats := make(map[string]struct {
-		duration time.Duration
-		count    int
-	})
-	for _, event := range events {
-		category := m.categorizeGCType(event.Type)
-		s := stats[category]
-		if category == "Concurrent Mark" {
-			s.duration += event.ConcurrentDuration
-		} else {
-			s.duration += event.Duration
-		}
-		s.count++
-		stats[category] = s
+	// Use pre-calculated data from analysis
+	if m.analysis == nil || m.analysis.GCTypeDurations == nil || m.analysis.GCTypeEventCounts == nil {
+		return title + "\n\nNo analysis data available"
 	}
 
-	if len(stats) == 0 {
-		return title + "\n\nNo events to analyze"
-	}
-
-	// Calculate total duration
+	// Calculate total duration from analysis data
 	var totalDuration time.Duration
-	for _, stat := range stats {
-		totalDuration += stat.duration
+	for _, duration := range m.analysis.GCTypeDurations {
+		totalDuration += duration
 	}
 
 	if totalDuration == 0 {
@@ -196,17 +180,19 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 	}
 
 	var bars []BarData
-	for gcType, stat := range stats {
-		if stat.count == 0 {
+	for gcType, duration := range m.analysis.GCTypeDurations {
+		eventCount := m.analysis.GCTypeEventCounts[gcType]
+		if eventCount == 0 {
 			continue
 		}
 
-		percentage := float64(stat.duration) / float64(totalDuration) * 100
-		durationMs := float64(stat.duration.Nanoseconds()) / 1e6
+		// Calculate percentage of total duration
+		percentage := float64(duration) / float64(totalDuration) * 100
+		durationMs := float64(duration.Nanoseconds()) / 1e6
 
 		bars = append(bars, BarData{
 			Label: gcType, Value: durationMs, Percentage: percentage,
-			Style: styleMap[gcType], Suffix: fmt.Sprintf("- %d events", stat.count),
+			Style: styleMap[gcType], Suffix: fmt.Sprintf("- %d events", eventCount),
 		})
 	}
 
@@ -237,40 +223,19 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 	return lipgloss.JoinVertical(lipgloss.Left, title, "", strings.Join(sections, "\n"))
 }
 
-func (m *Model) categorizeGCType(gcType string) string {
-	eventType := strings.ToLower(gcType)
-	switch {
-	case strings.Contains(eventType, "young"):
-		return "Young"
-	case strings.Contains(eventType, "mixed"):
-		return "Mixed"
-	case strings.Contains(eventType, "full"):
-		return "Full"
-	case strings.Contains(eventType, "concurrent"),
-		strings.Contains(eventType, "abort"):
-		return "Concurrent Mark"
-	default:
-		return "Other"
-	}
-}
-
 func (m *Model) renderGCCausesChart(events []*gc.GCEvent) string {
 	if len(events) == 0 {
 		return ""
 	}
 
-	// Group by cause and calculate totals
-	causeDurations := make(map[string]time.Duration)
-	for _, event := range events {
-		cause := event.Cause
-		if cause == "" {
-			cause = "Unknown"
-		}
-		causeDurations[cause] += event.Duration
+	// Use pre-calculated data from analysis
+	if m.analysis == nil || m.analysis.GCCauseDurations == nil {
+		return "GC Causes (Total Time)\n\nNo analysis data available"
 	}
 
+	// Calculate total duration from analysis data
 	var totalDuration time.Duration
-	for _, duration := range causeDurations {
+	for _, duration := range m.analysis.GCCauseDurations {
 		totalDuration += duration
 	}
 
@@ -282,7 +247,8 @@ func (m *Model) renderGCCausesChart(events []*gc.GCEvent) string {
 	var bars []BarData
 	colors := []lipgloss.Style{GoodStyle, InfoStyle, WarningStyle, CriticalStyle, MutedStyle}
 
-	for cause, duration := range causeDurations {
+	for cause, duration := range m.analysis.GCCauseDurations {
+		// Calculate percentage of total duration
 		percent := float64(duration) / float64(totalDuration) * 100
 		durationMs := float64(duration.Nanoseconds()) / 1e6
 		bars = append(bars, BarData{

@@ -101,6 +101,11 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 
 	analysis.TotalEvents = len(events)
 
+	// Initialize time tracking maps
+	analysis.GCTypeDurations = make(map[string]time.Duration)
+	analysis.GCTypeEventCounts = make(map[string]int)
+	analysis.GCCauseDurations = make(map[string]time.Duration)
+
 	// Calculate total runtime, GCLogs are always sorted
 	analysis.StartTime = events[0].Timestamp
 	analysis.EndTime = events[len(events)-1].Timestamp
@@ -141,6 +146,28 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 			analysis.MixedGCCount++
 		case "Full":
 			analysis.FullGCCount++
+		}
+
+		// ===== GC TIME DISTRIBUTION TRACKING =====
+
+		// Categorize GC type for time tracking
+		gcCategory := categorizeGCType(event.Type)
+
+		// Track duration by GC type
+		if gcCategory == "Concurrent Mark" {
+			analysis.GCTypeDurations[gcCategory] += event.ConcurrentDuration
+		} else {
+			analysis.GCTypeDurations[gcCategory] += event.Duration
+		}
+		analysis.GCTypeEventCounts[gcCategory]++
+
+		// Track duration by GC cause
+		cause := event.Cause
+		if gcCategory != "Concurrent Mark" {
+			if cause == "" {
+				cause = "Unknown"
+			}
+			analysis.GCCauseDurations[cause] += event.Duration
 		}
 
 		// ===== BASIC METRICS =====
@@ -208,7 +235,7 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 			if interval > 0 {
 				allocated := event.HeapBefore - prevEvent.HeapAfter
 				if allocated > 0 {
-					event.AllocationRateToEvent = float64(allocated) / 1024 / 1024 / interval.Seconds()
+					event.AllocationRateToEvent = allocated.MB() / interval.Seconds()
 
 					allocationEvents = append(allocationEvents, allocationDataPoint{
 						timestamp: event.Timestamp,
@@ -234,8 +261,8 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 		if event.HeapAfter > 0 {
 			memoryTrendPoints = append(memoryTrendPoints, memoryTrendPoint{
 				timestamp:   event.Timestamp,
-				heapAfterMB: float64(event.HeapAfter) / 1024 / 1024,
-				heapTotalMB: float64(event.HeapTotal) / 1024 / 1024,
+				heapAfterMB: event.HeapAfter.MB(),
+				heapTotalMB: event.HeapTotal.MB(),
 			})
 		}
 
@@ -333,6 +360,24 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 
 	// ===== SET ISSUE FLAGS FOR RECOMMENDATIONS =====
 	analysis.setIssueFlags()
+}
+
+// categorizeGCType categorizes GC types for time distribution analysis
+func categorizeGCType(gcType string) string {
+	eventType := strings.ToLower(gcType)
+	switch {
+	case strings.Contains(eventType, "young"):
+		return "Young"
+	case strings.Contains(eventType, "mixed"):
+		return "Mixed"
+	case strings.Contains(eventType, "full"):
+		return "Full"
+	case strings.Contains(eventType, "concurrent"),
+		strings.Contains(eventType, "abort"):
+		return "Concurrent Mark"
+	default:
+		return eventType
+	}
 }
 
 // Supporting data structures for single-pass analysis

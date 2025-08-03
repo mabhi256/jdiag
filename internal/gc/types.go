@@ -196,6 +196,15 @@ type GCAnalysis struct {
 	PromotionEfficiency     float64
 	ConsecutiveGrowthSpikes int
 
+	// ===== TIME DISTRIBUTION ANALYSIS =====
+
+	// GC Type time distributions
+	GCTypeDurations   map[string]time.Duration // "Young", "Mixed", "Full", "Concurrent Mark", "Other"
+	GCTypeEventCounts map[string]int           // Event counts by type
+
+	// GC Cause time distributions
+	GCCauseDurations map[string]time.Duration // Total time spent per cause
+
 	// ===== AGGREGATE ANALYSIS RESULTS =====
 
 	// Humongous object analysis
