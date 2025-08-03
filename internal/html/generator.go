@@ -84,7 +84,7 @@ func GenerateHTMLReport(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *g
 		return "", fmt.Errorf("failed to marshal report data: %v", err)
 	}
 
-	htmlContent := generateSingleFileHTMLContent(string(jsonData))
+	htmlContent := generateHTML(string(jsonData))
 
 	// Get safe output path
 	absPath, err := GetOutputPath(outputPath)
@@ -162,7 +162,7 @@ func generateChartData(events []*gc.GCEvent) ChartData {
 		}
 
 		// Frequency data by GC type
-		gcType := categorizeGCType(event.Type)
+		gcType := gc.CategorizeGCType(event.Type)
 		freq := frequencyMap[gcType]
 		freq.duration += event.Duration
 		freq.count++
@@ -193,22 +193,6 @@ func generateChartData(events []*gc.GCEvent) ChartData {
 		PauseTrends:    pauseTrends,
 		FrequencyData:  frequencyData,
 		AllocationData: allocationTrends,
-	}
-}
-
-func categorizeGCType(gcType string) string {
-	eventType := strings.ToLower(gcType)
-	switch {
-	case strings.Contains(eventType, "young"):
-		return "Young"
-	case strings.Contains(eventType, "mixed"):
-		return "Mixed"
-	case strings.Contains(eventType, "full"):
-		return "Full"
-	case strings.Contains(eventType, "concurrent"):
-		return "Concurrent"
-	default:
-		return "Other"
 	}
 }
 
@@ -259,8 +243,8 @@ func GetOutputPath(path string) (string, error) {
 	return absPath, nil
 }
 
-// generateSingleFileHTMLContent creates the single-file HTML with embedded CSS/JS
-func generateSingleFileHTMLContent(jsonData string) string {
+// generateHTML creates the single-file HTML with embedded CSS/JS
+func generateHTML(jsonData string) string {
 	// Replace placeholders in the HTML template
 	content := htmlTemplate
 

@@ -179,7 +179,7 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 		// ===== GC TIME DISTRIBUTION TRACKING =====
 
 		// Categorize GC type for time tracking
-		gcCategory := categorizeGCType(event.Type)
+		gcCategory := CategorizeGCType(event.Type)
 
 		// Track duration by GC type
 		if gcCategory == "Concurrent Mark" {
@@ -390,8 +390,8 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 	analysis.setIssueFlags()
 }
 
-// categorizeGCType categorizes GC types for time distribution analysis
-func categorizeGCType(gcType string) string {
+// CategorizeGCType categorizes GC types for time distribution analysis
+func CategorizeGCType(gcType string) string {
 	eventType := strings.ToLower(gcType)
 	switch {
 	case strings.Contains(eventType, "young"):
