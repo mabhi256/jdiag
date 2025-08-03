@@ -34,5 +34,5 @@ go.work.sum
 # Added by goreleaser init:
 /jdiag_completion.ps1
 /internal/html/dist
-/my-gc-analysis-report.html
+/*.html
 /node_modules

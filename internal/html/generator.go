@@ -63,34 +63,10 @@ type FrequencyPoint struct {
 	Count      int     `json:"count"`
 }
 
-// ReportOptions controls how the HTML report is generated
-type ReportOptions struct {
-	SingleFile   bool   // If true, generates a single HTML file with embedded CSS/JS
-	OutputDir    string // Directory to write separate files (when SingleFile is false)
-	UltraCompact bool   // If true, applies ultra-compact styling for maximum density
-}
-
-// GenerateCompactHTMLReport creates a space-efficient HTML report
-func GenerateCompactHTMLReport(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues, outputPath string) error {
-	return GenerateHTMLReportWithOptions(events, analysis, issues, outputPath, ReportOptions{
-		SingleFile:   true,
-		UltraCompact: false,
-	})
-}
-
-// GenerateUltraCompactHTMLReport creates a maximum density HTML report
-func GenerateUltraCompactHTMLReport(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues, outputPath string) error {
-	return GenerateHTMLReportWithOptions(events, analysis, issues, outputPath, ReportOptions{
-		SingleFile:   true,
-		UltraCompact: true,
-	})
-}
-
-// GenerateHTMLReportWithOptions creates a comprehensive HTML report with specified options
-func GenerateHTMLReportWithOptions(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues, outputPath string, options ReportOptions) error {
+func GenerateHTMLReport(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues, outputPath string) (string, error) {
 	// Validate inputs
 	if err := validateReportData(events, analysis, issues); err != nil {
-		return fmt.Errorf("invalid report data: %v", err)
+		return "", fmt.Errorf("invalid report data: %v", err)
 	}
 
 	reportData := &HTMLReportData{
@@ -99,40 +75,29 @@ func GenerateHTMLReportWithOptions(events []*gc.GCEvent, analysis *gc.GCAnalysis
 		Issues:      issues,
 		GeneratedAt: time.Now(),
 		JVMInfo:     extractJVMInfo(analysis),
-		ChartData:   generateOptimizedChartData(events, analysis),
+		ChartData:   generateChartData(events),
 	}
 
 	// Serialize data to JSON for JavaScript
 	jsonData, err := json.Marshal(reportData)
 	if err != nil {
-		return fmt.Errorf("failed to marshal report data: %v", err)
+		return "", fmt.Errorf("failed to marshal report data: %v", err)
 	}
 
-	return generateSingleFileReport(string(jsonData), outputPath, options)
-}
-
-// GenerateHTMLReport creates a comprehensive HTML report (backward compatibility)
-func GenerateHTMLReport(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues, outputPath string) error {
-	return GenerateCompactHTMLReport(events, analysis, issues, outputPath)
-}
-
-// generateSingleFileReport creates a single HTML file with embedded CSS and JS
-func generateSingleFileReport(jsonData, outputPath string, options ReportOptions) error {
-	htmlContent := generateSingleFileHTMLContent(jsonData, options)
+	htmlContent := generateSingleFileHTMLContent(string(jsonData))
 
 	// Get safe output path
-	safePath, err := GetOutputPath(outputPath)
+	absPath, err := GetOutputPath(outputPath)
 	if err != nil {
-		return err
+		return "", err
 	}
-
+	fmt.Println("path:", outputPath, "absPath:", absPath)
 	// Write to file
-	if err := os.WriteFile(safePath, []byte(htmlContent), 0644); err != nil {
-		return fmt.Errorf("failed to write HTML file: %v", err)
+	if err := os.WriteFile(absPath, []byte(htmlContent), 0644); err != nil {
+		return "", fmt.Errorf("failed to write HTML file: %v", err)
 	}
 
-	fmt.Printf("Compact HTML report generated: %s\n", safePath)
-	return nil
+	return absPath, nil
 }
 
 func extractJVMInfo(analysis *gc.GCAnalysis) JVMInfo {
@@ -145,7 +110,7 @@ func extractJVMInfo(analysis *gc.GCAnalysis) JVMInfo {
 	}
 }
 
-func generateOptimizedChartData(events []*gc.GCEvent, analysis *gc.GCAnalysis) ChartData {
+func generateChartData(events []*gc.GCEvent) ChartData {
 	var heapTrends, pauseTrends, allocationTrends []TimeSeriesPoint
 	frequencyMap := make(map[string]struct {
 		duration time.Duration
@@ -265,11 +230,11 @@ func validateReportData(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *g
 }
 
 // GetOutputPath returns a safe output path, creating directories if needed
-func GetOutputPath(customPath string) (string, error) {
+func GetOutputPath(path string) (string, error) {
 	var outputPath string
 
-	if customPath != "" {
-		outputPath = customPath
+	if path != "" {
+		outputPath = path
 	} else {
 		outputPath = GetDefaultOutputPath()
 	}
@@ -279,32 +244,25 @@ func GetOutputPath(customPath string) (string, error) {
 		outputPath += ".html"
 	}
 
-	// Create directory if it doesn't exist
-	dir := filepath.Dir(outputPath)
-	if dir != "." {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return "", fmt.Errorf("failed to create directory %s: %v", dir, err)
-		}
+	// Convert to absolute path
+	absPath, err := filepath.Abs(outputPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to get absolute path for %s: %v", outputPath, err)
 	}
 
-	return outputPath, nil
-}
+	// Create directory if it doesn't exist
+	dir := filepath.Dir(absPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create directory %s: %v", dir, err)
+	}
 
-// GenerateHTMLReportSafe is a safer version that validates inputs and handles errors
-func GenerateHTMLReportSafe(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues, outputPath string) error {
-	return GenerateCompactHTMLReport(events, analysis, issues, outputPath)
+	return absPath, nil
 }
 
 // generateSingleFileHTMLContent creates the single-file HTML with embedded CSS/JS
-func generateSingleFileHTMLContent(jsonData string, options ReportOptions) string {
+func generateSingleFileHTMLContent(jsonData string) string {
 	// Replace placeholders in the HTML template
 	content := htmlTemplate
-
-	// Apply ultra-compact class if requested
-	if options.UltraCompact {
-		// Add ultra-compact class to body
-		content = strings.ReplaceAll(content, "<body>", "<body class=\"ultra-compact\">")
-	}
 
 	content = strings.ReplaceAll(content, "{{CSS_CONTENT}}", cssContent)
 	content = strings.ReplaceAll(content, "{{JS_CONTENT}}", jsContent)
@@ -316,16 +274,5 @@ func generateSingleFileHTMLContent(jsonData string, options ReportOptions) strin
 // GetDefaultOutputPath returns a default HTML output path
 func GetDefaultOutputPath() string {
 	timestamp := time.Now().Format("20060102_150405")
-	return fmt.Sprintf("gc-analysis-compact-%s.html", timestamp)
-}
-
-// GetCompactReportMetadata returns metadata about the compact report
-func GetCompactReportMetadata() map[string]interface{} {
-	return map[string]interface{}{
-		"version":     "2.0.0",
-		"type":        "compact",
-		"features":    []string{"responsive", "interactive", "space-efficient"},
-		"max_events":  10000,
-		"chart_limit": 1000,
-	}
+	return fmt.Sprintf("gc-analysis-%s.html", timestamp)
 }

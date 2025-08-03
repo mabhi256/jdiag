@@ -315,7 +315,7 @@ internal/
     └── format.go                 # Auto-detect dump formats
 
 ```bash
-jdiag gc analyze gc.log -o cli|tui|html
+jdiag gc analyze gc.log -o cli|cli-more|tui|html|file.html
 jdiag heap analyze heap.hprof -o cli|tui|html
 jdiag thread analyze thread.dump -o cli|tui|html  
 

@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -14,25 +16,28 @@ import (
 )
 
 var (
-	outputFormat   string
-	htmlOutputPath = "my-gc-analysis-report.html"
+	output string
 )
 
 var gcCmd = &cobra.Command{
 	Use:   "gc",
-	Short: "Analyze GC logs",
+	Short: "Analyze Java garbage collection logs",
+}
+
+func isHtmlFile() bool {
+	return strings.HasSuffix(output, ".html")
 }
 
 var gcAnalyzeCmd = &cobra.Command{
 	Use:               "analyze [gc-log-file]",
-	Short:             "Analyze GC log file",
+	Short:             "Analyze a Java GC log file",
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeGCLogFiles,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		// Validate output flag
 		validFormats := []string{"cli", "cli-more", "tui", "html"}
-		if !slices.Contains(validFormats, outputFormat) {
-			return fmt.Errorf("invalid output format: %s. Valid options: %v", outputFormat, validFormats)
+
+		if !slices.Contains(validFormats, output) && !isHtmlFile() {
+			return fmt.Errorf("invalid output format: %s. Valid options: %v or *.html", output, validFormats)
 		}
 
 		// Validate file argument
@@ -59,40 +64,48 @@ var gcAnalyzeCmd = &cobra.Command{
 		}
 		recommendations := gc.GetRecommendations(analysis)
 
-		switch outputFormat {
-		case "cli":
+		switch {
+		case output == "cli":
 			analysis.PrintSummary()
-		case "cli-more":
+		case output == "cli-more":
 			analysis.PrintDetailed()
 			recommendations.Print()
-		case "tui":
+		case output == "tui":
 			tui.StartTUI(events, analysis, recommendations)
-		case "html":
-			// Generate HTML report using the safe version
-			err := html.GenerateUltraCompactHTMLReport(events, analysis, recommendations, htmlOutputPath)
+		case output == "html" || isHtmlFile():
+			// Generate HTML report and return absolute path of the output
+			var absPath string
+			var err error
+			if isHtmlFile() {
+				absPath, err = html.GenerateHTMLReport(events, analysis, recommendations, output)
+			} else {
+				absPath, err = html.GenerateHTMLReport(events, analysis, recommendations, "")
+			}
 			if err != nil {
 				fmt.Printf("Error generating HTML report: %v\n", err)
 				return
 			}
 
-			// Get the actual output path for display
-			outputPath, _ := html.GetOutputPath(htmlOutputPath)
-			fmt.Printf("HTML report generated successfully: %s\n", outputPath)
-			fmt.Printf("Open the file in your browser to view the interactive report.\n")
+			fmt.Printf("HTML report generated: %s\n", makeClickableLink(absPath))
+
+			// Auto-open the file in default browser
+			if err := openInBrowser(absPath); err != nil {
+				fmt.Printf("Note: Could not automatically open browser: %v\n", err)
+			}
 		default:
 			analysis.PrintSummary()
 		}
 	},
 }
 
-// TODO: add compare, export, watch commands
+// TODO: add compare command
 
 func init() {
 	rootCmd.AddCommand(gcCmd)
 
 	gcCmd.AddCommand(gcAnalyzeCmd)
 
-	gcAnalyzeCmd.Flags().StringVarP(&outputFormat, "output", "o", "cli", "Output format")
+	gcAnalyzeCmd.Flags().StringVarP(&output, "output", "o", "cli", "Output format")
 
 	// When user types: jdiag gc analyze file.log -o <TAB>
 	gcAnalyzeCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -173,4 +186,29 @@ func isValidGCLogFile(filename string) bool {
 	// Rotated logs: .log.0, .log.1, .log.2, etc.
 	re := regexp.MustCompile(`\.log\.\d+$`)
 	return re.MatchString(filename)
+}
+
+func makeClickableLink(filePath string) string {
+	fileURL := "file://" + filePath
+
+	// Use OSC 8 escape sequence for clickable links
+	// Format: \033]8;;URL\033\\TEXT\033]8;;\033\\
+	return fmt.Sprintf("\033]8;;%s\033\\%s\033]8;;\033\\", fileURL, filePath)
+}
+
+func openInBrowser(filePath string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin": // macOS
+		cmd = exec.Command("open", filePath)
+	case "linux":
+		cmd = exec.Command("xdg-open", filePath)
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", filePath)
+	default:
+		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+	}
+
+	return cmd.Start()
 }
