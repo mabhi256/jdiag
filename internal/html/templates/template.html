@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G1GC Analysis Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        {{CSS_CONTENT}}
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>🚀 G1GC Performance Analysis Report</h1>
+            <div id="generation-time"></div>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="dashboard">📊 Overview</button>
+            <button class="tab-btn" data-tab="trends">📉 Trends</button>
+            <button class="tab-btn" data-tab="events">📋 Events</button>
+            <button class="tab-btn" data-tab="recommendations">💡 Issues</button>
+        </nav>
+
+        <main>
+            <div id="dashboard" class="tab-content active">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>🖥️ JVM & Runtime</h3>
+                        <div id="jvm-info"></div>
+                    </div>
+                    <div class="card">
+                        <h3>📊 Performance</h3>
+                        <div id="performance-summary"></div>
+                    </div>
+                    <div class="card">
+                        <h3>🔄 GC Statistics</h3>
+                        <div id="gc-stats"></div>
+                    </div>
+                    <div class="card">
+                        <h3>⚠️ Issues</h3>
+                        <div id="issues-summary"></div>
+                    </div>
+                </div>
+                
+                <div class="detailed-metrics">
+                    <div id="detailed-metrics-content"></div>
+                </div>
+            </div>
+
+            <div id="trends" class="tab-content">
+                <div class="trends-tabs">
+                    <button class="trends-tab-btn active" data-trends-tab="heap-after">Heap After</button>
+                    <button class="trends-tab-btn" data-trends-tab="heap-before">Heap Before</button>
+                    <button class="trends-tab-btn" data-trends-tab="reclaimed">Reclaimed</button>
+                    <button class="trends-tab-btn" data-trends-tab="gc-duration">GC Duration</button>
+                    <button class="trends-tab-btn" data-trends-tab="pause">Pause Times</button>
+                    <button class="trends-tab-btn" data-trends-tab="promotion">Promotion</button>
+                </div>
+                <div id="trends-charts"></div>
+            </div>
+
+            <div id="events" class="tab-content">
+                <div class="events-controls">
+                    <input type="text" id="events-search" placeholder="Search events...">
+                    <select id="events-filter">
+                        <option value="all">All Events</option>
+                        <option value="Young">Young GC</option>
+                        <option value="Mixed">Mixed GC</option>
+                        <option value="Full">Full GC</option>
+                        <option value="issues">Events with Issues</option>
+                    </select>
+                </div>
+                <div id="events-table"></div>
+            </div>
+
+            <div id="recommendations" class="tab-content">
+                <div class="recommendations-tabs">
+                    <button class="rec-tab-btn active" data-rec-tab="critical">🔴 Critical</button>
+                    <button class="rec-tab-btn" data-rec-tab="warning">⚠️ Warning</button>
+                    <button class="rec-tab-btn" data-rec-tab="info">ℹ️ Info</button>
+                </div>
+                <div id="recommendations-content"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const reportData = {{JSON_DATA}};
+        {{JS_CONTENT}}
+    </script>
+</body>
+</html>

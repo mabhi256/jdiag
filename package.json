@@ -1,0 +1,18 @@
+{
+  "name": "jdiag",
+  "version": "1.0.0",
+  "description": "TypeScript build tools for jdiag",
+  "private": true,
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "format": "prettier --write internal/html/templates/app.ts",
+    "lint": "eslint internal/html/templates/app.ts --fix",
+    "build": "tsc internal/html/templates/app.ts --outDir internal/html/dist/ --target ES2017 --lib ES2017,DOM --strict --noImplicitAny"
+  }
+}

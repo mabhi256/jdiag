@@ -8,11 +8,15 @@ import (
 	"strings"
 
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/internal/html"
 	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/spf13/cobra"
 )
 
-var outputFormat string
+var (
+	outputFormat   string
+	htmlOutputPath = "my-gc-analysis-report.html"
+)
 
 var gcCmd = &cobra.Command{
 	Use:   "gc",
@@ -64,7 +68,17 @@ var gcAnalyzeCmd = &cobra.Command{
 		case "tui":
 			tui.StartTUI(events, analysis, recommendations)
 		case "html":
-			fmt.Println("HTML format not yet implemented")
+			// Generate HTML report using the safe version
+			err := html.GenerateUltraCompactHTMLReport(events, analysis, recommendations, htmlOutputPath)
+			if err != nil {
+				fmt.Printf("Error generating HTML report: %v\n", err)
+				return
+			}
+
+			// Get the actual output path for display
+			outputPath, _ := html.GetOutputPath(htmlOutputPath)
+			fmt.Printf("HTML report generated successfully: %s\n", outputPath)
+			fmt.Printf("Open the file in your browser to view the interactive report.\n")
 		default:
 			analysis.PrintSummary()
 		}
