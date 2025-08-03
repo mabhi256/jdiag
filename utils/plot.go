@@ -1,15 +1,12 @@
-package tui
+package utils
 
 import (
 	"fmt"
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
-// Chart-related constants
 const (
 	ChartHeight     = 14
 	YAxisLabelWidth = 7
@@ -18,26 +15,51 @@ const (
 	MinLabelSpacing = 10
 )
 
+// Abstract styling/rendering concerns
+type Renderer interface {
+	Render(text string) string
+}
+
+type ChartStyles struct {
+	Muted    Renderer
+	Good     Renderer
+	Info     Renderer
+	Critical Renderer
+	Warning  Renderer
+}
+
+// DataPoint represents a single point in the chart
+type DataPoint struct {
+	Value     float64
+	Timestamp time.Time
+	Icon      string // Pre-rendered/styled icon
+}
+
 // ChartConfig holds configuration for chart rendering
 type ChartConfig struct {
 	Width  int
 	Height int
 	Styles ChartStyles
+	Legend string // Optional pre-formatted legend
 }
 
-// ChartStyles holds the styling information for charts
-type ChartStyles struct {
-	Muted    lipgloss.Style
-	Good     lipgloss.Style
-	Info     lipgloss.Style
-	Critical lipgloss.Style
-	Warning  lipgloss.Style
+// SimpleRenderer provides a basic renderer that just returns the text as-is
+type SimpleRenderer struct{}
+
+func (s SimpleRenderer) Render(text string) string {
+	return text
 }
 
 // CreatePlot creates a line chart with the given data points
-func CreatePlot(values []float64, timestamps []time.Time, gcTypes []string, unit string, config ChartConfig) string {
-	if len(values) == 0 {
+func CreatePlot(dataPoints []DataPoint, unit string, config ChartConfig) string {
+	if len(dataPoints) == 0 {
 		return "No data"
+	}
+
+	// Extract values for min/max calculation
+	values := make([]float64, len(dataPoints))
+	for i, dp := range dataPoints {
+		values[i] = dp.Value
 	}
 
 	maxVal, minVal := slices.Max(values), slices.Min(values)
@@ -58,14 +80,14 @@ func CreatePlot(values []float64, timestamps []time.Time, gcTypes []string, unit
 	}
 
 	// Calculate data point positions
-	dataPoints := make([]struct{ x, y int }, len(values))
-	for i, val := range values {
-		x := i * (width - 1) / max(1, len(values)-1)
-		if len(values) == 1 {
+	chartPoints := make([]struct{ x, y int }, len(dataPoints))
+	for i, dp := range dataPoints {
+		x := i * (width - 1) / max(1, len(dataPoints)-1)
+		if len(dataPoints) == 1 {
 			x = width / 2
 		}
 		// Convert value to y position (inverted since we draw from top to bottom)
-		y := int((maxVal-val)/(maxVal-minVal)*float64(config.Height-1) + 0.5)
+		y := int((maxVal-dp.Value)/(maxVal-minVal)*float64(config.Height-1) + 0.5)
 		if y >= config.Height {
 			y = config.Height - 1
 		}
@@ -73,21 +95,21 @@ func CreatePlot(values []float64, timestamps []time.Time, gcTypes []string, unit
 			y = 0
 		}
 		if x < width {
-			dataPoints[i] = struct{ x, y int }{x, y}
+			chartPoints[i] = struct{ x, y int }{x, y}
 		}
 	}
 
 	// Draw lines between consecutive points
-	if len(dataPoints) > 1 {
-		for i := 0; i < len(dataPoints)-1; i++ {
-			drawLine(chartGrid, dataPoints[i].x, dataPoints[i].y, dataPoints[i+1].x, dataPoints[i+1].y, width, config.Height, config.Styles.Muted)
+	if len(chartPoints) > 1 {
+		for i := 0; i < len(chartPoints)-1; i++ {
+			drawLine(chartGrid, chartPoints[i].x, chartPoints[i].y, chartPoints[i+1].x, chartPoints[i+1].y, width, config.Height, config.Styles.Muted)
 		}
 	}
 
 	// Place data point markers (this will override line characters at data points)
-	for i, point := range dataPoints {
+	for i, point := range chartPoints {
 		if point.x < width && point.y < config.Height {
-			chartGrid[point.y][point.x] = getGCIcon(gcTypes[i], config.Styles)
+			chartGrid[point.y][point.x] = dataPoints[i].Icon
 		}
 	}
 
@@ -106,21 +128,42 @@ func CreatePlot(values []float64, timestamps []time.Time, gcTypes []string, unit
 		lines = append(lines, lineStr)
 	}
 
-	// Add time axis and legend
-	if len(timestamps) > 0 {
+	// Add time axis
+	if len(dataPoints) > 0 {
+		timestamps := make([]time.Time, len(dataPoints))
+		for i, dp := range dataPoints {
+			timestamps[i] = dp.Timestamp
+		}
 		lines = append(lines, createTimeAxis(timestamps, width, config.Styles.Muted)...)
 	}
 
-	legend := "Legend: " + config.Styles.Good.Render("● Young") + " " +
-		config.Styles.Info.Render("▲ Mixed") + " " +
-		config.Styles.Critical.Render("■ Full")
-	lines = append(lines, "", config.Styles.Muted.Render(legend))
+	// Add legend if provided
+	if config.Legend != "" {
+		lines = append(lines, "", config.Styles.Muted.Render(config.Legend))
+	}
 
 	return strings.Join(lines, "\n")
 }
 
+// CreateSimplePlot is a convenience function for simple value-only plots
+func CreateSimplePlot(values []float64, timestamps []time.Time, unit string, config ChartConfig) string {
+	dataPoints := make([]DataPoint, len(values))
+	for i, val := range values {
+		var ts time.Time
+		if i < len(timestamps) {
+			ts = timestamps[i]
+		}
+		dataPoints[i] = DataPoint{
+			Value:     val,
+			Timestamp: ts,
+			Icon:      config.Styles.Good.Render("●"), // Default icon
+		}
+	}
+	return CreatePlot(dataPoints, unit, config)
+}
+
 // drawLine draws a line between two points in the chart grid using dots
-func drawLine(grid [][]string, x1, y1, x2, y2, width, height int, mutedStyle lipgloss.Style) {
+func drawLine(grid [][]string, x1, y1, x2, y2, width, height int, mutedRenderer Renderer) {
 	// Ensure coordinates are within bounds
 	if x1 < 0 || x1 >= width || x2 < 0 || x2 >= width ||
 		y1 < 0 || y1 >= height || y2 < 0 || y2 >= height {
@@ -145,7 +188,7 @@ func drawLine(grid [][]string, x1, y1, x2, y2, width, height int, mutedStyle lip
 		// Don't overwrite if there's already a data point marker
 		if grid[y][x] == " " {
 			// Always use dots for line connections
-			grid[y][x] = mutedStyle.Render("·")
+			grid[y][x] = mutedRenderer.Render("·")
 		}
 
 		if x == x2 && y == y2 {
@@ -164,24 +207,8 @@ func drawLine(grid [][]string, x1, y1, x2, y2, width, height int, mutedStyle lip
 	}
 }
 
-// getGCIcon returns a styled icon for the given GC type
-func getGCIcon(gcType string, styles ChartStyles) string {
-	switch strings.ToLower(gcType) {
-	case "young":
-		return styles.Good.Render("●")
-	case "mixed":
-		return styles.Info.Render("▲")
-	case "full":
-		return styles.Critical.Render("■")
-	case "concurrent mark abort":
-		return styles.Warning.Render("◆")
-	default:
-		return styles.Muted.Render("•")
-	}
-}
-
 // createTimeAxis creates time axis labels for the chart
-func createTimeAxis(timestamps []time.Time, width int, mutedStyle lipgloss.Style) []string {
+func createTimeAxis(timestamps []time.Time, width int, mutedRenderer Renderer) []string {
 	axisLine := strings.Repeat(" ", 10) + "└" + strings.Repeat("─", width)
 	timeLine := strings.Repeat(" ", 10)
 
@@ -201,7 +228,7 @@ func createTimeAxis(timestamps []time.Time, width int, mutedStyle lipgloss.Style
 		timeLine += label
 	}
 
-	return []string{mutedStyle.Render(axisLine), mutedStyle.Render(timeLine)}
+	return []string{mutedRenderer.Render(axisLine), mutedRenderer.Render(timeLine)}
 }
 
 // abs returns the absolute value of an integer

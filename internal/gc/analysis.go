@@ -1,10 +1,11 @@
 package gc
 
 import (
-	"math"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/mabhi256/jdiag/utils"
 )
 
 // Constants for analysis thresholds
@@ -67,9 +68,7 @@ const (
 	LeakScoreCriticalThresh = 4
 	LeakScoreWarningThresh  = 2
 	LeakConfidenceThreshold = 0.7
-)
 
-const (
 	EvacFailureRateCritical = 5.0 // 5% evacuation failure rate
 	EvacFailureRateWarning  = 1.0
 
@@ -93,6 +92,35 @@ const (
 	ExpectedMixedRatio      = 0.1 // Expected ratio of mixed to young collections
 	AllocationBurstThresh   = 10  // % of events that can be bursts before flagging
 )
+
+type allocationDataPoint struct {
+	timestamp time.Time
+	rate      float64
+	interval  time.Duration
+	allocated utils.MemorySize
+}
+
+type promotionDataPoint struct {
+	timestamp        time.Time
+	promotedRegions  float64
+	oldGrowthRatio   float64
+	survivorOverflow bool
+	efficiency       float64
+}
+
+type humongousDataPoint struct {
+	timestamp     time.Time
+	regionsBefore int
+	regionsAfter  int
+	heapPercent   float64
+	trend         string // "growing", "static", "decreasing"
+}
+
+type memoryTrendPoint struct {
+	timestamp   time.Time
+	heapAfterMB float64
+	heapTotalMB float64
+}
 
 func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 	if len(events) == 0 {
@@ -356,7 +384,7 @@ func AnalyzeGCLogs(events []*GCEvent, analysis *GCAnalysis) {
 	analysis.ConcurrentCycleDuration = estimateConcurrentCycleDuration(events)
 
 	// Variance and advanced metrics
-	analysis.PauseTimeVariance = calculatePauseVariance(durations, analysis.AvgPause)
+	analysis.PauseTimeVariance = utils.CalculateDurationVariance(durations, analysis.AvgPause)
 
 	// ===== SET ISSUE FLAGS FOR RECOMMENDATIONS =====
 	analysis.setIssueFlags()
@@ -378,36 +406,6 @@ func categorizeGCType(gcType string) string {
 	default:
 		return eventType
 	}
-}
-
-// Supporting data structures for single-pass analysis
-type allocationDataPoint struct {
-	timestamp time.Time
-	rate      float64
-	interval  time.Duration
-	allocated MemorySize
-}
-
-type promotionDataPoint struct {
-	timestamp        time.Time
-	promotedRegions  float64
-	oldGrowthRatio   float64
-	survivorOverflow bool
-	efficiency       float64
-}
-
-type humongousDataPoint struct {
-	timestamp     time.Time
-	regionsBefore int
-	regionsAfter  int
-	heapPercent   float64
-	trend         string // "growing", "static", "decreasing"
-}
-
-type memoryTrendPoint struct {
-	timestamp   time.Time
-	heapAfterMB float64
-	heapTotalMB float64
 }
 
 // Analysis helper functions
@@ -608,7 +606,7 @@ func calculateAllocationRate(events []allocationDataPoint, totalRuntime time.Dur
 		return 0
 	}
 
-	var totalAllocated MemorySize
+	var totalAllocated utils.MemorySize
 	for _, event := range events {
 		totalAllocated += event.allocated
 	}
@@ -745,7 +743,7 @@ func calculateMemoryTrend(points []memoryTrendPoint, startTime time.Time) Memory
 		heapValues = append(heapValues, point.heapAfterMB)
 	}
 
-	slope, correlation := linearRegression(timePoints, heapValues)
+	slope, correlation := utils.LinearRegression(timePoints, heapValues)
 
 	totalHeap := 0.0
 	for _, point := range points {
@@ -816,61 +814,6 @@ func estimateConcurrentCycleDuration(events []*GCEvent) time.Duration {
 	}
 
 	return totalInterval / time.Duration(len(mixedCollectionTimestamps)-1)
-}
-
-func calculatePauseVariance(durations []time.Duration, avgPause time.Duration) float64 {
-	if len(durations) < 2 {
-		return 0
-	}
-
-	variance := 0.0
-	mean := float64(avgPause.Nanoseconds())
-
-	for _, d := range durations {
-		diff := float64(d.Nanoseconds()) - mean
-		variance += diff * diff
-	}
-	variance /= float64(len(durations))
-
-	if mean > 0 {
-		return variance / (mean * mean) // Normalized variance
-	}
-	return 0
-}
-
-func linearRegression(x, y []float64) (slope, correlation float64) {
-	if len(x) != len(y) || len(x) < 2 {
-		return 0, 0
-	}
-
-	n := float64(len(x))
-	var sumX, sumY, sumXY, sumXX, sumYY float64
-
-	for i := 0; i < len(x); i++ {
-		sumX += x[i]
-		sumY += y[i]
-		sumXY += x[i] * y[i]
-		sumXX += x[i] * x[i]
-		sumYY += y[i] * y[i]
-	}
-
-	denominator := n*sumXX - sumX*sumX
-	if denominator == 0 {
-		return 0, 0
-	}
-
-	slope = (n*sumXY - sumX*sumY) / denominator
-
-	numerator := n*sumXY - sumX*sumY
-	denominatorCorr := math.Sqrt((n*sumXX - sumX*sumX) * (n*sumYY - sumY*sumY))
-
-	if denominatorCorr == 0 {
-		correlation = 0
-	} else {
-		correlation = numerator / denominatorCorr
-	}
-
-	return slope, correlation
 }
 
 // Set issue flags based on computed metrics

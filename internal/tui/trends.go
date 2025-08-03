@@ -8,9 +8,12 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 const (
+	ChartHeight      = 14
+	MinChartWidth    = 20
 	ChartMarginWidth = 14
 	CausesChartPad   = 30
 	FreqChartPad     = 38
@@ -131,19 +134,7 @@ func (m *Model) renderHeapTrends(
 		return TitleStyle.Render(title) + "\n\nNo data available"
 	}
 
-	config := ChartConfig{
-		Width:  m.calculateChartWidth(),
-		Height: ChartHeight,
-		Styles: ChartStyles{
-			Muted:    MutedStyle,
-			Good:     GoodStyle,
-			Info:     InfoStyle,
-			Critical: CriticalStyle,
-			Warning:  WarningStyle,
-		},
-	}
-
-	chart := CreatePlot(values, timestamps, gcTypes, unit, config)
+	chart := CreatePlotFromGCData(values, timestamps, gcTypes, unit, m.calculateChartWidth(), ChartHeight)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -179,7 +170,7 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 		"Other":           MutedStyle,
 	}
 
-	var bars []BarData
+	var bars []utils.BarData
 	for gcType, duration := range m.analysis.GCTypeDurations {
 		eventCount := m.analysis.GCTypeEventCounts[gcType]
 		if eventCount == 0 {
@@ -190,18 +181,18 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 		percentage := float64(duration) / float64(totalDuration) * 100
 		durationMs := float64(duration.Nanoseconds()) / 1e6
 
-		bars = append(bars, BarData{
+		bars = append(bars, utils.BarData{
 			Label: gcType, Value: durationMs, Percentage: percentage,
 			Style: styleMap[gcType], Suffix: fmt.Sprintf("- %d events", eventCount),
 		})
 	}
 
-	config := DefaultBarConfig(m.calculateChartWidth() - FreqChartPad)
+	config := utils.DefaultBarConfig(m.calculateChartWidth() - FreqChartPad)
 	config.ValueFormat = "%.1fms"
 
 	chartTitle := fmt.Sprintf("Time Distribution (last %d events, %.1fms total):",
 		len(events), float64(totalDuration.Nanoseconds())/1e6)
-	sections := []string{CreateHorizontalBarChart(chartTitle, bars, config)}
+	sections := []string{utils.CreateHorizontalBarChart(chartTitle, bars, config)}
 
 	// Add frequency analysis
 	if len(events) > 1 {
@@ -244,21 +235,21 @@ func (m *Model) renderGCCausesChart(events []*gc.GCEvent) string {
 	}
 
 	// Create and sort bars
-	var bars []BarData
+	var bars []utils.BarData
 	colors := []lipgloss.Style{GoodStyle, InfoStyle, WarningStyle, CriticalStyle, MutedStyle}
 
 	for cause, duration := range m.analysis.GCCauseDurations {
 		// Calculate percentage of total duration
 		percent := float64(duration) / float64(totalDuration) * 100
 		durationMs := float64(duration.Nanoseconds()) / 1e6
-		bars = append(bars, BarData{
+		bars = append(bars, utils.BarData{
 			Label: cause, Value: durationMs, Percentage: percent,
 			Style: colors[len(bars)%len(colors)],
 		})
 	}
 
 	// Sort by duration descending and assign colors
-	slices.SortFunc(bars, func(a, b BarData) int {
+	slices.SortFunc(bars, func(a, b utils.BarData) int {
 		if a.Value > b.Value {
 			return -1
 		}
@@ -275,11 +266,11 @@ func (m *Model) renderGCCausesChart(events []*gc.GCEvent) string {
 		bars[i].Style = colors[i]
 	}
 
-	config := DefaultBarConfig(m.calculateChartWidth() - CausesChartPad)
+	config := utils.DefaultBarConfig(m.calculateChartWidth() - CausesChartPad)
 	config.LabelWidth = 24
 	config.ValueFormat = "%.1fms"
 
-	barChart := CreateHorizontalBarChart("GC Causes (Total Time)", bars, config)
+	barChart := utils.CreateHorizontalBarChart("GC Causes (Total Time)", bars, config)
 	totalMs := float64(totalDuration.Nanoseconds()) / 1e6
 
 	return fmt.Sprintf("%s\n\nTotal GC Time: %.1f ms", barChart, totalMs)

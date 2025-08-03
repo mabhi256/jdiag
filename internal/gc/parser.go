@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mabhi256/jdiag/utils"
 )
 
 const (
@@ -173,7 +175,7 @@ func (cp *ConfigurationParser) Parse(line string, context *ParseContext) error {
 	}
 
 	if matches := heapRegionPattern.FindStringSubmatch(line); len(matches) > 1 {
-		size, err := ParseMemorySize(matches[1])
+		size, err := utils.ParseMemorySize(matches[1])
 		if err != nil {
 			return fmt.Errorf("invalid heap region size: %v", err)
 		}
@@ -182,7 +184,7 @@ func (cp *ConfigurationParser) Parse(line string, context *ParseContext) error {
 	}
 
 	if matches := heapMaxPattern.FindStringSubmatch(line); len(matches) > 1 {
-		size, err := ParseMemorySize(matches[1])
+		size, err := utils.ParseMemorySize(matches[1])
 		if err != nil {
 			return fmt.Errorf("invalid heap max size: %v", err)
 		}
@@ -252,17 +254,17 @@ func (gp *GCEventParser) populateEvent(event *GCEvent, matches []string) error {
 	event.Cause = typeInfo.Cause
 
 	// Parse memory sizes
-	heapBefore, err := ParseMemorySize(matches[3])
+	heapBefore, err := utils.ParseMemorySize(matches[3])
 	if err != nil {
 		return fmt.Errorf("invalid heap before size: %v", err)
 	}
 
-	heapAfter, err := ParseMemorySize(matches[4])
+	heapAfter, err := utils.ParseMemorySize(matches[4])
 	if err != nil {
 		return fmt.Errorf("invalid heap after size: %v", err)
 	}
 
-	heapTotal, err := ParseMemorySize(matches[5])
+	heapTotal, err := utils.ParseMemorySize(matches[5])
 	if err != nil {
 		return fmt.Errorf("invalid heap total size: %v", err)
 	}
@@ -493,30 +495,30 @@ func (rdp *RegionDetailsParser) parseRegionSummary(matches []string, context *Pa
 		event.EdenRegionsAfter = regionsAfter
 		event.EdenRegionsTarget = regionsTarget
 		if event.RegionSize > 0 {
-			event.EdenMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
-			event.EdenMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			event.EdenMemoryBefore = utils.MemorySize(regionsBefore) * event.RegionSize
+			event.EdenMemoryAfter = utils.MemorySize(regionsAfter) * event.RegionSize
 		}
 	case "Survivor":
 		event.SurvivorRegionsBefore = regionsBefore
 		event.SurvivorRegionsAfter = regionsAfter
 		event.SurvivorRegionsTarget = regionsTarget
 		if event.RegionSize > 0 {
-			event.SurvivorMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
-			event.SurvivorMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			event.SurvivorMemoryBefore = utils.MemorySize(regionsBefore) * event.RegionSize
+			event.SurvivorMemoryAfter = utils.MemorySize(regionsAfter) * event.RegionSize
 		}
 	case "Old":
 		event.OldRegionsBefore = regionsBefore
 		event.OldRegionsAfter = regionsAfter
 		if event.RegionSize > 0 {
-			event.OldMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
-			event.OldMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			event.OldMemoryBefore = utils.MemorySize(regionsBefore) * event.RegionSize
+			event.OldMemoryAfter = utils.MemorySize(regionsAfter) * event.RegionSize
 		}
 	case "Humongous":
 		event.HumongousRegionsBefore = regionsBefore
 		event.HumongousRegionsAfter = regionsAfter
 		if event.RegionSize > 0 {
-			event.HumongousMemoryBefore = MemorySize(regionsBefore) * event.RegionSize
-			event.HumongousMemoryAfter = MemorySize(regionsAfter) * event.RegionSize
+			event.HumongousMemoryBefore = utils.MemorySize(regionsBefore) * event.RegionSize
+			event.HumongousMemoryAfter = utils.MemorySize(regionsAfter) * event.RegionSize
 		}
 	}
 
@@ -529,8 +531,8 @@ func (rdp *RegionDetailsParser) parseHeapSummary(matches []string, context *Pars
 	}
 
 	event := context.Events[len(context.Events)-1]
-	totalMemory, _ := ParseMemorySize(matches[1] + "K")
-	usedMemory, _ := ParseMemorySize(matches[2] + "K")
+	totalMemory, _ := utils.ParseMemorySize(matches[1] + "K")
+	usedMemory, _ := utils.ParseMemorySize(matches[2] + "K")
 
 	if event.RegionSize > 0 {
 		totalRegions := int(totalMemory.Bytes() / event.RegionSize.Bytes())
@@ -550,10 +552,10 @@ func (rdp *RegionDetailsParser) parseMetaspaceInfo(matches []string, context *Pa
 
 	event := context.Events[len(context.Events)-1]
 	spaceType := matches[1]
-	used, _ := ParseMemorySize(matches[2] + "K")
-	capacity, _ := ParseMemorySize(matches[3] + "K")
-	committed, _ := ParseMemorySize(matches[4] + "K")
-	reserved, _ := ParseMemorySize(matches[5] + "K")
+	used, _ := utils.ParseMemorySize(matches[2] + "K")
+	capacity, _ := utils.ParseMemorySize(matches[3] + "K")
+	committed, _ := utils.ParseMemorySize(matches[4] + "K")
+	reserved, _ := utils.ParseMemorySize(matches[5] + "K")
 
 	switch spaceType {
 	case "Metaspace":
@@ -577,10 +579,10 @@ func (rdp *RegionDetailsParser) parseMetaspaceBeforeAfter(matches []string, cont
 
 	event := context.Events[len(context.Events)-1]
 	spaceType := matches[1]
-	usedBefore, _ := ParseMemorySize(matches[2] + "K")
-	committedBefore, _ := ParseMemorySize(matches[3] + "K")
-	usedAfter, _ := ParseMemorySize(matches[4] + "K")
-	committedAfter, _ := ParseMemorySize(matches[5] + "K")
+	usedBefore, _ := utils.ParseMemorySize(matches[2] + "K")
+	committedBefore, _ := utils.ParseMemorySize(matches[3] + "K")
+	usedAfter, _ := utils.ParseMemorySize(matches[4] + "K")
+	committedAfter, _ := utils.ParseMemorySize(matches[5] + "K")
 
 	switch spaceType {
 	case "Metaspace":

@@ -1,6 +1,10 @@
 package gc
 
-import "time"
+import (
+	"time"
+
+	"github.com/mabhi256/jdiag/utils"
+)
 
 type GCEvent struct {
 	ID        int
@@ -10,9 +14,9 @@ type GCEvent struct {
 	Cause     string // "G1 Evacuation Pause", "Metadata GC Threshold"
 
 	// [gc] GC(0) Pause Young (Normal) (G1 Evacuation Pause) 65M->42M(256M) 26.506ms
-	HeapBefore MemorySize
-	HeapAfter  MemorySize
-	HeapTotal  MemorySize
+	HeapBefore utils.MemorySize
+	HeapAfter  utils.MemorySize
+	HeapTotal  utils.MemorySize
 	Duration   time.Duration
 
 	// [gc,cpu] GC(0) User=0.02s Sys=0.10s Real=0.03s
@@ -34,39 +38,39 @@ type GCEvent struct {
 	EvacuationFailureTime   time.Duration
 
 	// [gc,heap] GC(0)   region size 1024K, 64 young (65536K), 0 survivors (0K)
-	RegionSize MemorySize
+	RegionSize utils.MemorySize
 
 	// [gc,heap] GC(0) Eden regions: 64->0(62)
 	EdenRegionsBefore int
 	EdenRegionsAfter  int
 	EdenRegionsTarget int
-	EdenMemoryBefore  MemorySize
-	EdenMemoryAfter   MemorySize
+	EdenMemoryBefore  utils.MemorySize
+	EdenMemoryAfter   utils.MemorySize
 
 	// [gc,heap] GC(0) Survivor regions: 0->2(2)
 	SurvivorRegionsBefore int
 	SurvivorRegionsAfter  int
 	SurvivorRegionsTarget int
-	SurvivorMemoryBefore  MemorySize
-	SurvivorMemoryAfter   MemorySize
+	SurvivorMemoryBefore  utils.MemorySize
+	SurvivorMemoryAfter   utils.MemorySize
 
 	// [gc,heap] GC(0) Old regions: 2->42
 	OldRegionsBefore int
 	OldRegionsAfter  int
-	OldMemoryBefore  MemorySize
-	OldMemoryAfter   MemorySize
+	OldMemoryBefore  utils.MemorySize
+	OldMemoryAfter   utils.MemorySize
 
 	// Young regions total (Eden + Survivor)
 	YoungRegionsBefore int
 	YoungRegionsAfter  int
-	YoungMemoryBefore  MemorySize
-	YoungMemoryAfter   MemorySize
+	YoungMemoryBefore  utils.MemorySize
+	YoungMemoryAfter   utils.MemorySize
 
 	// [gc,heap] GC(0) Humongous regions: 0->0
 	HumongousRegionsBefore int
 	HumongousRegionsAfter  int
-	HumongousMemoryBefore  MemorySize
-	HumongousMemoryAfter   MemorySize
+	HumongousMemoryBefore  utils.MemorySize
+	HumongousMemoryAfter   utils.MemorySize
 
 	// [gc,heap] GC(0)  garbage-first heap   total 262144K, used 66610K
 	HeapTotalRegions      int
@@ -83,20 +87,20 @@ type GCEvent struct {
 	// [gc,metaspace] GC(0) Metaspace: 138K(320K)->138K(320K) NonClass: 130K(192K)->130K(192K) Class: 8K(128K)->8K(128K)
 	// Metaspace: used(committed)->used(committed)
 	// Metaspace used 138K, committed 320K, reserved 1114112K
-	MetaspaceUsedBefore      MemorySize
-	MetaspaceUsedAfter       MemorySize
-	MetaspaceCapacityBefore  MemorySize
-	MetaspaceCapacityAfter   MemorySize
-	MetaspaceCommittedBefore MemorySize
-	MetaspaceCommittedAfter  MemorySize
-	MetaspaceReserved        MemorySize
+	MetaspaceUsedBefore      utils.MemorySize
+	MetaspaceUsedAfter       utils.MemorySize
+	MetaspaceCapacityBefore  utils.MemorySize
+	MetaspaceCapacityAfter   utils.MemorySize
+	MetaspaceCommittedBefore utils.MemorySize
+	MetaspaceCommittedAfter  utils.MemorySize
+	MetaspaceReserved        utils.MemorySize
 
 	// class space    used 8K, committed 128K, reserved 1048576K
-	ClassSpaceUsedBefore     MemorySize
-	ClassSpaceUsedAfter      MemorySize
-	ClassSpaceCapacityBefore MemorySize
-	ClassSpaceCapacityAfter  MemorySize
-	ClassSpaceReserved       MemorySize
+	ClassSpaceUsedBefore     utils.MemorySize
+	ClassSpaceUsedAfter      utils.MemorySize
+	ClassSpaceCapacityBefore utils.MemorySize
+	ClassSpaceCapacityAfter  utils.MemorySize
+	ClassSpaceReserved       utils.MemorySize
 
 	// [gc,marking] GC(5) Concurrent Mark Cycle
 	ConcurrentPhase    string
@@ -135,8 +139,8 @@ type GCEvent struct {
 type GCAnalysis struct {
 	// ===== BASIC INFO ====
 	JVMVersion     string
-	HeapRegionSize MemorySize
-	HeapMax        MemorySize
+	HeapRegionSize utils.MemorySize
+	HeapMax        utils.MemorySize
 	TotalEvents    int
 	YoungGCCount   int
 	MixedGCCount   int

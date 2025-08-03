@@ -1,5 +1,4 @@
-// horizontalBar.go
-package tui
+package utils
 
 import (
 	"fmt"
