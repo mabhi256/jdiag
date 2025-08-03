@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 func (m *Model) RenderEvents() string {
@@ -151,9 +152,9 @@ func (m *Model) renderEventRow(event *gc.GCEvent, isSelected bool) string {
 
 	// Format duration & heap
 	if event.ConcurrentDuration != 0 {
-		durationStr = FormatDuration(event.ConcurrentDuration)
+		durationStr = utils.FormatDuration(event.ConcurrentDuration)
 	} else {
-		durationStr = FormatDuration(event.Duration)
+		durationStr = utils.FormatDuration(event.Duration)
 
 		// Format heap changes
 		heapStr = fmt.Sprintf("%*s → %-*s (%s)",
@@ -324,7 +325,7 @@ func (m *Model) renderEventDetails(event *gc.GCEvent) string {
 	timingLine := ""
 	if event.ConcurrentDuration == 0 {
 		timingLine = fmt.Sprintf("Duration: %s  User: %.2fms  Sys: %.2fms  Real: %.2fms",
-			FormatDuration(event.Duration), userMs, sysMs, realMs)
+			utils.FormatDuration(event.Duration), userMs, sysMs, realMs)
 	}
 
 	// Region information

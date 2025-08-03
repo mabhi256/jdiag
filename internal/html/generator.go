@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 // Embed template files at compile time
@@ -139,7 +140,7 @@ func extractJVMInfo(analysis *gc.GCAnalysis) JVMInfo {
 		Version:        analysis.JVMVersion,
 		HeapRegionSize: analysis.HeapRegionSize.String(),
 		HeapMax:        analysis.HeapMax.String(),
-		TotalRuntime:   formatDuration(analysis.TotalRuntime),
+		TotalRuntime:   utils.FormatDuration(analysis.TotalRuntime),
 		TotalEvents:    analysis.TotalEvents,
 	}
 }
@@ -246,19 +247,6 @@ func categorizeGCType(gcType string) string {
 	}
 }
 
-func formatDuration(d time.Duration) string {
-	if d < time.Second {
-		return fmt.Sprintf("%dms", d.Milliseconds())
-	}
-	if d < time.Minute {
-		return fmt.Sprintf("%.1fs", d.Seconds())
-	}
-	if d < time.Hour {
-		return fmt.Sprintf("%.1fm", d.Minutes())
-	}
-	return fmt.Sprintf("%.1fh", d.Hours())
-}
-
 // Helper functions for better error handling and data validation
 func validateReportData(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) error {
 	if events == nil {
@@ -329,31 +317,6 @@ func generateSingleFileHTMLContent(jsonData string, options ReportOptions) strin
 func GetDefaultOutputPath() string {
 	timestamp := time.Now().Format("20060102_150405")
 	return fmt.Sprintf("gc-analysis-compact-%s.html", timestamp)
-}
-
-// Utility functions for better chart optimization
-func optimizeChartDataForRendering(data []TimeSeriesPoint, maxPoints int) []TimeSeriesPoint {
-	if len(data) <= maxPoints {
-		return data
-	}
-
-	// Simple decimation - take every nth point
-	step := len(data) / maxPoints
-	if step < 1 {
-		step = 1
-	}
-
-	optimized := make([]TimeSeriesPoint, 0, maxPoints)
-	for i := 0; i < len(data); i += step {
-		optimized = append(optimized, data[i])
-	}
-
-	// Always include the last point
-	if len(data) > 0 && optimized[len(optimized)-1].EventID != data[len(data)-1].EventID {
-		optimized = append(optimized, data[len(data)-1])
-	}
-
-	return optimized
 }
 
 // GetCompactReportMetadata returns metadata about the compact report

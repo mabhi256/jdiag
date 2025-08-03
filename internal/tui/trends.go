@@ -201,7 +201,7 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 			avgInterval := duration / time.Duration(len(events)-1)
 			gcPerHour := float64(time.Hour) / float64(avgInterval)
 			sections = append(sections, "",
-				fmt.Sprintf("Average Interval: %s", FormatDuration(avgInterval)),
+				fmt.Sprintf("Average Interval: %s", utils.FormatDuration(avgInterval)),
 				fmt.Sprintf("GC Events/Hour: %.1f", gcPerHour))
 		}
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 func (m *Model) RenderDashboard() string {
@@ -20,7 +21,7 @@ func (m *Model) RenderDashboard() string {
 		}
 		if !m.analysis.StartTime.IsZero() && !m.analysis.EndTime.IsZero() {
 			runtime := m.analysis.EndTime.Sub(m.analysis.StartTime)
-			jvmInfo += fmt.Sprintf("  Runtime: %s", FormatDuration(runtime))
+			jvmInfo += fmt.Sprintf("  Runtime: %s", utils.FormatDuration(runtime))
 		}
 
 		headerLine := lipgloss.NewStyle().
@@ -143,7 +144,7 @@ func renderPerformanceOverview(analysis *gc.GCAnalysis) string {
 	if analysis.TotalRuntime > 0 {
 		runtimeRow := fmt.Sprintf("%-15s %-12s",
 			"Runtime",
-			FormatDuration(analysis.TotalRuntime))
+			utils.FormatDuration(analysis.TotalRuntime))
 		rows = append(rows, runtimeRow)
 	}
 

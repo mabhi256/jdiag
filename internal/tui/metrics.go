@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 func (m *Model) RenderMetrics() string {
@@ -126,9 +127,9 @@ func renderGeneralMetrics(analysis *gc.GCAnalysis) string {
 
 	perf := []string{
 		fmt.Sprintf("• Total Events: %d", analysis.TotalEvents),
-		fmt.Sprintf("• Runtime: %s", FormatDuration(analysis.TotalRuntime)),
+		fmt.Sprintf("• Runtime: %s", utils.FormatDuration(analysis.TotalRuntime)),
 		throughputStr,
-		fmt.Sprintf("• Total GC Time: %s", FormatDuration(analysis.TotalGCTime)),
+		fmt.Sprintf("• Total GC Time: %s", utils.FormatDuration(analysis.TotalGCTime)),
 	}
 
 	// Collection Breakdown
@@ -167,28 +168,28 @@ func renderGeneralMetrics(analysis *gc.GCAnalysis) string {
 func renderTimingMetrics(analysis *gc.GCAnalysis) string {
 	// Maximum pause with status
 	maxPauseStatus := getStatusIndicator(float64(analysis.MaxPause.Milliseconds()), float64(gc.PausePoor.Milliseconds()), float64(gc.PauseCritical.Milliseconds()))
-	maxPauseStr := fmt.Sprintf("• Maximum: %s", FormatDuration(analysis.MaxPause))
+	maxPauseStr := fmt.Sprintf("• Maximum: %s", utils.FormatDuration(analysis.MaxPause))
 	if maxPauseStatus != "" {
 		maxPauseStr += " " + maxPauseStatus
 	}
 
 	// P95 pause with status
 	p95PauseStatus := getStatusIndicator(float64(analysis.P95Pause.Milliseconds()), float64(gc.PauseAcceptable.Milliseconds()), float64(gc.PausePoor.Milliseconds()))
-	p95PauseStr := fmt.Sprintf("• P95: %s", FormatDuration(analysis.P95Pause))
+	p95PauseStr := fmt.Sprintf("• P95: %s", utils.FormatDuration(analysis.P95Pause))
 	if p95PauseStatus != "" {
 		p95PauseStr += " " + p95PauseStatus
 	}
 
 	// P99 pause with status
 	p99PauseStatus := getStatusIndicator(float64(analysis.P99Pause.Milliseconds()), float64(gc.PausePoor.Milliseconds()), float64(gc.PauseCritical.Milliseconds()))
-	p99PauseStr := fmt.Sprintf("• P99: %s", FormatDuration(analysis.P99Pause))
+	p99PauseStr := fmt.Sprintf("• P99: %s", utils.FormatDuration(analysis.P99Pause))
 	if p99PauseStatus != "" {
 		p99PauseStr += " " + p99PauseStatus
 	}
 
 	lines := []string{
-		fmt.Sprintf("• Average: %s", FormatDuration(analysis.AvgPause)),
-		fmt.Sprintf("• Minimum: %s", FormatDuration(analysis.MinPause)),
+		fmt.Sprintf("• Average: %s", utils.FormatDuration(analysis.AvgPause)),
+		fmt.Sprintf("• Minimum: %s", utils.FormatDuration(analysis.MinPause)),
 		maxPauseStr,
 		p95PauseStr,
 		p99PauseStr,
@@ -389,7 +390,7 @@ func renderConcurrentMetrics(analysis *gc.GCAnalysis) string {
 			status = WarningStyle.Render("⚠️ Long")
 		}
 
-		cycleDurationStr := fmt.Sprintf("• Cycle Duration: %s", FormatDuration(analysis.ConcurrentCycleDuration))
+		cycleDurationStr := fmt.Sprintf("• Cycle Duration: %s", utils.FormatDuration(analysis.ConcurrentCycleDuration))
 		if status != "" {
 			cycleDurationStr += " " + status
 		}
