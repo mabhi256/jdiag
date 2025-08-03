@@ -29,8 +29,34 @@ func isHtmlFile() bool {
 }
 
 var gcAnalyzeCmd = &cobra.Command{
-	Use:               "analyze [gc-log-file]",
-	Short:             "Analyze a Java GC log file",
+	Use: "analyze [gc-log-file]",
+	Short: `Analyze a Java GC log file.
+
+This command parses GC log files and provides detailed analysis
+including pause times, throughput metrics, heap utilization, and tuning recommendations.
+
+Output Formats:
+  cli       Basic summary with key metrics (default)
+  cli-more  Detailed analysis with recommendations
+  tui       Interactive terminal interface for exploration
+  html      Generate HTML report and open in browser
+  file.html Save HTML report to specific file
+
+Examples:
+  # Basic analysis with summary output
+  jdiag gc analyze app.log
+
+  # Detailed command-line output with recommendations
+  jdiag gc analyze app.log -o cli-more
+
+  # Interactive terminal interface
+  jdiag gc analyze app.log -o tui
+
+  # Generate HTML report
+  jdiag gc analyze app.log -o html
+
+  # Save HTML report to specific file
+  jdiag gc analyze app.log -o report.html`,
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeGCLogFiles,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
