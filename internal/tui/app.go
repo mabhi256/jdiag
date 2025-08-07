@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/utils"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -103,11 +104,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) handleHorizontalNavigation(direction int) (tea.Model, tea.Cmd) {
 	switch m.currentTab {
 	case MetricsTab:
-		CycleEnumPtr(&m.metricsSubTab, direction, ConcurrentMetrics)
+		utils.CycleEnumPtr(&m.metricsSubTab, direction, ConcurrentMetrics)
 	case IssuesTab:
-		CycleEnumPtr(&m.issuesState.selectedSubTab, direction, InfoIssues)
+		utils.CycleEnumPtr(&m.issuesState.selectedSubTab, direction, InfoIssues)
 	case TrendsTab:
-		CycleEnumPtr(&m.trendsState.trendSubTab, direction, FrequencyTrend)
+		utils.CycleEnumPtr(&m.trendsState.trendSubTab, direction, FrequencyTrend)
 	default:
 		return m, nil
 	}
@@ -200,9 +201,9 @@ func (m *Model) handleEventsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.eventsState.selectedEvent++
 		}
 	case "f":
-		CycleEnumPtr(&m.eventsState.eventFilter, 1, ConcurrentAbort)
+		utils.CycleEnumPtr(&m.eventsState.eventFilter, 1, ConcurrentAbort)
 	case "s":
-		CycleEnumPtr(&m.eventsState.sortBy, 1, TypeSortEvent)
+		utils.CycleEnumPtr(&m.eventsState.sortBy, 1, TypeSortEvent)
 	}
 	return m, nil
 }

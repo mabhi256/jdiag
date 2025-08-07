@@ -43,20 +43,11 @@ Output Formats:
   file.html Save HTML report to specific file
 
 Examples:
-  # Basic analysis with summary output
-  jdiag gc analyze app.log
-
-  # Detailed command-line output with recommendations
-  jdiag gc analyze app.log -o cli-more
-
-  # Interactive terminal interface
-  jdiag gc analyze app.log -o tui
-
-  # Generate HTML report
-  jdiag gc analyze app.log -o html
-
-  # Save HTML report to specific file
-  jdiag gc analyze app.log -o report.html`,
+  jdiag gc analyze app.log					# Basic analysis with summary output
+  jdiag gc analyze app.log -o cli-more		# Detailed command-line output with recommendations
+  jdiag gc analyze app.log -o tui			# Interactive terminal interface
+  jdiag gc analyze app.log -o html			# Generate HTML report
+  jdiag gc analyze app.log -o report.html	# Save HTML report to specific file`,
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeGCLogFiles,
 	PreRunE: func(cmd *cobra.Command, args []string) error {

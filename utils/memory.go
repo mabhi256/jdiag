@@ -15,6 +15,7 @@ const (
 	MB   MemorySize = 1024 * KB
 	GB   MemorySize = 1024 * MB
 	TB   MemorySize = 1024 * GB
+	PB   MemorySize = 1024 * TB
 )
 
 // String returns a human-readable representation of the memory size
@@ -31,6 +32,8 @@ func (m MemorySize) String() string {
 	}
 
 	switch {
+	case m >= PB:
+		return formatValue(float64(m)/float64(TB), "P")
 	case m >= TB:
 		return formatValue(float64(m)/float64(TB), "T")
 	case m >= GB:

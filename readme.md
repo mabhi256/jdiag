@@ -331,3 +331,15 @@ Use sensible pause time target default
     - 50ms: web, api, microservices
     - 100ms: enterprise, application
     - 200ms: batch, analytics, etl
+
+- capture extra/ other data in memoryTrendPoint and other datapoints in analysis.go
+
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Go App        │    │  Generated      │    │  Target Java    │
+│                 │    │  Java Client    │    │  Application    │
+│  JMXCollector   │───▶│  JMXQuery.java  │───▶│                 │
+│  JMXClient      │    │                 │    │  ├─MemoryMBean  │
+│                 │    │                 │    │  ├─GCMBean      │
+│                 │◀───│                 │◀───│  ├─ThreadMBean  │
+│                 │    │                 │    │  └─RuntimeMBean │
+└─────────────────┘    └─────────────────┘    └─────────────────┘

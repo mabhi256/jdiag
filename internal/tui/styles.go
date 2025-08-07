@@ -61,14 +61,31 @@ var (
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Bold(true).
 			Padding(0, 1)
-)
 
-var (
+	HeaderStyle = lipgloss.NewStyle().
+			Foreground(TextColor).
+			Background(lipgloss.Color("#1a1a1a")).
+			Bold(true).
+			Padding(0, 1)
+
+	StatusBarStyle = lipgloss.NewStyle().
+			Foreground(TextColor).
+			Background(MutedColor).
+			Padding(0, 1)
+
+	ErrorStyle = lipgloss.NewStyle().
+			Foreground(CriticalColor).
+			Background(lipgloss.Color("#1a1a1a")).
+			Bold(true).
+			Padding(1, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(CriticalColor)
+
 	HelpBarStyle = lipgloss.NewStyle().
-		Foreground(MutedColor).
-		Background(lipgloss.Color("#1a1a1a")).
-		Width(0). // Will be set dynamically
-		Padding(0, 1)
+			Foreground(MutedColor).
+			Background(lipgloss.Color("#1a1a1a")).
+			Width(0). // Will be set dynamically
+			Padding(0, 1)
 )
 
 type TerminalCapabilities struct {
@@ -229,6 +246,20 @@ func GetSeverityStyle(severity string) lipgloss.Style {
 func GetSeverityIcon(severity string) string {
 	switch strings.ToLower(severity) {
 	case "critical":
+		return "🔴"
+	case "warning":
+		return "⚠️"
+	case "info":
+		return "ℹ️"
+	default:
+		return "✅"
+	}
+}
+
+// GetSeverityIconWithText returns icon with text for severity level
+func GetSeverityIconWithText(severity string) string {
+	switch strings.ToLower(severity) {
+	case "critical":
 		return "🔴 Critical"
 	case "warning":
 		return "⚠️  Warning"
@@ -237,6 +268,172 @@ func GetSeverityIcon(severity string) string {
 	default:
 		return "✅ Good"
 	}
+}
+
+func GetMemoryPressureStyle(pressure string) lipgloss.Style {
+	switch pressure {
+	case "critical":
+		return CriticalStyle
+	case "high":
+		return WarningStyle
+	case "moderate":
+		return InfoStyle
+	default:
+		return GoodStyle
+	}
+}
+
+func GetMemoryPressureIcon(level string) string {
+	switch level {
+	case "critical":
+		return "🔴"
+	case "high":
+		return "🟡"
+	case "moderate":
+		return "🟠"
+	default:
+		return "🟢"
+	}
+}
+
+func GetTrendIcon(trend float64) string {
+	if trend > 0.05 { // Rising more than 5%
+		return "📈"
+	} else if trend < -0.05 { // Falling more than 5%
+		return "📉"
+	}
+	return "➡️" // Stable
+}
+
+func CreateStatusIndicator(status, text string, color lipgloss.Color) string {
+	var icon string
+	switch status {
+	case "connected":
+		icon = "🟢"
+	case "disconnected":
+		icon = "🔴"
+	case "warning":
+		icon = "🟡"
+	case "error":
+		icon = "❌"
+	default:
+		icon = "⚫"
+	}
+
+	style := lipgloss.NewStyle().Foreground(color).Bold(true)
+	return style.Render(fmt.Sprintf("%s %s", icon, text))
+}
+
+// CreateMetricDisplay creates a formatted metric display
+func CreateMetricDisplay(name, value, unit string, color lipgloss.Color) string {
+	nameStyle := InfoStyle
+	valueStyle := lipgloss.NewStyle().Foreground(color).Bold(true)
+	unitStyle := MutedStyle
+
+	return fmt.Sprintf("%s: %s%s",
+		nameStyle.Render(name),
+		valueStyle.Render(value),
+		unitStyle.Render(unit))
+}
+
+// CreateSparkline creates a simple sparkline chart
+func CreateSparkline(values []float64, width int) string {
+	if len(values) == 0 || width <= 0 {
+		return ""
+	}
+
+	// Find min and max values
+	min, max := values[0], values[0]
+	for _, v := range values {
+		if v < min {
+			min = v
+		}
+		if v > max {
+			max = v
+		}
+	}
+
+	// Avoid division by zero
+	if max == min {
+		return strings.Repeat("─", width)
+	}
+
+	// Create sparkline characters
+	chars := []string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
+
+	var result strings.Builder
+	for i := 0; i < width && i < len(values); i++ {
+		// Normalize value to 0-1 range
+		normalized := (values[i] - min) / (max - min)
+
+		// Map to character index
+		charIndex := int(normalized * float64(len(chars)-1))
+		if charIndex >= len(chars) {
+			charIndex = len(chars) - 1
+		}
+
+		result.WriteString(chars[charIndex])
+	}
+
+	return result.String()
+}
+
+// CreateGauge creates a gauge-style progress indicator
+func CreateGauge(value, min, max float64, width int, color lipgloss.Color) string {
+	if max <= min || width <= 0 {
+		return ""
+	}
+
+	// Normalize value to 0-1 range
+	normalized := (value - min) / (max - min)
+	if normalized < 0 {
+		normalized = 0
+	}
+	if normalized > 1 {
+		normalized = 1
+	}
+
+	return CreateProgressBar(normalized, width, color)
+}
+
+// Responsive width calculations
+func CalculateBarWidth(totalWidth, sections int) int {
+	sectionWidth := totalWidth / sections
+	barWidth := sectionWidth - 10 // Leave space for labels
+	if barWidth < 10 {
+		barWidth = 10
+	}
+	return barWidth
+}
+
+// Table-like formatting for aligned data
+func FormatKeyValue(key, value string, keyWidth int) string {
+	keyStyled := InfoStyle.Width(keyWidth).Render(key + ":")
+	valueStyled := TextStyle.Render(value)
+	return lipgloss.JoinHorizontal(lipgloss.Left, keyStyled, " ", valueStyled)
+}
+
+// Multi-column layout helper
+func CreateColumns(content []string, totalWidth int) string {
+	if len(content) == 0 {
+		return ""
+	}
+
+	if len(content) == 1 {
+		return content[0]
+	}
+
+	columnWidth := totalWidth / len(content)
+	var columns []string
+
+	for _, c := range content {
+		column := lipgloss.NewStyle().
+			Width(columnWidth).
+			Render(c)
+		columns = append(columns, column)
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, columns...)
 }
 
 // TruncateString truncates a string to fit within maxWidth
@@ -248,6 +445,18 @@ func TruncateString(s string, maxWidth int) string {
 		return strings.Repeat(".", maxWidth)
 	}
 	return s[:maxWidth-3] + "..."
+}
+
+// SanitizeString removes control characters and ensures safe display
+func SanitizeString(s string) string {
+	// Remove any control characters that might mess up the display
+	var result []rune
+	for _, r := range s {
+		if r >= 32 && r != 127 { // Printable ASCII characters
+			result = append(result, r)
+		}
+	}
+	return string(result)
 }
 
 // PadRight pads a string to the right to reach the specified width
