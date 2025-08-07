@@ -50,6 +50,8 @@ type Model struct {
 	// Tab management
 	activeTab TabType
 	tabState  *TabState
+	// Scrolling support
+	scrollPositions map[TabType]int // Per-tab scroll positions
 
 	// Process selection state
 	processMode     bool
@@ -82,6 +84,7 @@ func initialModel(config *Config) *Model {
 		metricsProcessor: NewMetricsProcessor(),
 		help:             help.New(),
 		activeTab:        TabMemory,
+		scrollPositions:  make(map[TabType]int),
 		tabState:         NewTabState(),
 		processList:      processList,
 		processMode:      config.PID == 0 && config.Host == "", // Start in process mode if no target specified
@@ -226,6 +229,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = m.nextTab()
 			return m, nil
 
+		case key.Matches(msg, keys.Up):
+			m.scrollUp(1)
+			return m, nil
+
+		case key.Matches(msg, keys.Down):
+			m.scrollDown(1)
+			return m, nil
+
+		case key.Matches(msg, keys.PageUp):
+			m.scrollUp(10)
+			return m, nil
+
+		case key.Matches(msg, keys.PageDown):
+			m.scrollDown(10)
+			return m, nil
+
 		case key.Matches(msg, keys.SelectProcess):
 			m.processMode = true
 			m.refreshProcessList()
@@ -324,7 +343,7 @@ func (m *Model) clearError() {
 }
 
 func (m *Model) View() string {
-	if m.width == 0 {
+	if m.width == 0 || m.height == 0 {
 		return ""
 	}
 
@@ -341,16 +360,26 @@ func (m *Model) View() string {
 
 	header := m.renderHeader()
 	tabBar := m.renderTabBar()
-	content := m.renderActiveTab()
 	helpView := m.help.View(keys)
 
-	// Calculate available height for content
-	usedHeight := lipgloss.Height(header) + lipgloss.Height(tabBar) + lipgloss.Height(helpView) + 2
-	contentHeight := m.height - usedHeight
+	// Calculate available height for content area
+	headerHeight := lipgloss.Height(header)
+	tabBarHeight := lipgloss.Height(tabBar)
+	helpHeight := lipgloss.Height(helpView)
 
-	if contentHeight > 0 {
-		content = lipgloss.NewStyle().Height(contentHeight).Render(content)
+	contentHeight := m.height - headerHeight - tabBarHeight - helpHeight
+	if contentHeight < 1 {
+		contentHeight = 1 // Minimum content height
 	}
+
+	// Generate full content
+	fullContent := m.renderActiveTab()
+
+	// Apply scrolling to content
+	scrolledContent := m.applyScrolling(fullContent, contentHeight)
+
+	// Apply height constraint to scrolled content
+	content := lipgloss.NewStyle().Height(contentHeight).Render(scrolledContent)
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, tabBar, content, helpView)
 }
@@ -383,14 +412,6 @@ func (m *Model) renderProcessSelectionView() string {
 	// Process list
 	listView := m.processList.View() // Triggers Title(), Description(), FilterValue()
 
-	instructions := []string{
-		"Enter: Connect to selected process",
-		"q: Quit",
-	}
-
-	instructionStyle := tui.MutedStyle.Width(m.width)
-	instructionsView := instructionStyle.Render(strings.Join(instructions, " • "))
-
 	// Status bar
 	statusText := fmt.Sprintf("Found %d Java processes", len(m.processList.Items()))
 	if m.showError {
@@ -398,23 +419,18 @@ func (m *Model) renderProcessSelectionView() string {
 	}
 	statusView := tui.StatusBarStyle.Width(m.width).Render(statusText)
 
-	// Calculate available height
-	usedHeight := lipgloss.Height(header) + lipgloss.Height(instructionsView) + lipgloss.Height(statusView)
-	listHeight := m.height - usedHeight - 2
-
-	if listHeight > 0 {
-		m.processList.SetHeight(listHeight)
-	}
+	separatorLine := strings.Repeat("─", m.width)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
+		tui.MutedStyle.Render(separatorLine),
 		listView,
-		instructionsView,
 		statusView,
 	)
 }
 
 func (m *Model) renderHeader() string {
+	// Build title
 	var title string
 	if m.selectedProcess != nil {
 		title = fmt.Sprintf("🔍 JDiag Watch - %s (PID: %d)",
@@ -423,41 +439,29 @@ func (m *Model) renderHeader() string {
 		title = fmt.Sprintf("🔍 JDiag Watch - %s", m.config.String())
 	}
 
+	// Build status
 	var status string
-	var statusStyle lipgloss.Style
-
 	if m.connected {
-		uptime := time.Since(m.lastUpdate)
-		status = fmt.Sprintf("🟢 Connected • Updates: %d • Uptime: %s",
-			m.updateCount,
-			utils.FormatDuration(uptime))
-		statusStyle = tui.GoodStyle
+		uptime := m.tabState.System.JVMUptime
+		status = tui.GoodStyle.Render(fmt.Sprintf("🟢 Connected • Uptime: %s", utils.FormatDuration(uptime)))
 		if m.errorMessage != "" {
-			status = fmt.Sprintf("⚠️ Connected (Warning: %s)", m.errorMessage)
-			statusStyle = tui.WarningStyle
+			status = tui.WarningStyle.Render("⚠️ Connected (Warning)")
 		}
 	} else {
-		status = "🔴 Disconnected"
-		statusStyle = tui.CriticalStyle
+		status = tui.CriticalStyle.Render("🔴 Disconnected")
 		if m.errorMessage != "" {
-			status = fmt.Sprintf("🔴 Error: %s", m.errorMessage)
+			status = tui.CriticalStyle.Render("🔴 Error")
 		}
 	}
 
-	timestamp := m.lastUpdate.Format("15:04:05")
+	// Single header line
+	headerLine := title + " • " + status
+	separatorLine := strings.Repeat("─", m.width)
 
-	// Create header with title, status, and timestamp
-	titleStyle := tui.TitleStyle.Width(m.width / 3)
-	statusStyled := statusStyle.Width(m.width / 3).Align(lipgloss.Center)
-	timestampStyle := tui.MutedStyle.Width(m.width / 3).Align(lipgloss.Right)
-
-	headerRow := lipgloss.JoinHorizontal(lipgloss.Top,
-		titleStyle.Render(title),
-		statusStyled.Render(status),
-		timestampStyle.Render(timestamp),
+	return lipgloss.JoinVertical(lipgloss.Left,
+		tui.HeaderStyle.Width(m.width).Render(headerLine),
+		tui.MutedStyle.Render(separatorLine),
 	)
-
-	return tui.BoxStyle.Width(m.width).Render(headerRow)
 }
 
 func (m *Model) renderTabBar() string {
@@ -500,4 +504,49 @@ func (m *Model) Init() tea.Cmd {
 	}
 
 	return triggerImmediateTick()
+}
+
+func (m *Model) applyScrolling(content string, viewportHeight int) string {
+	lines := strings.Split(content, "\n")
+	totalLines := len(lines)
+
+	// No scrolling needed if content fits
+	if totalLines <= viewportHeight {
+		return content
+	}
+
+	// Get current scroll position for active tab
+	scrollPos := m.scrollPositions[m.activeTab]
+
+	// Ensure scroll position is valid
+	maxScroll := totalLines - viewportHeight
+	if scrollPos > maxScroll {
+		scrollPos = maxScroll
+		m.scrollPositions[m.activeTab] = scrollPos
+	}
+	if scrollPos < 0 {
+		scrollPos = 0
+		m.scrollPositions[m.activeTab] = scrollPos
+	}
+
+	// Extract visible lines
+	endPos := scrollPos + viewportHeight
+	visibleLines := lines[scrollPos:endPos]
+
+	// Add scroll indicator if content is scrolled
+	if scrollPos > 0 || endPos < totalLines {
+		// Replace last line with scroll indicator
+		scrollInfo := fmt.Sprintf("%s (Line %d-%d of %d) %s",
+			tui.MutedStyle.Render("▲"),
+			scrollPos+1,
+			endPos,
+			totalLines,
+			tui.MutedStyle.Render("▼"))
+
+		if len(visibleLines) > 0 {
+			visibleLines[len(visibleLines)-1] = scrollInfo
+		}
+	}
+
+	return strings.Join(visibleLines, "\n")
 }

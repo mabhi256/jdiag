@@ -15,6 +15,8 @@ type KeyMap struct {
 	Reconnect     key.Binding
 	Enter         key.Binding
 	Escape        key.Binding
+	PageUp        key.Binding
+	PageDown      key.Binding
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
@@ -40,4 +42,21 @@ var keys = KeyMap{
 	Reconnect:     key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "reconnect")),
 	Enter:         key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 	Escape:        key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
+	PageUp:        key.NewBinding(key.WithKeys("pgup"), key.WithHelp("pgup", "page up")),
+	PageDown:      key.NewBinding(key.WithKeys("pgdown"), key.WithHelp("pgdown", "page down")),
+}
+
+func (m *Model) scrollUp(lines int) {
+	currentPos := m.scrollPositions[m.activeTab]
+	newPos := currentPos - lines
+	if newPos < 0 {
+		newPos = 0
+	}
+	m.scrollPositions[m.activeTab] = newPos
+}
+
+func (m *Model) scrollDown(lines int) {
+	currentPos := m.scrollPositions[m.activeTab]
+	m.scrollPositions[m.activeTab] = currentPos + lines
+	// Max scroll validation happens in applyScrolling()
 }
