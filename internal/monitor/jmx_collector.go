@@ -173,6 +173,10 @@ func (jc *JMXCollector) collectMemoryMetrics(metrics *JVMSnapshot) error {
 
 		objectName, nameOk := pool["ObjectName"].(string)
 		if !nameOk {
+			// Try lowercase objectName (this is what the Java client actually uses)
+			objectName, nameOk = pool["objectName"].(string)
+		}
+		if !nameOk {
 			continue
 		}
 
@@ -186,6 +190,16 @@ func (jc *JMXCollector) collectMemoryMetrics(metrics *JVMSnapshot) error {
 
 		// Categorize by generation based on pool name
 		poolName := extractPoolName(objectName)
+
+		// If ObjectName extraction failed, try alternative methods
+		if poolName == "" {
+			// Try to get name from other fields that might be available
+			if name, exists := pool["Name"].(string); exists {
+				poolName = name
+			} else if name, exists := pool["name"].(string); exists {
+				poolName = name
+			}
+		}
 
 		if isYoungGenPool(poolName) {
 			metrics.YoungUsed += int64(used)
@@ -215,6 +229,10 @@ func (jc *JMXCollector) collectGCMetrics(metrics *JVMSnapshot) error {
 
 	for _, gc := range gcs {
 		objectName, nameOk := gc["ObjectName"].(string)
+		if !nameOk {
+			// Try lowercase objectName (this is what the Java client actually uses)
+			objectName, nameOk = gc["objectName"].(string)
+		}
 		count, countOk := gc["CollectionCount"].(float64)
 		time, timeOk := gc["CollectionTime"].(float64)
 
@@ -223,6 +241,16 @@ func (jc *JMXCollector) collectGCMetrics(metrics *JVMSnapshot) error {
 		}
 
 		gcName := extractGCName(objectName)
+
+		// If ObjectName extraction failed, try alternative methods
+		if gcName == "" {
+			// Try to get name from other fields that might be available
+			if name, exists := gc["Name"].(string); exists {
+				gcName = name
+			} else if name, exists := gc["name"].(string); exists {
+				gcName = name
+			}
+		}
 
 		if isYoungGenGC(gcName) {
 			metrics.YoungGCCount += int64(count)
@@ -337,18 +365,42 @@ func (jc *JMXCollector) updateMetrics(metrics *JVMSnapshot) {
 // Helper functions for categorizing memory pools and GC collectors
 
 func extractPoolName(objectName string) string {
+	// If objectName is empty, return empty
+	if objectName == "" {
+		return ""
+	}
+
 	// Extract name from "java.lang:type=MemoryPool,name=PoolName"
 	if idx := strings.Index(objectName, "name="); idx != -1 {
-		return objectName[idx+5:]
+		name := objectName[idx+5:]
+		// Remove any trailing parameters
+		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
+			name = name[:commaIdx]
+		}
+		return name
 	}
+
+	// Fallback: return the whole objectName
 	return objectName
 }
 
 func extractGCName(objectName string) string {
+	// If objectName is empty, return empty
+	if objectName == "" {
+		return ""
+	}
+
 	// Extract name from "java.lang:type=GarbageCollector,name=CollectorName"
 	if idx := strings.Index(objectName, "name="); idx != -1 {
-		return objectName[idx+5:]
+		name := objectName[idx+5:]
+		// Remove any trailing parameters
+		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
+			name = name[:commaIdx]
+		}
+		return name
 	}
+
+	// Fallback: return the whole objectName
 	return objectName
 }
 
@@ -359,7 +411,10 @@ func isYoungGenPool(poolName string) bool {
 		strings.Contains(lowerName, "young") ||
 		strings.Contains(lowerName, "nursery") ||
 		strings.Contains(lowerName, "s0") ||
-		strings.Contains(lowerName, "s1")
+		strings.Contains(lowerName, "s1") ||
+		// G1GC specific pool names
+		strings.Contains(lowerName, "g1 eden") ||
+		strings.Contains(lowerName, "g1 survivor")
 }
 
 func isOldGenPool(poolName string) bool {
@@ -367,7 +422,9 @@ func isOldGenPool(poolName string) bool {
 	return strings.Contains(lowerName, "old") ||
 		strings.Contains(lowerName, "tenured") ||
 		strings.Contains(lowerName, "cms") ||
-		strings.Contains(lowerName, "g1 old")
+		// G1GC specific pool names
+		strings.Contains(lowerName, "g1 old") ||
+		strings.Contains(lowerName, "g1 old gen")
 }
 
 func isYoungGenGC(gcName string) bool {
@@ -377,7 +434,13 @@ func isYoungGenGC(gcName string) bool {
 		strings.Contains(lowerName, "scavenge") ||
 		strings.Contains(lowerName, "parnew") ||
 		strings.Contains(lowerName, "ps scavenge") ||
-		strings.Contains(lowerName, "g1 young")
+		// G1GC specific collector names
+		strings.Contains(lowerName, "g1 young") ||
+		strings.Contains(lowerName, "g1 young generation") ||
+		// Sometimes the name might just be "g1" for young collections
+		(strings.Contains(lowerName, "g1") &&
+			!strings.Contains(lowerName, "old") &&
+			!strings.Contains(lowerName, "mixed"))
 }
 
 func isOldGenGC(gcName string) bool {
@@ -387,8 +450,11 @@ func isOldGenGC(gcName string) bool {
 		strings.Contains(lowerName, "marksweep") ||
 		strings.Contains(lowerName, "parallel old") ||
 		strings.Contains(lowerName, "ps marksweep") ||
+		// G1GC specific collector names
 		strings.Contains(lowerName, "g1 old") ||
-		strings.Contains(lowerName, "g1 mixed")
+		strings.Contains(lowerName, "g1 old generation") ||
+		strings.Contains(lowerName, "g1 mixed") ||
+		strings.Contains(lowerName, "g1 concurrent")
 }
 
 // Test the JMX connection
