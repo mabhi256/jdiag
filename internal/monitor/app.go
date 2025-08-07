@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -14,27 +13,6 @@ import (
 	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/mabhi256/jdiag/utils"
 )
-
-// processItem represents a Java process in the selection list
-type processItem struct {
-	process *JavaProcess
-}
-
-func (i processItem) FilterValue() string {
-	return fmt.Sprintf("%d %s", i.process.PID, i.process.MainClass)
-}
-
-func (i processItem) Title() string {
-	title := fmt.Sprintf("PID %d: %s", i.process.PID, i.process.MainClass)
-	if len(title) > 50 {
-		title = title[:47] + "..."
-	}
-	return title
-}
-
-func (i processItem) Description() string {
-	return ""
-}
 
 // The main TUI model
 type Model struct {
@@ -116,106 +94,60 @@ func triggerImmediateTick() tea.Cmd {
 	return func() tea.Msg { return TickMsg(time.Now()) }
 }
 
-func (m *Model) refreshProcessList() {
-	processes, err := DiscoverJavaProcesses()
-	if err != nil {
-		m.setError(fmt.Sprintf("Failed to discover processes: %v", err))
-		return
-	}
-
-	// Sort processes by PID
-	sort.Slice(processes, func(i, j int) bool {
-		return processes[i].PID < processes[j].PID
-	})
-
-	items := make([]list.Item, len(processes))
-	for i, proc := range processes {
-		items[i] = processItem{process: proc}
-	}
-
-	m.processList.SetItems(items)
-}
-
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.help.Width = msg.Width
-
-		if m.processMode {
-			m.processList.SetWidth(msg.Width)
-			m.processList.SetHeight(msg.Height - 4) // Leave space for header and footer
-		}
-
-		return m, nil
-
-	case TickMsg:
-		if m.processMode {
-			// Refresh list
-			m.refreshProcessList()
-		} else {
-			// Metrics collection and processing
-			metrics := m.collector.GetMetrics()
-			m.tabState = m.metricsProcessor.ProcessMetrics(metrics)
-
-			// Track connection status
-			if metrics.Connected && !m.connected {
-				m.connected = true
-				m.clearError()
-			} else if !metrics.Connected && m.connected {
-				m.connected = false
-				if metrics.Error != nil {
-					m.setError(fmt.Sprintf("Connection lost: %v", metrics.Error))
-				} else {
-					m.setError("Connection lost to JVM")
-				}
-			}
-
-			if metrics.Connected {
-				m.lastUpdate = time.Now()
-				m.updateCount++
-				m.tabState.System.ConnectionUptime = time.Since(m.startTime)
-				m.tabState.System.UpdateCount = m.updateCount
-			}
-		}
-
-		// Always schedule the next tick
-		return m, m.scheduleTick()
-
-	case tea.KeyMsg:
+	// Handle global keys first (before mode-specific logic)
+	if msg, ok := msg.(tea.KeyMsg); ok {
 		if key.Matches(msg, keys.Quit) {
 			if m.collector != nil {
 				m.collector.Stop()
 			}
 			return m, tea.Quit
 		}
+	}
 
-		// Process mode specific keys
-		if m.processMode {
-			switch {
-			case m.processMode && key.Matches(msg, keys.Enter):
-				if selectedItem := m.processList.SelectedItem(); selectedItem != nil {
-					if procItem, ok := selectedItem.(processItem); ok {
-						return m.selectProcess(procItem.process)
-					}
-				}
+	// Handles ALL process mode logic
+	if m.processMode {
+		return m.handleProcessModeUpdate(msg)
+	}
 
-			case m.processMode && key.Matches(msg, keys.Escape):
-				// ESC in process mode - go back to monitoring if we had selected a process previously
-				if m.selectedProcess != nil {
-					m.processMode = false
-					// return m, nil // Mode changed, next tick will use metrics interval
-				}
+	// Monitoring mode specific keys
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.help.Width = msg.Width
+
+		return m, nil
+
+	case TickMsg:
+		// Metrics collection and processing
+		metrics := m.collector.GetMetrics()
+		m.tabState = m.metricsProcessor.ProcessMetrics(metrics)
+
+		// Track connection status
+		if metrics.Connected && !m.connected {
+			m.connected = true
+			m.clearError()
+		} else if !metrics.Connected && m.connected {
+			m.connected = false
+			if metrics.Error != nil {
+				m.setError(fmt.Sprintf("Connection lost: %v", metrics.Error))
+			} else {
+				m.setError("Connection lost to JVM")
 			}
-
-			// Handle list navigation in process mode (for arrow keys, filtering, etc.)
-			var cmd tea.Cmd
-			m.processList, cmd = m.processList.Update(msg)
-			return m, cmd
 		}
 
-		// Monitoring mode specific keys
+		if metrics.Connected {
+			m.lastUpdate = time.Now()
+			m.updateCount++
+			m.tabState.System.ConnectionUptime = time.Since(m.startTime)
+			m.tabState.System.UpdateCount = m.updateCount
+		}
+
+		// Always schedule the next tick
+		return m, m.scheduleTick()
+
+	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Tab):
 			m.activeTab = m.nextTab()
@@ -270,47 +202,6 @@ func (m *Model) nextTab() TabType {
 func (m *Model) prevTab() TabType {
 	// utils.CycleEnumPtr(&m.activeTab, -1, TabSystem)
 	return utils.GetPrevEnum(m.activeTab, TabSystem)
-}
-
-func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
-	// Try to enable JMX first
-	if err := EnableJMXForProcess(process.PID); err != nil {
-		m.setError(fmt.Sprintf("JMX not enabled for PID %d.", process.PID))
-		return m, nil
-	}
-
-	// Update configuration and switch to monitoring mode
-	m.config.PID = process.PID
-	m.config.Host = ""
-	m.config.Port = 0
-	m.selectedProcess = process
-	m.processMode = false
-	m.clearError()
-
-	// Reset start time for new monitoring session
-	m.startTime = time.Now()
-	m.updateCount = 0
-
-	// Update system state with process info
-	m.tabState.System.ProcessName = process.MainClass
-
-	// Reinitialize the collector with new config
-	if m.collector != nil {
-		m.collector.Stop()
-	}
-	m.collector = NewJMXCollector(m.config)
-
-	// Reset metrics for new session
-	m.metricsProcessor = NewMetricsProcessor()
-
-	// Start monitoring
-	if err := m.collector.Start(); err != nil {
-		m.setError(fmt.Sprintf("Failed to connect to process %d: %v", process.PID, err))
-		m.processMode = true
-		return m, nil
-	}
-
-	return m, triggerImmediateTick()
 }
 
 func (m *Model) reconnect() (tea.Model, tea.Cmd) {
@@ -406,29 +297,6 @@ func (m *Model) renderActiveTab() string {
 	}
 }
 
-func (m *Model) renderProcessSelectionView() string {
-	header := tui.HeaderStyle.Width(m.width).Render("🔍 Select Java Process to Monitor")
-
-	// Process list
-	listView := m.processList.View() // Triggers Title(), Description(), FilterValue()
-
-	// Status bar
-	statusText := fmt.Sprintf("Found %d Java processes", len(m.processList.Items()))
-	if m.showError {
-		statusText = m.errorMessage
-	}
-	statusView := tui.StatusBarStyle.Width(m.width).Render(statusText)
-
-	separatorLine := strings.Repeat("─", m.width)
-
-	return lipgloss.JoinVertical(lipgloss.Left,
-		header,
-		tui.MutedStyle.Render(separatorLine),
-		listView,
-		statusView,
-	)
-}
-
 func (m *Model) renderHeader() string {
 	// Build title
 	var title string
@@ -504,49 +372,4 @@ func (m *Model) Init() tea.Cmd {
 	}
 
 	return triggerImmediateTick()
-}
-
-func (m *Model) applyScrolling(content string, viewportHeight int) string {
-	lines := strings.Split(content, "\n")
-	totalLines := len(lines)
-
-	// No scrolling needed if content fits
-	if totalLines <= viewportHeight {
-		return content
-	}
-
-	// Get current scroll position for active tab
-	scrollPos := m.scrollPositions[m.activeTab]
-
-	// Ensure scroll position is valid
-	maxScroll := totalLines - viewportHeight
-	if scrollPos > maxScroll {
-		scrollPos = maxScroll
-		m.scrollPositions[m.activeTab] = scrollPos
-	}
-	if scrollPos < 0 {
-		scrollPos = 0
-		m.scrollPositions[m.activeTab] = scrollPos
-	}
-
-	// Extract visible lines
-	endPos := scrollPos + viewportHeight
-	visibleLines := lines[scrollPos:endPos]
-
-	// Add scroll indicator if content is scrolled
-	if scrollPos > 0 || endPos < totalLines {
-		// Replace last line with scroll indicator
-		scrollInfo := fmt.Sprintf("%s (Line %d-%d of %d) %s",
-			tui.MutedStyle.Render("▲"),
-			scrollPos+1,
-			endPos,
-			totalLines,
-			tui.MutedStyle.Render("▼"))
-
-		if len(visibleLines) > 0 {
-			visibleLines[len(visibleLines)-1] = scrollInfo
-		}
-	}
-
-	return strings.Join(visibleLines, "\n")
 }

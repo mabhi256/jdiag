@@ -45,18 +45,3 @@ var keys = KeyMap{
 	PageUp:        key.NewBinding(key.WithKeys("pgup"), key.WithHelp("pgup", "page up")),
 	PageDown:      key.NewBinding(key.WithKeys("pgdown"), key.WithHelp("pgdown", "page down")),
 }
-
-func (m *Model) scrollUp(lines int) {
-	currentPos := m.scrollPositions[m.activeTab]
-	newPos := currentPos - lines
-	if newPos < 0 {
-		newPos = 0
-	}
-	m.scrollPositions[m.activeTab] = newPos
-}
-
-func (m *Model) scrollDown(lines int) {
-	currentPos := m.scrollPositions[m.activeTab]
-	m.scrollPositions[m.activeTab] = currentPos + lines
-	// Max scroll validation happens in applyScrolling()
-}
