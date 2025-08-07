@@ -1,4 +1,4 @@
-package java_sample;
+// package java_sample;
 
 import java.util.ArrayList;
 import java.util.List;

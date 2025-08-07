@@ -36,3 +36,4 @@ go.work.sum
 /internal/html/dist
 /*.html
 /node_modules
+/java_sample/*.class

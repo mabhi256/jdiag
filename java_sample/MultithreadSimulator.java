@@ -1,4 +1,4 @@
-package java_sample;
+// package java_sample;
 
 import java.util.Random;
 import java.util.concurrent.*;
