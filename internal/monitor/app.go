@@ -15,44 +15,6 @@ import (
 	"github.com/mabhi256/jdiag/utils"
 )
 
-// KeyMap defines the key bindings
-type KeyMap struct {
-	Up            key.Binding
-	Down          key.Binding
-	Left          key.Binding
-	Right         key.Binding
-	Tab           key.Binding
-	Refresh       key.Binding
-	Quit          key.Binding
-	SelectProcess key.Binding
-	EnableJMX     key.Binding
-	Reconnect     key.Binding
-}
-
-func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Tab, k.Refresh, k.Quit}
-}
-
-func (k KeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right},
-		{k.Tab, k.Refresh, k.SelectProcess, k.Reconnect, k.Quit},
-	}
-}
-
-var keys = KeyMap{
-	Up:            key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
-	Down:          key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
-	Left:          key.NewBinding(key.WithKeys("left", "h"), key.WithHelp("←/h", "left")),
-	Right:         key.NewBinding(key.WithKeys("right", "l"), key.WithHelp("→/l", "right")),
-	Tab:           key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "switch view")),
-	Refresh:       key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "refresh")),
-	Quit:          key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
-	SelectProcess: key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "select process")),
-	EnableJMX:     key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "enable JMX")),
-	Reconnect:     key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "reconnect")),
-}
-
 type tickMsg time.Time
 type metricsMsg *JVMSnapshot
 type refreshProcessListMsg struct{}
@@ -146,21 +108,7 @@ func initialModel(config *Config) *Model {
 	return m
 }
 
-func (m *Model) Init() tea.Cmd {
-	if m.processMode {
-		return tea.Batch(
-			m.refreshProcessListCmd(),
-			tea.Tick(5*time.Second, func(time.Time) tea.Msg {
-				return refreshProcessListMsg{}
-			}),
-		)
-	}
-
-	// Start the collector for direct monitoring
-	if err := m.collector.Start(); err != nil {
-		m.lastError = err
-	}
-
+func (m *Model) startMonitoringCommands() tea.Cmd {
 	return tea.Batch(
 		tea.Tick(m.config.GetInterval(), func(t time.Time) tea.Msg {
 			return tickMsg(t)
@@ -168,6 +116,15 @@ func (m *Model) Init() tea.Cmd {
 		func() tea.Msg {
 			return metricsMsg(m.collector.GetMetrics())
 		},
+	)
+}
+
+func (m *Model) startProcessModeCommands() tea.Cmd {
+	return tea.Batch(
+		m.refreshProcessListCmd(),
+		tea.Tick(5*time.Second, func(time.Time) tea.Msg {
+			return refreshProcessListMsg{}
+		}),
 	)
 }
 
@@ -221,17 +178,39 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		if m.processMode {
-			return m.updateProcessMode(msg)
-		}
-
-		switch {
-		case key.Matches(msg, keys.Quit):
+		if key.Matches(msg, keys.Quit) {
 			if m.collector != nil {
 				m.collector.Stop()
 			}
 			return m, tea.Quit
+		}
 
+		// Process mode specific keys
+		if m.processMode {
+			switch {
+			case m.processMode && key.Matches(msg, keys.Enter):
+				if selectedItem := m.processList.SelectedItem(); selectedItem != nil {
+					if procItem, ok := selectedItem.(processItem); ok {
+						return m.selectProcess(procItem.process)
+					}
+				}
+
+			case m.processMode && key.Matches(msg, keys.Escape):
+				// ESC in process mode - go back to monitoring if we had selected a process previously
+				if m.selectedProcess != nil {
+					m.processMode = false
+					return m, nil
+				}
+			}
+
+			// Handle list navigation in process mode (for arrow keys, filtering, etc.)
+			var cmd tea.Cmd
+			m.processList, cmd = m.processList.Update(msg)
+			return m, cmd
+		}
+
+		// Monitoring mode specific keys
+		switch {
 		case key.Matches(msg, keys.Tab):
 			m.activeTab = m.nextTab()
 			return m, nil
@@ -313,36 +292,6 @@ func (m *Model) prevTab() TabType {
 	return utils.GetPrevEnum(m.activeTab, TabSystem)
 }
 
-func (m *Model) updateProcessMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, keys.Quit):
-		return m, tea.Quit
-
-	case key.Matches(msg, key.NewBinding(key.WithKeys("enter"))):
-		if selectedItem := m.processList.SelectedItem(); selectedItem != nil {
-			if procItem, ok := selectedItem.(processItem); ok {
-				return m.selectProcess(procItem.process)
-			}
-		}
-
-	case key.Matches(msg, keys.EnableJMX):
-		if selectedItem := m.processList.SelectedItem(); selectedItem != nil {
-			if procItem, ok := selectedItem.(processItem); ok {
-				return m.enableJMXForProcess(procItem.process)
-			}
-		}
-
-	case key.Matches(msg, key.NewBinding(key.WithKeys("esc"))):
-		if !m.processMode {
-			return m, tea.Quit
-		}
-	}
-
-	var cmd tea.Cmd
-	m.processList, cmd = m.processList.Update(msg)
-	return m, cmd
-}
-
 func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 	if !process.JMXEnabled {
 		// Try to enable JMX first
@@ -379,7 +328,7 @@ func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 	}
 	m.collector = NewJMXCollector(m.config)
 
-	// Reset advanced metrics for new session
+	// Reset metrics for new session
 	m.metricsProcessor = NewMetricsProcessor()
 
 	// Start monitoring
@@ -389,18 +338,7 @@ func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return m, m.Init()
-}
-
-func (m *Model) enableJMXForProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
-	if err := EnableJMXForProcess(process.PID); err != nil {
-		m.setError(fmt.Sprintf("Failed to enable JMX: %v", err))
-	} else {
-		m.setError(fmt.Sprintf("JMX enabled for process %d", process.PID))
-		// Refresh the process list
-		m.refreshProcessList()
-	}
-	return m, nil
+	return m, m.startMonitoringCommands()
 }
 
 func (m *Model) reconnect() (tea.Model, tea.Cmd) {
@@ -418,7 +356,7 @@ func (m *Model) reconnect() (tea.Model, tea.Cmd) {
 		m.startTime = time.Now()
 	}
 
-	return m, m.Init()
+	return m, m.startMonitoringCommands()
 }
 
 func (m *Model) setError(message string) {
@@ -486,13 +424,11 @@ func (m *Model) renderActiveTab() string {
 }
 
 func (m *Model) renderProcessSelectionView() string {
-	// Header
 	header := tui.HeaderStyle.Width(m.width).Render("🔍 Select Java Process to Monitor")
 
 	// Process list
-	listView := m.processList.View()
+	listView := m.processList.View() // Triggers Title(), Description(), FilterValue()
 
-	// Instructions
 	instructions := []string{
 		"Enter: Connect to selected process",
 		"e: Enable JMX for selected process",
@@ -600,4 +536,17 @@ func StartTUI(config *Config) error {
 	}
 
 	return nil
+}
+
+func (m *Model) Init() tea.Cmd {
+	if m.processMode {
+		return m.startProcessModeCommands()
+	}
+
+	// Start the collector for direct monitoring
+	if err := m.collector.Start(); err != nil {
+		m.lastError = err
+	}
+
+	return m.startMonitoringCommands()
 }
