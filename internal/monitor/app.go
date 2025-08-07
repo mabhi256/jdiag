@@ -15,10 +15,6 @@ import (
 	"github.com/mabhi256/jdiag/utils"
 )
 
-type tickMsg time.Time
-type metricsMsg *JVMSnapshot
-type refreshProcessListMsg struct{}
-
 // processItem represents a Java process in the selection list
 type processItem struct {
 	process *JavaProcess
@@ -108,30 +104,21 @@ func initialModel(config *Config) *Model {
 	return m
 }
 
-func (m *Model) startMonitoringCommands() tea.Cmd {
-	return tea.Batch(
-		tea.Tick(m.config.GetInterval(), func(t time.Time) tea.Msg {
-			return tickMsg(t)
-		}),
-		func() tea.Msg {
-			return metricsMsg(m.collector.GetMetrics())
-		},
-	)
-}
+type TickMsg time.Time
 
-func (m *Model) startProcessModeCommands() tea.Cmd {
-	return tea.Batch(
-		m.refreshProcessListCmd(),
-		tea.Tick(5*time.Second, func(time.Time) tea.Msg {
-			return refreshProcessListMsg{}
-		}),
-	)
-}
-
-func (m *Model) refreshProcessListCmd() tea.Cmd {
-	return func() tea.Msg {
-		return refreshProcessListMsg{}
+func (m *Model) scheduleTick() tea.Cmd {
+	interval := m.config.GetInterval() // Default metrics interval
+	if m.processMode {
+		interval = 5 * time.Second // Process refresh interval
 	}
+
+	return tea.Tick(interval, func(t time.Time) tea.Msg {
+		return TickMsg(t)
+	})
+}
+
+func triggerImmediateTick() tea.Cmd {
+	return func() tea.Msg { return TickMsg(time.Now()) }
 }
 
 func (m *Model) refreshProcessList() {
@@ -168,14 +155,38 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case refreshProcessListMsg:
+	case TickMsg:
 		if m.processMode {
+			// Refresh list
 			m.refreshProcessList()
-			return m, tea.Tick(5*time.Second, func(time.Time) tea.Msg {
-				return refreshProcessListMsg{}
-			})
+		} else {
+			// Metrics collection and processing
+			metrics := m.collector.GetMetrics()
+			m.tabState = m.metricsProcessor.ProcessMetrics(metrics)
+
+			// Track connection status
+			if metrics.Connected && !m.connected {
+				m.connected = true
+				m.clearError()
+			} else if !metrics.Connected && m.connected {
+				m.connected = false
+				if metrics.Error != nil {
+					m.setError(fmt.Sprintf("Connection lost: %v", metrics.Error))
+				} else {
+					m.setError("Connection lost to JVM")
+				}
+			}
+
+			if metrics.Connected {
+				m.lastUpdate = time.Now()
+				m.updateCount++
+				m.tabState.System.ConnectionUptime = time.Since(m.startTime)
+				m.tabState.System.UpdateCount = m.updateCount
+			}
 		}
-		return m, nil
+
+		// Always schedule the next tick
+		return m, m.scheduleTick()
 
 	case tea.KeyMsg:
 		if key.Matches(msg, keys.Quit) {
@@ -199,7 +210,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// ESC in process mode - go back to monitoring if we had selected a process previously
 				if m.selectedProcess != nil {
 					m.processMode = false
-					return m, nil
+					// return m, nil // Mode changed, next tick will use metrics interval
 				}
 			}
 
@@ -226,57 +237,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.SelectProcess):
 			m.processMode = true
 			m.refreshProcessList()
-			return m, m.refreshProcessListCmd()
+			// return m, m.doProcessTick() // Start process ticking
 
 		case key.Matches(msg, keys.Reconnect):
 			return m.reconnect()
 
 		case key.Matches(msg, keys.Refresh):
-			return m, func() tea.Msg {
-				return metricsMsg(m.collector.GetMetrics())
-			}
+			// Trigger immediate tick
+			return m, triggerImmediateTick()
 		}
-
-	case tickMsg:
-		if !m.processMode {
-			return m, tea.Batch(
-				tea.Tick(m.config.GetInterval(), func(t time.Time) tea.Msg {
-					return tickMsg(t)
-				}),
-				func() tea.Msg {
-					return metricsMsg(m.collector.GetMetrics())
-				},
-			)
-		}
-
-	case metricsMsg:
-		if !m.processMode {
-			metrics := (*JVMSnapshot)(msg)
-
-			// m.tabState.UpdateFromMetrics(metrics)
-			m.tabState = m.metricsProcessor.ProcessMetrics(metrics)
-
-			// Track connection status
-			if metrics.Connected && !m.connected {
-				m.connected = true
-				m.clearError()
-			} else if !metrics.Connected && m.connected {
-				m.connected = false
-				if metrics.Error != nil {
-					m.setError(fmt.Sprintf("Connection lost: %v", metrics.Error))
-				} else {
-					m.setError("Connection lost to JVM")
-				}
-			}
-
-			if metrics.Connected {
-				m.lastUpdate = time.Now()
-				m.updateCount++
-				m.tabState.System.ConnectionUptime = time.Since(m.startTime)
-				m.tabState.System.UpdateCount = m.updateCount
-			}
-		}
-		return m, nil
 	}
 
 	return m, nil
@@ -338,7 +307,7 @@ func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return m, m.startMonitoringCommands()
+	return m, triggerImmediateTick()
 }
 
 func (m *Model) reconnect() (tea.Model, tea.Cmd) {
@@ -356,7 +325,8 @@ func (m *Model) reconnect() (tea.Model, tea.Cmd) {
 		m.startTime = time.Now()
 	}
 
-	return m, m.startMonitoringCommands()
+	// Get immediate data after reconnect
+	return m, triggerImmediateTick()
 }
 
 func (m *Model) setError(message string) {
@@ -539,14 +509,12 @@ func StartTUI(config *Config) error {
 }
 
 func (m *Model) Init() tea.Cmd {
-	if m.processMode {
-		return m.startProcessModeCommands()
+	if !m.processMode {
+		// Start the collector for direct monitoring
+		if err := m.collector.Start(); err != nil {
+			m.lastError = err
+		}
 	}
 
-	// Start the collector for direct monitoring
-	if err := m.collector.Start(); err != nil {
-		m.lastError = err
-	}
-
-	return m.startMonitoringCommands()
+	return triggerImmediateTick()
 }
