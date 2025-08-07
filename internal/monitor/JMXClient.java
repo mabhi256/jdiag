@@ -1,5 +1,6 @@
 
 import com.sun.tools.attach.*;
+import java.io.File;
 import java.util.*;
 import javax.management.*;
 import javax.management.openmbean.CompositeData;
@@ -52,13 +53,36 @@ public class JMXClient {
                     .getProperty(localConnectorProperty);
 
             if (addr == null) {
-                vm.loadAgent(vm.getSystemProperties().getProperty("java.home")
-                        + "/lib/management-agent.jar");
-                addr = vm.getAgentProperties().getProperty(localConnectorProperty);
+                // Try to start the management agent
+                // First try Java 9+ path
+                try {
+                    vm.startManagementAgent(null);
+                    addr = vm.getAgentProperties().getProperty(localConnectorProperty);
+                } catch (Exception e) {
+                    // Fallback for older Java versions (Java 8 and below)
+                    String javaHome = vm.getSystemProperties().getProperty("java.home");
+                    String agentPath = javaHome + File.separator + "lib" + File.separator + "management-agent.jar";
+
+                    // Check if the agent file exists
+                    File agentFile = new File(agentPath);
+                    if (!agentFile.exists()) {
+                        // Try alternative location (some JDK distributions)
+                        agentPath = javaHome + File.separator + "jre" + File.separator + "lib" + File.separator
+                                + "management-agent.jar";
+                        agentFile = new File(agentPath);
+                    }
+
+                    if (agentFile.exists()) {
+                        vm.loadAgent(agentPath);
+                        addr = vm.getAgentProperties().getProperty(localConnectorProperty);
+                    } else {
+                        throw new RuntimeException("Management agent not found. Tried: " + agentPath);
+                    }
+                }
             }
 
             if (addr == null) {
-                throw new RuntimeException("Failed to get JMX connector address");
+                throw new RuntimeException("Failed to get JMX connector address after loading agent");
             }
 
             return addr;
@@ -114,7 +138,7 @@ public class JMXClient {
         if (value instanceof CompositeData cd) {
             Map<String, Object> map = new HashMap<>();
             for (String key : cd.getCompositeType().keySet()) {
-                map.put(key, convertValue(cd.get(key)));  // Recursively convert nested values
+                map.put(key, convertValue(cd.get(key))); // Recursively convert nested values
             }
             return map;
         }

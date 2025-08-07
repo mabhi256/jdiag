@@ -21,7 +21,7 @@ type processItem struct {
 }
 
 func (i processItem) FilterValue() string {
-	return fmt.Sprintf("%d %s %s", i.process.PID, i.process.MainClass, i.process.User)
+	return fmt.Sprintf("%d %s", i.process.PID, i.process.MainClass)
 }
 
 func (i processItem) Title() string {
@@ -33,15 +33,7 @@ func (i processItem) Title() string {
 }
 
 func (i processItem) Description() string {
-	jmxStatus := "❌ JMX Disabled"
-	if i.process.JMXEnabled {
-		jmxStatus = "✅ JMX Enabled"
-		if i.process.JMXPort > 0 {
-			jmxStatus += fmt.Sprintf(" (port %d)", i.process.JMXPort)
-		}
-	}
-
-	return fmt.Sprintf("User: %s | %s", i.process.User, jmxStatus)
+	return ""
 }
 
 // The main TUI model
@@ -262,17 +254,10 @@ func (m *Model) prevTab() TabType {
 }
 
 func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
-	if !process.JMXEnabled {
-		// Try to enable JMX first
-		if err := EnableJMXForProcess(process.PID); err != nil {
-			m.setError(fmt.Sprintf("JMX not enabled for PID %d. Try running with sudo or enable JMX on the target application.", process.PID))
-			return m, nil
-		}
-
-		// Refresh process info after enabling JMX
-		if updatedProcess, err := GetProcessByPID(process.PID); err == nil {
-			process = updatedProcess
-		}
+	// Try to enable JMX first
+	if err := EnableJMXForProcess(process.PID); err != nil {
+		m.setError(fmt.Sprintf("JMX not enabled for PID %d.", process.PID))
+		return m, nil
 	}
 
 	// Update configuration and switch to monitoring mode
@@ -289,7 +274,6 @@ func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 
 	// Update system state with process info
 	m.tabState.System.ProcessName = process.MainClass
-	m.tabState.System.ProcessUser = process.User
 
 	// Reinitialize the collector with new config
 	if m.collector != nil {
@@ -401,7 +385,6 @@ func (m *Model) renderProcessSelectionView() string {
 
 	instructions := []string{
 		"Enter: Connect to selected process",
-		"e: Enable JMX for selected process",
 		"q: Quit",
 	}
 

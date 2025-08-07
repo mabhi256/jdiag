@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -36,12 +35,9 @@ func GetAllTabs() []TabType {
 
 // A discovered Java process
 type JavaProcess struct {
-	PID        int    `json:"pid"`
-	MainClass  string `json:"mainClass"`
-	User       string `json:"user"`
-	JMXEnabled bool   `json:"jmxEnabled"`
-	JMXPort    int    `json:"jmxPort,omitempty"`
-	Args       string `json:"args,omitempty"`
+	PID       int    `json:"pid"`
+	MainClass string `json:"mainClass"`
+	Args      string `json:"args,omitempty"`
 }
 
 // The current JVM metrics snapshot
@@ -300,21 +296,4 @@ func (c *Config) String() string {
 	}
 
 	return "No target specified"
-}
-
-type JMXClient struct {
-	connectionURL string // JMX service URL
-	pid           int    // Process ID for local attachment
-	tempDir       string // Temporary directory for generated Java code
-	javaPath      string // Path to Java executable
-}
-
-type JMXCollector struct {
-	config   *Config
-	client   *JMXClient
-	metrics  *JVMSnapshot
-	mu       sync.RWMutex
-	running  bool
-	stopChan chan struct{}
-	errChan  chan error
 }

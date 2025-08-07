@@ -3,8 +3,19 @@ package monitor
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 )
+
+type JMXCollector struct {
+	config   *Config
+	client   *JMXClient
+	metrics  *JVMSnapshot
+	mu       sync.RWMutex
+	running  bool
+	stopChan chan struct{}
+	errChan  chan error
+}
 
 func NewJMXCollector(config *Config) *JMXCollector {
 	return &JMXCollector{
@@ -34,12 +45,6 @@ func (jc *JMXCollector) Start() error {
 
 	if err != nil {
 		return fmt.Errorf("failed to create JMX client: %w", err)
-	}
-
-	// Test connection
-	if err := jc.client.TestConnection(); err != nil {
-		jc.client.Close()
-		return fmt.Errorf("failed to connect to JMX: %w", err)
 	}
 
 	jc.running = true
@@ -96,35 +101,22 @@ func (jc *JMXCollector) collectMetrics() {
 		Connected: false,
 	}
 
-	// Collect all metrics
-	if err := jc.collectMemoryMetrics(metrics); err != nil {
-		metrics.Error = err
-		jc.updateMetrics(metrics)
-		return
+	// Define all collection functions
+	collectors := []func(*JVMSnapshot) error{
+		jc.collectMemoryMetrics,
+		jc.collectGCMetrics,
+		jc.collectThreadMetrics,
+		jc.collectOSMetrics,
+		jc.collectRuntimeMetrics,
 	}
 
-	if err := jc.collectGCMetrics(metrics); err != nil {
-		metrics.Error = err
-		jc.updateMetrics(metrics)
-		return
-	}
-
-	if err := jc.collectThreadMetrics(metrics); err != nil {
-		metrics.Error = err
-		jc.updateMetrics(metrics)
-		return
-	}
-
-	if err := jc.collectOSMetrics(metrics); err != nil {
-		metrics.Error = err
-		jc.updateMetrics(metrics)
-		return
-	}
-
-	if err := jc.collectRuntimeMetrics(metrics); err != nil {
-		metrics.Error = err
-		jc.updateMetrics(metrics)
-		return
+	// Execute all collectors
+	for _, collect := range collectors {
+		if err := collect(metrics); err != nil {
+			metrics.Error = err
+			jc.updateMetrics(metrics)
+			return
+		}
 	}
 
 	metrics.Connected = true

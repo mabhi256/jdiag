@@ -11,6 +11,13 @@ import (
 	"strings"
 )
 
+type JMXClient struct {
+	pid           int    // Process ID for local attachment
+	connectionURL string // JMX service URL
+	tempDir       string // Temporary directory for generated Java code
+	javaPath      string // Path to Java executable
+}
+
 //go:embed JMXClient.java
 var jmxClientSource string
 
@@ -169,4 +176,19 @@ func (c *JMXClient) TestConnection() error {
 	// Try to query the Runtime MBean to test connectivity
 	_, err := c.QueryMBean("java.lang:type=Runtime", []string{"Name"})
 	return err
+}
+
+func EnableJMXForProcess(pid int) error {
+	cmd := exec.Command("jcmd", strconv.Itoa(pid), "ManagementAgent.start_local")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to enable JMX for process %d: %w", pid, err)
+	}
+
+	outputStr := string(output)
+	if strings.Contains(outputStr, "Started") || strings.Contains(outputStr, "successfully") {
+		return nil
+	}
+
+	return fmt.Errorf("failed to enable JMX: %s", outputStr)
 }
