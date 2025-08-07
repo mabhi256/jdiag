@@ -107,12 +107,12 @@ type Model struct {
 	selectedProcess *JavaProcess
 
 	// Error state
-	lastError      error
-	errorMessage   string
-	showError      bool
-	connectionLost bool
+	lastError    error
+	errorMessage string
+	showError    bool
 
 	// Status tracking
+	connected   bool
 	lastUpdate  time.Time
 	updateCount int64
 	startTime   time.Time
@@ -135,6 +135,7 @@ func initialModel(config *Config) *Model {
 		tabState:         NewTabState(),
 		processList:      processList,
 		processMode:      config.PID == 0 && config.Host == "", // Start in process mode if no target specified
+		connected:        false,
 		startTime:        time.Now(),
 	}
 
@@ -277,11 +278,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tabState = m.metricsProcessor.ProcessMetrics(metrics)
 
 			// Track connection status
-			if metrics.Connected && m.connectionLost {
-				m.connectionLost = false
+			if metrics.Connected && !m.connected {
+				m.connected = true
 				m.clearError()
-			} else if !metrics.Connected && !m.connectionLost {
-				m.connectionLost = true
+			} else if !metrics.Connected && m.connected {
+				m.connected = false
 				if metrics.Error != nil {
 					m.setError(fmt.Sprintf("Connection lost: %v", metrics.Error))
 				} else {
@@ -412,7 +413,7 @@ func (m *Model) reconnect() (tea.Model, tea.Cmd) {
 		m.setError(fmt.Sprintf("Reconnection failed: %v", err))
 	} else {
 		m.clearError()
-		m.connectionLost = false
+		m.connected = true
 		// Reset start time on reconnect
 		m.startTime = time.Now()
 	}
@@ -446,16 +447,9 @@ func (m *Model) View() string {
 		return errorOverlay
 	}
 
-	// Header
 	header := m.renderHeader()
-
-	// Tab bar
 	tabBar := m.renderTabBar()
-
-	// Content based on active tab
 	content := m.renderActiveTab()
-
-	// Help
 	helpView := m.help.View(keys)
 
 	// Calculate available height for content
@@ -470,7 +464,7 @@ func (m *Model) View() string {
 }
 
 func (m *Model) renderActiveTab() string {
-	if m.connectionLost {
+	if !m.connected {
 		if m.errorMessage != "" {
 			return tui.CriticalStyle.Render(fmt.Sprintf("Connection error: %s", m.errorMessage))
 		}
@@ -543,13 +537,7 @@ func (m *Model) renderHeader() string {
 	var status string
 	var statusStyle lipgloss.Style
 
-	if m.connectionLost {
-		status = "🔴 Disconnected"
-		statusStyle = tui.CriticalStyle
-		if m.errorMessage != "" {
-			status = fmt.Sprintf("🔴 Error: %s", m.errorMessage)
-		}
-	} else {
+	if m.connected {
 		uptime := time.Since(m.lastUpdate)
 		status = fmt.Sprintf("🟢 Connected • Updates: %d • Uptime: %s",
 			m.updateCount,
@@ -558,6 +546,12 @@ func (m *Model) renderHeader() string {
 		if m.errorMessage != "" {
 			status = fmt.Sprintf("⚠️ Connected (Warning: %s)", m.errorMessage)
 			statusStyle = tui.WarningStyle
+		}
+	} else {
+		status = "🔴 Disconnected"
+		statusStyle = tui.CriticalStyle
+		if m.errorMessage != "" {
+			status = fmt.Sprintf("🔴 Error: %s", m.errorMessage)
 		}
 	}
 
