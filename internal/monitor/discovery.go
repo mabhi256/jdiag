@@ -63,31 +63,36 @@ func DiscoverJavaProcesses() ([]*JavaProcess, error) {
 }
 
 func shouldSkipProcess(mainClass string) bool {
-	// Skip processes with unavailable information
-	if strings.Contains(mainClass, "-- process information unavailable") ||
-		strings.HasPrefix(mainClass, "--") {
+	mainClass = strings.TrimSpace(mainClass)
+
+	// Skip if empty
+	if mainClass == "" {
 		return true
 	}
 
-	// Skip if main class is empty or just whitespace
-	if strings.TrimSpace(mainClass) == "" {
+	// Skip if starts with --
+	if strings.HasPrefix(mainClass, "--") {
 		return true
 	}
 
 	// Skip VSCode extensions
-	if strings.Contains(mainClass, ".vscode") &&
-		strings.Contains(mainClass, "extensions") {
+	if strings.Contains(mainClass, ".vscode") && strings.Contains(mainClass, "extensions") {
 		return true
 	}
 
-	// Skip jps itself
-	if strings.Contains(mainClass, "sun.tools.jps.Jps") {
-		return true
+	// Skip common tools and unavailable processes
+	skipPatterns := []string{
+		"sun.tools.jps.Jps",
+		"jcmd",
+		"JMXClient",
+		"-- process information unavailable",
+		"org.eclipse.equinox.launcher",
 	}
 
-	// Skip Eclipse launcher (common IDE process)
-	if strings.Contains(mainClass, "org.eclipse.equinox.launcher") {
-		return true
+	for _, pattern := range skipPatterns {
+		if strings.Contains(mainClass, pattern) {
+			return true
+		}
 	}
 
 	return false
