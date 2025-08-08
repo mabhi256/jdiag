@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mabhi256/jdiag/internal/jmx"
 	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/mabhi256/jdiag/utils"
 
@@ -11,7 +12,7 @@ import (
 )
 
 // Render renders the system tab view
-func RenderSystemTab(state *TabState, config *Config, width int) string {
+func RenderSystemTab(state *TabState, config *jmx.Config, width int) string {
 	var sections []string
 
 	// System overview
@@ -229,7 +230,7 @@ func renderJVMInfo(system *SystemState) string {
 }
 
 // renderConnectionInfo shows connection and monitoring statistics
-func renderConnectionInfo(system *SystemState, config *Config) string {
+func renderConnectionInfo(system *SystemState, config *jmx.Config) string {
 	var connectionLines []string
 
 	// Target information

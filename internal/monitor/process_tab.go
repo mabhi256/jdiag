@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mabhi256/jdiag/internal/jmx"
 	"github.com/mabhi256/jdiag/internal/tui"
 )
 
@@ -58,7 +59,7 @@ func (m *Model) refreshProcessList() {
 // selectProcess handles process selection and switches to monitoring mode
 func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 	// Try to enable JMX first
-	if err := EnableJMXForProcess(process.PID); err != nil {
+	if err := jmx.EnableJMXForProcess(process.PID); err != nil {
 		m.setError(fmt.Sprintf("JMX not enabled for PID %d", process.PID))
 		return m, nil
 	}
@@ -82,7 +83,7 @@ func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 	if m.collector != nil {
 		m.collector.Stop()
 	}
-	m.collector = NewJMXCollector(m.config)
+	m.collector = jmx.NewJMXCollector(m.config)
 
 	// Reset metrics for new session
 	m.metricsProcessor = NewMetricsProcessor()

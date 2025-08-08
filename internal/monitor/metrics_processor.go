@@ -3,6 +3,7 @@ package monitor
 import (
 	"time"
 
+	"github.com/mabhi256/jdiag/internal/jmx"
 	"github.com/mabhi256/jdiag/utils"
 )
 
@@ -12,7 +13,7 @@ type MetricsProcessor struct {
 	gcTracker   *GCEventTracker
 	alertEngine *AlertEngine
 
-	lastMetrics         *JVMSnapshot
+	lastMetrics         *jmx.JVMSnapshot
 	startTime           time.Time
 	lastAllocationCheck time.Time
 	lastHeapUsed        int64
@@ -29,7 +30,7 @@ func NewMetricsProcessor() *MetricsProcessor {
 }
 
 // ProcessMetrics takes raw JVM metrics and produces enriched TabState
-func (mp *MetricsProcessor) ProcessMetrics(metrics *JVMSnapshot) *TabState {
+func (mp *MetricsProcessor) ProcessMetrics(metrics *jmx.JVMSnapshot) *TabState {
 	if !metrics.Connected {
 		return NewTabState()
 	}
@@ -57,7 +58,7 @@ func (mp *MetricsProcessor) ProcessMetrics(metrics *JVMSnapshot) *TabState {
 }
 
 // updateHistoricalData adds current metrics to time-series storage
-func (mp *MetricsProcessor) updateHistoricalData(metrics *JVMSnapshot) {
+func (mp *MetricsProcessor) updateHistoricalData(metrics *jmx.JVMSnapshot) {
 	now := metrics.Timestamp
 
 	// Heap usage percentage
@@ -135,7 +136,7 @@ func (mp *MetricsProcessor) calculateTrendSlope(points []utils.HistoryPoint, win
 }
 
 // calculateGCOverhead computes percentage of time spent in GC
-func (mp *MetricsProcessor) calculateGCOverhead(metrics *JVMSnapshot) float64 {
+func (mp *MetricsProcessor) calculateGCOverhead(metrics *jmx.JVMSnapshot) float64 {
 	uptime := time.Since(mp.startTime)
 	totalGCTime := time.Duration(metrics.YoungGCTime+metrics.OldGCTime) * time.Millisecond
 
@@ -147,7 +148,7 @@ func (mp *MetricsProcessor) calculateGCOverhead(metrics *JVMSnapshot) float64 {
 }
 
 // calculateAllocationRate estimates memory allocation rate in bytes/second
-func (mp *MetricsProcessor) calculateAllocationRate(metrics *JVMSnapshot) float64 {
+func (mp *MetricsProcessor) calculateAllocationRate(metrics *jmx.JVMSnapshot) float64 {
 	now := metrics.Timestamp
 
 	// Need baseline measurement
@@ -180,7 +181,7 @@ func (mp *MetricsProcessor) calculateAllocationRate(metrics *JVMSnapshot) float6
 }
 
 // buildTabState constructs complete TabState with basic metrics + analytics
-func (mp *MetricsProcessor) buildTabState(metrics *JVMSnapshot, trends map[string]float64, gcOverhead float64) *TabState {
+func (mp *MetricsProcessor) buildTabState(metrics *jmx.JVMSnapshot, trends map[string]float64, gcOverhead float64) *TabState {
 	state := NewTabState()
 
 	// === Memory State ===

@@ -3,6 +3,8 @@ package monitor
 import (
 	"sync"
 	"time"
+
+	"github.com/mabhi256/jdiag/internal/jmx"
 )
 
 type GCEventTracker struct {
@@ -23,7 +25,7 @@ func NewGCEventTracker() *GCEventTracker {
 	}
 }
 
-func (get *GCEventTracker) ProcessGCMetrics(metrics *JVMSnapshot) {
+func (get *GCEventTracker) ProcessGCMetrics(metrics *jmx.JVMSnapshot) {
 	get.mu.Lock()
 	defer get.mu.Unlock()
 

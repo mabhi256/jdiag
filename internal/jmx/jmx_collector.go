@@ -1,4 +1,4 @@
-package monitor
+package jmx
 
 import (
 	"encoding/json"
@@ -8,6 +8,38 @@ import (
 	"sync"
 	"time"
 )
+
+type Config struct {
+	// Target configuration
+	PID  int    // Process ID for local monitoring
+	Host string // Host for remote monitoring
+	Port int    // Port for remote monitoring
+
+	Interval int // Update interval in ms
+
+	// Debug configuration
+	Debug        bool   // Enable debug mode
+	DebugLogFile string // Path to debug log file
+}
+
+func (c *Config) GetInterval() time.Duration {
+	return time.Duration(c.Interval) * time.Millisecond
+}
+
+func (c *Config) String() string {
+	if c.PID != 0 {
+		return fmt.Sprintf("PID %d", c.PID)
+	}
+
+	if c.Host != "" {
+		if c.Port != 0 {
+			return fmt.Sprintf("%s:%d", c.Host, c.Port)
+		}
+		return c.Host
+	}
+
+	return "No target specified"
+}
 
 type JMXCollector struct {
 	config             *Config
@@ -89,10 +121,14 @@ func (jc *JMXCollector) Start() error {
 
 	// Create original JMX client
 	var err error
-	if jc.config.IsLocalMonitoring() {
+	if jc.config.PID != 0 {
 		jc.client, err = NewJMXClient(jc.config.PID, "")
 	} else {
-		jc.client, err = NewJMXClient(0, jc.config.GetJMXConnectionURL())
+		// Standard JMX service URL format
+		host := jc.config.Host
+		port := jc.config.Port
+		url := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", host, port)
+		jc.client, err = NewJMXClient(0, url)
 	}
 
 	if err != nil {
@@ -1215,24 +1251,6 @@ func (jc *JMXCollector) updateMetrics(metrics *JVMSnapshot) {
 func (jc *JMXCollector) TestConnection() error {
 	client := jc.getEffectiveClient()
 	return client.TestConnection()
-}
-
-func (c *Config) GetJMXConnectionURL() string {
-	if c.Host == "" || c.Port == 0 {
-		return ""
-	}
-
-	// Standard JMX service URL format
-	url := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", c.Host, c.Port)
-	return url
-}
-
-func (c *Config) IsRemoteMonitoring() bool {
-	return c.Host != "" && c.Port != 0
-}
-
-func (c *Config) IsLocalMonitoring() bool {
-	return c.PID != 0
 }
 
 // Debug logging method to show available attributes

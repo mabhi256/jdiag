@@ -5,6 +5,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/mabhi256/jdiag/internal/jmx"
 )
 
 type AlertEngine struct {
@@ -35,7 +37,7 @@ func NewAlertEngine() *AlertEngine {
 	}
 }
 
-func (ae *AlertEngine) AnalyzeMetrics(metrics *JVMSnapshot, trends map[string]float64, gcOverhead float64, gcTracker *GCEventTracker) {
+func (ae *AlertEngine) AnalyzeMetrics(metrics *jmx.JVMSnapshot, trends map[string]float64, gcOverhead float64, gcTracker *GCEventTracker) {
 	ae.mu.Lock()
 	defer ae.mu.Unlock()
 

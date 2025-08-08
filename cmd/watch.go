@@ -5,12 +5,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mabhi256/jdiag/internal/jmx"
 	"github.com/mabhi256/jdiag/internal/monitor"
 	"github.com/spf13/cobra"
 )
 
 var (
 	interval int
+	debug    bool
 )
 
 var watchCmd = &cobra.Command{
@@ -52,7 +54,7 @@ Examples:
 		return completions, cobra.ShellCompDirectiveNoFileComp
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		config := &monitor.Config{
+		config := &jmx.Config{
 			Interval: interval,
 		}
 
@@ -71,7 +73,7 @@ Examples:
 			}
 		}
 
-		config.Debug = true
+		config.Debug = debug
 		err := monitor.StartTUI(config)
 		if err != nil {
 			return fmt.Errorf("unable to start TUI: %w", err)
@@ -85,6 +87,7 @@ func init() {
 	rootCmd.AddCommand(watchCmd)
 
 	watchCmd.Flags().IntVarP(&interval, "interval", "i", 1000, "Update interval im ms")
+	watchCmd.Flags().BoolVarP(&debug, "debug", "d", false, "Enable debug mode")
 }
 
 func parseHostPort(arg string) (string, int, error) {

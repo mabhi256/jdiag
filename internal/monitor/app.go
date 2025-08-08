@@ -10,14 +10,15 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mabhi256/jdiag/internal/jmx"
 	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/mabhi256/jdiag/utils"
 )
 
 // The main TUI model
 type Model struct {
-	config           *Config
-	collector        *JMXCollector
+	config           *jmx.Config
+	collector        *jmx.JMXCollector
 	metricsProcessor *MetricsProcessor
 	help             help.Model
 
@@ -48,7 +49,7 @@ type Model struct {
 	startTime   time.Time
 }
 
-func initialModel(config *Config) *Model {
+func initialModel(config *jmx.Config) *Model {
 	// Create process list
 	items := []list.Item{}
 	processList := list.New(items, list.NewDefaultDelegate(), 0, 0)
@@ -58,7 +59,7 @@ func initialModel(config *Config) *Model {
 
 	m := &Model{
 		config:           config,
-		collector:        NewJMXCollector(config),
+		collector:        jmx.NewJMXCollector(config),
 		metricsProcessor: NewMetricsProcessor(),
 		help:             help.New(),
 		activeTab:        TabMemory,
@@ -209,7 +210,7 @@ func (m *Model) reconnect() (tea.Model, tea.Cmd) {
 		m.collector.Stop()
 	}
 
-	m.collector = NewJMXCollector(m.config)
+	m.collector = jmx.NewJMXCollector(m.config)
 	if err := m.collector.Start(); err != nil {
 		m.setError(fmt.Sprintf("Reconnection failed: %v", err))
 	} else {
@@ -346,7 +347,7 @@ func (m *Model) renderTabBar() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 }
 
-func StartTUI(config *Config) error {
+func StartTUI(config *jmx.Config) error {
 	model := initialModel(config)
 
 	program := tea.NewProgram(
