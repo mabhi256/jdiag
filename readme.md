@@ -343,3 +343,46 @@ Use sensible pause time target default
 │                 │◀───│                 │◀───│  ├─ThreadMBean  │
 │                 │    │                 │    │  └─RuntimeMBean │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+
+GC Metrics
+
+GC Cause - Why each GC was triggered (allocation failure, G1 humongous allocation, etc.)
+Memory Before/After GC - Heap usage before and after each collection
+GC Efficiency - How much memory was actually freed
+Pause Time Details - Individual phase timings for G1GC
+Collection Efficiency Ratio - Memory freed vs time spent
+
+Memory Metrics
+
+Peak Memory Usage - MemoryPoolMXBean.getPeakUsage() for each pool
+Collection Usage - MemoryPoolMXBean.getCollectionUsage() (memory after last GC)
+Memory Pool Thresholds - Usage threshold crossing events
+Buffer Pool Metrics - Direct and mapped buffer usage (off-heap memory)
+Memory Allocation Rate - Eden space allocation speed
+
+Thread Metrics
+
+Blocked/Waiting Thread Counts - ThreadMXBean.findMonitorDeadlockedThreads()
+Deadlock Detection - Critical for troubleshooting hangs
+Thread CPU Time - Per-thread CPU usage
+Thread Contention - Lock contention statistics
+
+JVM Configuration
+
+JVM Arguments - RuntimeMXBean.getInputArguments() (crucial for troubleshooting)
+System Properties - Key properties like java.version, GC settings, etc.
+Compilation Statistics - JIT compiler metrics from CompilationMXBean
+
+G1GC-Specific Metrics
+
+Region Information - Total regions, used regions, region size
+Humongous Object Statistics - Large object allocations
+Concurrent Mark Cycle - Concurrent marking progress
+Mixed Collection Details - Old generation cleanup efficiency
+
+System Metrics
+
+File Descriptor Usage - Open file handles (Unix systems)
+Process Memory Details - RSS, Virtual memory size
+Code Cache Utilization - Detailed code cache pool metrics
+Safepoint Statistics - JVM pause information

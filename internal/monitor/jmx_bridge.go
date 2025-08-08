@@ -141,9 +141,9 @@ func (c *JMXClient) executeJMXQueryPattern(pattern string, attributes []string) 
 }
 
 // QueryMBean queries a specific MBean and returns attributes as JSON
-func (c *JMXClient) QueryMBean(objectName string, attributes []string) (map[string]any, error) {
+func (c *JMXClient) QueryMBean(objectName string) (map[string]any, error) {
 	// Use our custom JMX client to query the MBean
-	output, err := c.executeJMXQuery(objectName, attributes)
+	output, err := c.executeJMXQuery(objectName, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +157,8 @@ func (c *JMXClient) QueryMBean(objectName string, attributes []string) (map[stri
 }
 
 // QueryMBeanPattern queries multiple MBeans matching a pattern
-func (c *JMXClient) QueryMBeanPattern(pattern string, attributes []string) ([]map[string]any, error) {
-	output, err := c.executeJMXQueryPattern(pattern, attributes)
+func (c *JMXClient) QueryMBeanPattern(pattern string) ([]map[string]any, error) {
+	output, err := c.executeJMXQueryPattern(pattern, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (c *JMXClient) QueryMBeanPattern(pattern string, attributes []string) ([]ma
 // TestConnection tests if we can connect to the JMX service
 func (c *JMXClient) TestConnection() error {
 	// Try to query the Runtime MBean to test connectivity
-	_, err := c.QueryMBean("java.lang:type=Runtime", []string{"Name"})
+	_, err := c.QueryMBean("java.lang:type=Runtime")
 	return err
 }
 
