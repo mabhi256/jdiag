@@ -1,24 +1,44 @@
+// internal/monitor/jmx_collector.go - Simple fix that overrides the client methods
 package monitor
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
 )
 
 type JMXCollector struct {
-	config   *Config
-	client   *JMXClient
-	metrics  *JVMSnapshot
-	mu       sync.RWMutex
-	running  bool
-	stopChan chan struct{}
-	errChan  chan error
+	config      *Config
+	client      *JMXClient
+	debugClient *DebugJMXClient // Wrapper for debug logging
+	metrics     *JVMSnapshot
+	mu          sync.RWMutex
+	running     bool
+	stopChan    chan struct{}
+	errChan     chan error
+	debugFile   *os.File
+}
+
+// DebugJMXClient wraps the original JMXClient to add debug logging
+type DebugJMXClient struct {
+	originalClient *JMXClient
+	debugFile      *os.File
+	enabled        bool
+}
+
+type DebugLogEntry struct {
+	Timestamp time.Time   `json:"timestamp"`
+	MBeanName string      `json:"mbean_name"`
+	QueryType string      `json:"query_type"`
+	RawData   interface{} `json:"raw_data"`
+	Error     string      `json:"error,omitempty"`
 }
 
 func NewJMXCollector(config *Config) *JMXCollector {
-	return &JMXCollector{
+	collector := &JMXCollector{
 		config: config,
 		metrics: &JVMSnapshot{
 			Timestamp: time.Now(),
@@ -27,6 +47,37 @@ func NewJMXCollector(config *Config) *JMXCollector {
 		stopChan: make(chan struct{}),
 		errChan:  make(chan error, 1),
 	}
+
+	// Initialize debug logging if enabled
+	if config.Debug {
+		if err := collector.initDebugLogging(); err != nil {
+			fmt.Printf("Warning: Failed to initialize debug logging: %v\n", err)
+		}
+	}
+
+	return collector
+}
+
+func (jc *JMXCollector) initDebugLogging() error {
+	if jc.config.DebugLogFile == "" {
+		timestamp := time.Now().Format("20060102_150405")
+		jc.config.DebugLogFile = fmt.Sprintf("jmx_debug_%s.log", timestamp)
+	}
+
+	file, err := os.OpenFile(jc.config.DebugLogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open debug log file: %w", err)
+	}
+
+	jc.debugFile = file
+
+	// Write debug session header
+	header := fmt.Sprintf("=== JMX Debug Session Started at %s ===\n", time.Now().Format(time.RFC3339))
+	if _, err := jc.debugFile.WriteString(header); err != nil {
+		return fmt.Errorf("failed to write debug header: %w", err)
+	}
+
+	return nil
 }
 
 // Start metric collection
@@ -35,7 +86,7 @@ func (jc *JMXCollector) Start() error {
 		return fmt.Errorf("collector already running")
 	}
 
-	// Create JMX client
+	// Create original JMX client
 	var err error
 	if jc.config.IsLocalMonitoring() {
 		jc.client, err = NewJMXClient(jc.config.PID, "")
@@ -47,12 +98,101 @@ func (jc *JMXCollector) Start() error {
 		return fmt.Errorf("failed to create JMX client: %w", err)
 	}
 
+	// Create debug wrapper if debug mode is enabled
+	if jc.config.Debug && jc.debugFile != nil {
+		jc.debugClient = &DebugJMXClient{
+			originalClient: jc.client,
+			debugFile:      jc.debugFile,
+			enabled:        true,
+		}
+	}
+
 	jc.running = true
 
 	// Start collection goroutine
 	go jc.collectLoop()
 
 	return nil
+}
+
+// QueryMBean with automatic debug logging
+func (dc *DebugJMXClient) QueryMBean(objectName string, attributes []string) (map[string]any, error) {
+	data, err := dc.originalClient.QueryMBean(objectName, attributes)
+
+	if dc.enabled {
+		dc.logDebugData(objectName, "single", data, err)
+	}
+
+	return data, err
+}
+
+// QueryMBeanPattern with automatic debug logging
+func (dc *DebugJMXClient) QueryMBeanPattern(pattern string, attributes []string) ([]map[string]any, error) {
+	data, err := dc.originalClient.QueryMBeanPattern(pattern, attributes)
+
+	if dc.enabled {
+		// Convert slice to interface{} for logging
+		dc.logDebugData(pattern, "pattern", data, err)
+	}
+
+	return data, err
+}
+
+// TestConnection with debug logging
+func (dc *DebugJMXClient) TestConnection() error {
+	err := dc.originalClient.TestConnection()
+
+	if dc.enabled {
+		dc.logDebugData("java.lang:type=Runtime", "test_connection", map[string]interface{}{"connection_test": true}, err)
+	}
+
+	return err
+}
+
+// Close method for debug client
+func (dc *DebugJMXClient) Close() error {
+	return dc.originalClient.Close()
+}
+
+func (dc *DebugJMXClient) logDebugData(mbeanName, queryType string, data interface{}, err error) {
+	if dc.debugFile == nil {
+		return
+	}
+
+	entry := DebugLogEntry{
+		Timestamp: time.Now(),
+		MBeanName: mbeanName,
+		QueryType: queryType,
+		RawData:   data,
+	}
+
+	if err != nil {
+		entry.Error = err.Error()
+	}
+
+	jsonData, marshalErr := json.MarshalIndent(entry, "", "  ")
+	if marshalErr != nil {
+		fallbackLog := fmt.Sprintf("[%s] ERROR: Failed to marshal debug data for %s: %v\n",
+			entry.Timestamp.Format(time.RFC3339), mbeanName, marshalErr)
+		dc.debugFile.WriteString(fallbackLog)
+		return
+	}
+
+	dc.debugFile.WriteString(string(jsonData) + "\n")
+	dc.debugFile.Sync()
+}
+
+// getEffectiveClient returns the debug client if available, otherwise the original client
+func (jc *JMXCollector) getEffectiveClient() interface {
+	QueryMBean(string, []string) (map[string]any, error)
+	QueryMBeanPattern(string, []string) ([]map[string]any, error)
+	TestConnection() error
+	Close() error
+} {
+	if jc.debugClient != nil {
+		return jc.debugClient
+	}
+	return jc.client
 }
 
 // Stop metric collection
@@ -67,6 +207,13 @@ func (jc *JMXCollector) Stop() {
 	if jc.client != nil {
 		jc.client.Close()
 	}
+
+	if jc.debugFile != nil {
+		footer := fmt.Sprintf("=== JMX Debug Session Ended at %s ===\n", time.Now().Format(time.RFC3339))
+		jc.debugFile.WriteString(footer)
+		jc.debugFile.Close()
+		jc.debugFile = nil
+	}
 }
 
 // Get the current snapshot
@@ -74,7 +221,6 @@ func (jc *JMXCollector) GetMetrics() *JVMSnapshot {
 	jc.mu.RLock()
 	defer jc.mu.RUnlock()
 
-	// Return a copy to avoid race conditions
 	metricsCopy := *jc.metrics
 	return &metricsCopy
 }
@@ -101,7 +247,6 @@ func (jc *JMXCollector) collectMetrics() {
 		Connected: false,
 	}
 
-	// Define all collection functions
 	collectors := []func(*JVMSnapshot) error{
 		jc.collectMemoryMetrics,
 		jc.collectGCMetrics,
@@ -110,7 +255,6 @@ func (jc *JMXCollector) collectMetrics() {
 		jc.collectRuntimeMetrics,
 	}
 
-	// Execute all collectors
 	for _, collect := range collectors {
 		if err := collect(metrics); err != nil {
 			metrics.Error = err
@@ -123,10 +267,14 @@ func (jc *JMXCollector) collectMetrics() {
 	jc.updateMetrics(metrics)
 }
 
-// Collect memory-related metrics
+// IMPORTANT: Replace all your existing collection methods with these updated versions
+// that use the effective client (which will be the debug client if debug is enabled)
+
 func (jc *JMXCollector) collectMemoryMetrics(metrics *JVMSnapshot) error {
+	client := jc.getEffectiveClient()
+
 	// Heap memory
-	heapMemory, err := jc.client.QueryMBean("java.lang:type=Memory",
+	heapMemory, err := client.QueryMBean("java.lang:type=Memory",
 		[]string{"HeapMemoryUsage", "NonHeapMemoryUsage"})
 	if err != nil {
 		return fmt.Errorf("failed to query heap memory: %w", err)
@@ -156,8 +304,8 @@ func (jc *JMXCollector) collectMemoryMetrics(metrics *JVMSnapshot) error {
 		}
 	}
 
-	// Memory pools for generation-specific metrics
-	pools, err := jc.client.QueryMBeanPattern("java.lang:type=MemoryPool,name=*",
+	// Memory pools
+	pools, err := client.QueryMBeanPattern("java.lang:type=MemoryPool,name=*",
 		[]string{"Usage", "Type"})
 	if err != nil {
 		return fmt.Errorf("failed to query memory pools: %w", err)
@@ -173,7 +321,6 @@ func (jc *JMXCollector) collectMemoryMetrics(metrics *JVMSnapshot) error {
 
 		objectName, nameOk := pool["ObjectName"].(string)
 		if !nameOk {
-			// Try lowercase objectName (this is what the Java client actually uses)
 			objectName, nameOk = pool["objectName"].(string)
 		}
 		if !nameOk {
@@ -188,12 +335,8 @@ func (jc *JMXCollector) collectMemoryMetrics(metrics *JVMSnapshot) error {
 			continue
 		}
 
-		// Categorize by generation based on pool name
 		poolName := extractPoolName(objectName)
-
-		// If ObjectName extraction failed, try alternative methods
 		if poolName == "" {
-			// Try to get name from other fields that might be available
 			if name, exists := pool["Name"].(string); exists {
 				poolName = name
 			} else if name, exists := pool["name"].(string); exists {
@@ -219,9 +362,10 @@ func (jc *JMXCollector) collectMemoryMetrics(metrics *JVMSnapshot) error {
 	return nil
 }
 
-// Collect garbage collection metrics
 func (jc *JMXCollector) collectGCMetrics(metrics *JVMSnapshot) error {
-	gcs, err := jc.client.QueryMBeanPattern("java.lang:type=GarbageCollector,name=*",
+	client := jc.getEffectiveClient()
+
+	gcs, err := client.QueryMBeanPattern("java.lang:type=GarbageCollector,name=*",
 		[]string{"CollectionCount", "CollectionTime"})
 	if err != nil {
 		return fmt.Errorf("failed to query GC metrics: %w", err)
@@ -230,7 +374,6 @@ func (jc *JMXCollector) collectGCMetrics(metrics *JVMSnapshot) error {
 	for _, gc := range gcs {
 		objectName, nameOk := gc["ObjectName"].(string)
 		if !nameOk {
-			// Try lowercase objectName (this is what the Java client actually uses)
 			objectName, nameOk = gc["objectName"].(string)
 		}
 		count, countOk := gc["CollectionCount"].(float64)
@@ -241,10 +384,7 @@ func (jc *JMXCollector) collectGCMetrics(metrics *JVMSnapshot) error {
 		}
 
 		gcName := extractGCName(objectName)
-
-		// If ObjectName extraction failed, try alternative methods
 		if gcName == "" {
-			// Try to get name from other fields that might be available
 			if name, exists := gc["Name"].(string); exists {
 				gcName = name
 			} else if name, exists := gc["name"].(string); exists {
@@ -264,10 +404,10 @@ func (jc *JMXCollector) collectGCMetrics(metrics *JVMSnapshot) error {
 	return nil
 }
 
-// Collect thread-related metrics
 func (jc *JMXCollector) collectThreadMetrics(metrics *JVMSnapshot) error {
-	// Thread metrics
-	threading, err := jc.client.QueryMBean("java.lang:type=Threading",
+	client := jc.getEffectiveClient()
+
+	threading, err := client.QueryMBean("java.lang:type=Threading",
 		[]string{"ThreadCount", "PeakThreadCount", "DaemonThreadCount"})
 	if err != nil {
 		return fmt.Errorf("failed to query thread metrics: %w", err)
@@ -280,8 +420,7 @@ func (jc *JMXCollector) collectThreadMetrics(metrics *JVMSnapshot) error {
 		metrics.PeakThreadCount = int64(peak)
 	}
 
-	// Class loading metrics
-	classLoading, err := jc.client.QueryMBean("java.lang:type=ClassLoading",
+	classLoading, err := client.QueryMBean("java.lang:type=ClassLoading",
 		[]string{"LoadedClassCount", "UnloadedClassCount", "TotalLoadedClassCount"})
 	if err != nil {
 		return fmt.Errorf("failed to query class loading metrics: %w", err)
@@ -297,10 +436,12 @@ func (jc *JMXCollector) collectThreadMetrics(metrics *JVMSnapshot) error {
 	return nil
 }
 
-// Collect OS metrics
 func (jc *JMXCollector) collectOSMetrics(metrics *JVMSnapshot) error {
-	osInfo, err := jc.client.QueryMBean("java.lang:type=OperatingSystem",
-		[]string{"ProcessCpuLoad", "SystemCpuLoad", "AvailableProcessors", "TotalPhysicalMemorySize", "FreePhysicalMemorySize", "SystemLoadAverage"})
+	client := jc.getEffectiveClient()
+
+	osInfo, err := client.QueryMBean("java.lang:type=OperatingSystem",
+		[]string{"ProcessCpuLoad", "SystemCpuLoad", "AvailableProcessors",
+			"TotalPhysicalMemorySize", "FreePhysicalMemorySize", "SystemLoadAverage"})
 	if err != nil {
 		return fmt.Errorf("failed to query CPU metrics: %w", err)
 	}
@@ -328,14 +469,14 @@ func (jc *JMXCollector) collectOSMetrics(metrics *JVMSnapshot) error {
 }
 
 func (jc *JMXCollector) collectRuntimeMetrics(metrics *JVMSnapshot) error {
-	// Runtime information
-	runtime, err := jc.client.QueryMBean("java.lang:type=Runtime",
+	client := jc.getEffectiveClient()
+
+	runtime, err := client.QueryMBean("java.lang:type=Runtime",
 		[]string{"Name", "VmName", "VmVendor", "VmVersion", "StartTime", "Uptime"})
 	if err != nil {
 		return fmt.Errorf("failed to query runtime metrics: %w", err)
 	}
 
-	// Extract runtime information
 	if name, ok := runtime["VmName"].(string); ok {
 		metrics.JVMName = name
 	}
@@ -355,128 +496,30 @@ func (jc *JMXCollector) collectRuntimeMetrics(metrics *JVMSnapshot) error {
 	return nil
 }
 
-// Updates the current metrics
 func (jc *JMXCollector) updateMetrics(metrics *JVMSnapshot) {
 	jc.mu.Lock()
 	defer jc.mu.Unlock()
 	jc.metrics = metrics
 }
 
-// Helper functions for categorizing memory pools and GC collectors
-
-func extractPoolName(objectName string) string {
-	// If objectName is empty, return empty
-	if objectName == "" {
-		return ""
-	}
-
-	// Extract name from "java.lang:type=MemoryPool,name=PoolName"
-	if idx := strings.Index(objectName, "name="); idx != -1 {
-		name := objectName[idx+5:]
-		// Remove any trailing parameters
-		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
-			name = name[:commaIdx]
-		}
-		return name
-	}
-
-	// Fallback: return the whole objectName
-	return objectName
-}
-
-func extractGCName(objectName string) string {
-	// If objectName is empty, return empty
-	if objectName == "" {
-		return ""
-	}
-
-	// Extract name from "java.lang:type=GarbageCollector,name=CollectorName"
-	if idx := strings.Index(objectName, "name="); idx != -1 {
-		name := objectName[idx+5:]
-		// Remove any trailing parameters
-		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
-			name = name[:commaIdx]
-		}
-		return name
-	}
-
-	// Fallback: return the whole objectName
-	return objectName
-}
-
-func isYoungGenPool(poolName string) bool {
-	lowerName := strings.ToLower(poolName)
-	return strings.Contains(lowerName, "eden") ||
-		strings.Contains(lowerName, "survivor") ||
-		strings.Contains(lowerName, "young") ||
-		strings.Contains(lowerName, "nursery") ||
-		strings.Contains(lowerName, "s0") ||
-		strings.Contains(lowerName, "s1") ||
-		// G1GC specific pool names
-		strings.Contains(lowerName, "g1 eden") ||
-		strings.Contains(lowerName, "g1 survivor")
-}
-
-func isOldGenPool(poolName string) bool {
-	lowerName := strings.ToLower(poolName)
-	return strings.Contains(lowerName, "old") ||
-		strings.Contains(lowerName, "tenured") ||
-		strings.Contains(lowerName, "cms") ||
-		// G1GC specific pool names
-		strings.Contains(lowerName, "g1 old") ||
-		strings.Contains(lowerName, "g1 old gen")
-}
-
-func isYoungGenGC(gcName string) bool {
-	lowerName := strings.ToLower(gcName)
-	return strings.Contains(lowerName, "young") ||
-		strings.Contains(lowerName, "copy") ||
-		strings.Contains(lowerName, "scavenge") ||
-		strings.Contains(lowerName, "parnew") ||
-		strings.Contains(lowerName, "ps scavenge") ||
-		// G1GC specific collector names
-		strings.Contains(lowerName, "g1 young") ||
-		strings.Contains(lowerName, "g1 young generation") ||
-		// Sometimes the name might just be "g1" for young collections
-		(strings.Contains(lowerName, "g1") &&
-			!strings.Contains(lowerName, "old") &&
-			!strings.Contains(lowerName, "mixed"))
-}
-
-func isOldGenGC(gcName string) bool {
-	lowerName := strings.ToLower(gcName)
-	return strings.Contains(lowerName, "old") ||
-		strings.Contains(lowerName, "cms") ||
-		strings.Contains(lowerName, "marksweep") ||
-		strings.Contains(lowerName, "parallel old") ||
-		strings.Contains(lowerName, "ps marksweep") ||
-		// G1GC specific collector names
-		strings.Contains(lowerName, "g1 old") ||
-		strings.Contains(lowerName, "g1 old generation") ||
-		strings.Contains(lowerName, "g1 mixed") ||
-		strings.Contains(lowerName, "g1 concurrent")
-}
-
-// Test the JMX connection
 func (jc *JMXCollector) TestConnection() error {
-	if jc.client == nil {
-		return fmt.Errorf("no JMX client initialized")
-	}
-
-	return jc.client.TestConnection()
+	client := jc.getEffectiveClient()
+	return client.TestConnection()
 }
 
-// Checks if the collector is currently running
 func (jc *JMXCollector) IsRunning() bool {
 	return jc.running
 }
 
-// Get info about the current connection
 func (jc *JMXCollector) GetConnectionInfo() map[string]any {
 	info := make(map[string]any)
 
 	info["running"] = jc.running
 	info["config"] = jc.config.String()
+	info["debug_enabled"] = jc.config.Debug
+	if jc.config.Debug {
+		info["debug_log_file"] = jc.config.DebugLogFile
+	}
 	info["target_type"] = "unknown"
 
 	if jc.config.IsLocalMonitoring() {
@@ -499,6 +542,83 @@ func (jc *JMXCollector) GetConnectionInfo() map[string]any {
 	jc.mu.RUnlock()
 
 	return info
+}
+
+// Helper functions (keep your existing implementations)
+func extractPoolName(objectName string) string {
+	if objectName == "" {
+		return ""
+	}
+	if idx := strings.Index(objectName, "name="); idx != -1 {
+		name := objectName[idx+5:]
+		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
+			name = name[:commaIdx]
+		}
+		return name
+	}
+	return objectName
+}
+
+func extractGCName(objectName string) string {
+	if objectName == "" {
+		return ""
+	}
+	if idx := strings.Index(objectName, "name="); idx != -1 {
+		name := objectName[idx+5:]
+		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
+			name = name[:commaIdx]
+		}
+		return name
+	}
+	return objectName
+}
+
+func isYoungGenPool(poolName string) bool {
+	lowerName := strings.ToLower(poolName)
+	return strings.Contains(lowerName, "eden") ||
+		strings.Contains(lowerName, "survivor") ||
+		strings.Contains(lowerName, "young") ||
+		strings.Contains(lowerName, "nursery") ||
+		strings.Contains(lowerName, "s0") ||
+		strings.Contains(lowerName, "s1") ||
+		strings.Contains(lowerName, "g1 eden") ||
+		strings.Contains(lowerName, "g1 survivor")
+}
+
+func isOldGenPool(poolName string) bool {
+	lowerName := strings.ToLower(poolName)
+	return strings.Contains(lowerName, "old") ||
+		strings.Contains(lowerName, "tenured") ||
+		strings.Contains(lowerName, "cms") ||
+		strings.Contains(lowerName, "g1 old") ||
+		strings.Contains(lowerName, "g1 old gen")
+}
+
+func isYoungGenGC(gcName string) bool {
+	lowerName := strings.ToLower(gcName)
+	return strings.Contains(lowerName, "young") ||
+		strings.Contains(lowerName, "copy") ||
+		strings.Contains(lowerName, "scavenge") ||
+		strings.Contains(lowerName, "parnew") ||
+		strings.Contains(lowerName, "ps scavenge") ||
+		strings.Contains(lowerName, "g1 young") ||
+		strings.Contains(lowerName, "g1 young generation") ||
+		(strings.Contains(lowerName, "g1") &&
+			!strings.Contains(lowerName, "old") &&
+			!strings.Contains(lowerName, "mixed"))
+}
+
+func isOldGenGC(gcName string) bool {
+	lowerName := strings.ToLower(gcName)
+	return strings.Contains(lowerName, "old") ||
+		strings.Contains(lowerName, "cms") ||
+		strings.Contains(lowerName, "marksweep") ||
+		strings.Contains(lowerName, "parallel old") ||
+		strings.Contains(lowerName, "ps marksweep") ||
+		strings.Contains(lowerName, "g1 old") ||
+		strings.Contains(lowerName, "g1 old generation") ||
+		strings.Contains(lowerName, "g1 mixed") ||
+		strings.Contains(lowerName, "g1 concurrent")
 }
 
 func (c *Config) GetJMXConnectionURL() string {

@@ -277,6 +277,10 @@ type Config struct {
 	Port int    // Port for remote monitoring
 
 	Interval int // Update interval in milliseconds
+
+	// Debug configuration
+	Debug        bool   // Enable debug mode
+	DebugLogFile string // Path to debug log file
 }
 
 func (c *Config) GetInterval() time.Duration {

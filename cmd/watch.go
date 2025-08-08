@@ -71,6 +71,7 @@ Examples:
 			}
 		}
 
+		config.Debug = true
 		err := monitor.StartTUI(config)
 		if err != nil {
 			return fmt.Errorf("unable to start TUI: %w", err)
