@@ -18,7 +18,7 @@ import (
 // The main TUI model
 type Model struct {
 	config           *jmx.Config
-	collector        *jmx.JMXCollector
+	collector        *jmx.JMXPoller
 	metricsProcessor *MetricsProcessor
 	help             help.Model
 

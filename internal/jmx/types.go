@@ -90,15 +90,24 @@ type JVMSnapshot struct {
 	G1OldGenRegionThreshold  float64 // Old gen threshold for mixed GC
 
 	// G1GC Phase Timings
-	G1YoungPauseTime      int64   // ms
-	G1MixedPauseTime      int64   // ms
-	G1EvacuationPauseTime int64   // ms
-	G1RootScanTime        int64   // ms
-	G1UpdateRSTime        int64   // Update remembered set time (ms)
-	G1ScanRSTime          int64   // ms
-	G1ObjectCopyTime      int64   // ms
-	G1TerminationTime     int64   // ms
-	G1GCOverheadLimit     float64 // percentage
+	G1YoungPauseTime       int64 // ms
+	G1MixedPauseTime       int64
+	G1EvacuationPauseTime  int64
+	G1RootScanTime         int64
+	G1UpdateRSTime         int64 // Remembered set
+	G1ScanRSTime           int64
+	G1ObjectCopyTime       int64
+	G1TerminationTime      int64
+	G1OtherTime            int64
+	G1ChooseCSetTime       int64
+	G1RefProcTime          int64
+	G1RefEnqTime           int64
+	G1RedirtyCardsTime     int64
+	G1CodeRootPurgeTime    int64
+	G1StringDedupTime      int64
+	G1YoungFreeCSetTime    int64
+	G1NonYoungFreeCSetTime int64
+	G1GCOverheadLimit      float64 // percentage
 
 	// ===== GARBAGE COLLECTION METRICS =====
 	// Basic GC counts and times
