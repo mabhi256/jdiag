@@ -37,4 +37,4 @@ go.work.sum
 /*.html
 /node_modules
 /java_sample/*.class
-/jmx_debug*.log
+/jmx*.log

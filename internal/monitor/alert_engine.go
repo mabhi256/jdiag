@@ -37,15 +37,15 @@ func NewAlertEngine() *AlertEngine {
 	}
 }
 
-func (ae *AlertEngine) AnalyzeMetrics(metrics *jmx.JVMSnapshot, trends map[string]float64, gcOverhead float64, gcTracker *GCEventTracker) {
+func (ae *AlertEngine) AnalyzeMetrics(metrics *jmx.MBeanSnapshot, trends map[string]float64, gcOverhead float64, gcTracker *GCEventTracker) {
 	ae.mu.Lock()
 	defer ae.mu.Unlock()
 
 	ae.alerts = nil // Clear previous alerts
 
 	// Heap usage analysis
-	if metrics.HeapMax > 0 {
-		heapPercent := float64(metrics.HeapUsed) / float64(metrics.HeapMax)
+	if metrics.Memory.Heap.Max > 0 {
+		heapPercent := float64(metrics.Memory.Heap.Used) / float64(metrics.Memory.Heap.Max)
 
 		if heapPercent >= ae.heapCriticalThreshold {
 			ae.addAlert("critical", "Critical Heap Usage",
@@ -70,14 +70,14 @@ func (ae *AlertEngine) AnalyzeMetrics(metrics *jmx.JVMSnapshot, trends map[strin
 	}
 
 	// CPU usage analysis
-	if metrics.ProcessCpuLoad >= ae.cpuCriticalThreshold {
+	if metrics.OS.ProcessCpuLoad >= ae.cpuCriticalThreshold {
 		ae.addAlert("critical", "Critical CPU Usage",
-			fmt.Sprintf("Process CPU usage is at %.1f%%, system may be overloaded", metrics.ProcessCpuLoad*100),
-			metrics.ProcessCpuLoad, ae.cpuCriticalThreshold, "cpu_usage")
-	} else if metrics.ProcessCpuLoad >= ae.cpuWarningThreshold {
+			fmt.Sprintf("Process CPU usage is at %.1f%%, system may be overloaded", metrics.OS.ProcessCpuLoad*100),
+			metrics.OS.ProcessCpuLoad, ae.cpuCriticalThreshold, "cpu_usage")
+	} else if metrics.OS.ProcessCpuLoad >= ae.cpuWarningThreshold {
 		ae.addAlert("warning", "High CPU Usage",
-			fmt.Sprintf("Process CPU usage is at %.1f%% monitor system load", metrics.ProcessCpuLoad*100),
-			metrics.ProcessCpuLoad, ae.cpuWarningThreshold, "cpu_usage")
+			fmt.Sprintf("Process CPU usage is at %.1f%% monitor system load", metrics.OS.ProcessCpuLoad*100),
+			metrics.OS.ProcessCpuLoad, ae.cpuWarningThreshold, "cpu_usage")
 	}
 
 	// Trend analysis

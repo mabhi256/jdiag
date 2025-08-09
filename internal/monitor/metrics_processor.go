@@ -13,7 +13,7 @@ type MetricsProcessor struct {
 	gcTracker   *GCEventTracker
 	alertEngine *AlertEngine
 
-	lastMetrics         *jmx.JVMSnapshot
+	lastMetrics         *jmx.MBeanSnapshot
 	startTime           time.Time
 	lastAllocationCheck time.Time
 	lastHeapUsed        int64
@@ -30,7 +30,7 @@ func NewMetricsProcessor() *MetricsProcessor {
 }
 
 // ProcessMetrics takes raw JVM metrics and produces enriched TabState
-func (mp *MetricsProcessor) ProcessMetrics(metrics *jmx.JVMSnapshot) *TabState {
+func (mp *MetricsProcessor) ProcessMetrics(metrics *jmx.MBeanSnapshot) *TabState {
 	if !metrics.Connected {
 		return NewTabState()
 	}
@@ -58,20 +58,20 @@ func (mp *MetricsProcessor) ProcessMetrics(metrics *jmx.JVMSnapshot) *TabState {
 }
 
 // updateHistoricalData adds current metrics to time-series storage
-func (mp *MetricsProcessor) updateHistoricalData(metrics *jmx.JVMSnapshot) {
+func (mp *MetricsProcessor) updateHistoricalData(metrics *jmx.MBeanSnapshot) {
 	now := metrics.Timestamp
 
 	// Heap usage percentage
-	if metrics.HeapMax > 0 {
-		heapPercent := float64(metrics.HeapUsed) / float64(metrics.HeapMax)
+	if metrics.Memory.Heap.Max > 0 {
+		heapPercent := float64(metrics.Memory.Heap.Used) / float64(metrics.Memory.Heap.Max)
 		mp.dataStore.AddHeapUsage(now, heapPercent)
 	}
 
 	// CPU usage
-	mp.dataStore.AddCPUUsage(now, metrics.ProcessCpuLoad)
+	mp.dataStore.AddCPUUsage(now, metrics.OS.ProcessCpuLoad)
 
 	// Thread count
-	mp.dataStore.AddThreadCount(now, float64(metrics.ThreadCount))
+	mp.dataStore.AddThreadCount(now, float64(metrics.Threading.Count))
 
 	// Allocation rate
 	allocationRate := mp.calculateAllocationRate(metrics)
@@ -136,9 +136,9 @@ func (mp *MetricsProcessor) calculateTrendSlope(points []utils.HistoryPoint, win
 }
 
 // calculateGCOverhead computes percentage of time spent in GC
-func (mp *MetricsProcessor) calculateGCOverhead(metrics *jmx.JVMSnapshot) float64 {
+func (mp *MetricsProcessor) calculateGCOverhead(metrics *jmx.MBeanSnapshot) float64 {
 	uptime := time.Since(mp.startTime)
-	totalGCTime := time.Duration(metrics.YoungGCTime+metrics.OldGCTime) * time.Millisecond
+	totalGCTime := time.Duration(metrics.GC.YoungGCTime+metrics.GC.OldGCTime) * time.Millisecond
 
 	if uptime.Milliseconds() == 0 {
 		return 0
@@ -148,13 +148,13 @@ func (mp *MetricsProcessor) calculateGCOverhead(metrics *jmx.JVMSnapshot) float6
 }
 
 // calculateAllocationRate estimates memory allocation rate in bytes/second
-func (mp *MetricsProcessor) calculateAllocationRate(metrics *jmx.JVMSnapshot) float64 {
+func (mp *MetricsProcessor) calculateAllocationRate(metrics *jmx.MBeanSnapshot) float64 {
 	now := metrics.Timestamp
 
 	// Need baseline measurement
 	if mp.lastMetrics == nil || mp.lastAllocationCheck.IsZero() {
 		mp.lastAllocationCheck = now
-		mp.lastHeapUsed = metrics.HeapUsed
+		mp.lastHeapUsed = metrics.Memory.Heap.Used
 		return -1
 	}
 
@@ -164,53 +164,91 @@ func (mp *MetricsProcessor) calculateAllocationRate(metrics *jmx.JVMSnapshot) fl
 	}
 
 	// Calculate heap usage change
-	heapChange := metrics.HeapUsed - mp.lastHeapUsed
+	heapChange := metrics.Memory.Heap.Used - mp.lastHeapUsed
 
 	// Only consider positive changes as allocations
 	if heapChange > 0 {
 		rate := float64(heapChange) / timeDiff
 		mp.lastAllocationCheck = now
-		mp.lastHeapUsed = metrics.HeapUsed
+		mp.lastHeapUsed = metrics.Memory.Heap.Used
 		return rate
 	}
 
 	// Reset baseline after GC or negative change
 	mp.lastAllocationCheck = now
-	mp.lastHeapUsed = metrics.HeapUsed
+	mp.lastHeapUsed = metrics.Memory.Heap.Used
 	return 0
 }
 
+// Helper functions to derive young/old generation data from memory pools
+func (mp *MetricsProcessor) getYoungGenUsage(metrics *jmx.MBeanSnapshot) (used, committed, max int64) {
+	// G1 Eden space
+	if metrics.Memory.G1Eden.Valid {
+		used += metrics.Memory.G1Eden.Usage.Used
+		committed += metrics.Memory.G1Eden.Usage.Committed
+		if metrics.Memory.G1Eden.Usage.Max > 0 {
+			max += metrics.Memory.G1Eden.Usage.Max
+		}
+	}
+
+	// G1 Survivor space
+	if metrics.Memory.G1Survivor.Valid {
+		used += metrics.Memory.G1Survivor.Usage.Used
+		committed += metrics.Memory.G1Survivor.Usage.Committed
+		if metrics.Memory.G1Survivor.Usage.Max > 0 {
+			max += metrics.Memory.G1Survivor.Usage.Max
+		}
+	}
+
+	return used, committed, max
+}
+
+func (mp *MetricsProcessor) getOldGenUsage(metrics *jmx.MBeanSnapshot) (used, committed, max int64) {
+	// G1 Old Gen space
+	if metrics.Memory.G1OldGen.Valid {
+		used = metrics.Memory.G1OldGen.Usage.Used
+		committed = metrics.Memory.G1OldGen.Usage.Committed
+		max = metrics.Memory.G1OldGen.Usage.Max
+	}
+
+	return used, committed, max
+}
+
 // buildTabState constructs complete TabState with basic metrics + analytics
-func (mp *MetricsProcessor) buildTabState(metrics *jmx.JVMSnapshot, trends map[string]float64, gcOverhead float64) *TabState {
+func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, trends map[string]float64, gcOverhead float64) *TabState {
 	state := NewTabState()
 
 	// === Memory State ===
-	state.Memory.HeapUsed = metrics.HeapUsed
-	state.Memory.HeapCommitted = metrics.HeapCommitted
-	state.Memory.HeapMax = metrics.HeapMax
-	if metrics.HeapMax > 0 {
-		state.Memory.HeapUsagePercent = float64(metrics.HeapUsed) / float64(metrics.HeapMax)
+	state.Memory.HeapUsed = metrics.Memory.Heap.Used
+	state.Memory.HeapCommitted = metrics.Memory.Heap.Committed
+	state.Memory.HeapMax = metrics.Memory.Heap.Max
+	if metrics.Memory.Heap.Max > 0 {
+		state.Memory.HeapUsagePercent = float64(metrics.Memory.Heap.Used) / float64(metrics.Memory.Heap.Max)
 	}
 
-	state.Memory.YoungUsed = metrics.YoungUsed
-	state.Memory.YoungCommitted = metrics.YoungCommitted
-	state.Memory.YoungMax = metrics.YoungMax
-	if metrics.YoungMax > 0 {
-		state.Memory.YoungUsagePercent = float64(metrics.YoungUsed) / float64(metrics.YoungMax)
+	// Calculate young generation metrics from memory pools
+	youngUsed, youngCommitted, youngMax := mp.getYoungGenUsage(metrics)
+	state.Memory.YoungUsed = youngUsed
+	state.Memory.YoungCommitted = youngCommitted
+	state.Memory.YoungMax = youngMax
+	if youngMax > 0 {
+		state.Memory.YoungUsagePercent = float64(youngUsed) / float64(youngMax)
 	}
 
-	state.Memory.OldUsed = metrics.OldUsed
-	state.Memory.OldCommitted = metrics.OldCommitted
-	state.Memory.OldMax = metrics.OldMax
-	if metrics.OldMax > 0 {
-		state.Memory.OldUsagePercent = float64(metrics.OldUsed) / float64(metrics.OldMax)
+	// Calculate old generation metrics from memory pools
+	oldUsed, oldCommitted, oldMax := mp.getOldGenUsage(metrics)
+	state.Memory.OldUsed = oldUsed
+	state.Memory.OldCommitted = oldCommitted
+	state.Memory.OldMax = oldMax
+	if oldMax > 0 {
+		state.Memory.OldUsagePercent = float64(oldUsed) / float64(oldMax)
 	}
 
-	state.Memory.NonHeapUsed = metrics.NonHeapUsed
-	state.Memory.NonHeapCommitted = metrics.NonHeapCommitted
-	state.Memory.NonHeapMax = metrics.NonHeapMax
-	if metrics.HeapMax > 0 { // Use HeapMax as reference for non-heap percentage
-		state.Memory.NonHeapUsagePercent = float64(metrics.NonHeapUsed) / float64(metrics.HeapMax)
+	state.Memory.NonHeapUsed = metrics.Memory.NonHeap.Used
+	state.Memory.NonHeapCommitted = metrics.Memory.NonHeap.Committed
+	state.Memory.NonHeapMax = metrics.Memory.NonHeap.Max
+	if metrics.Memory.NonHeap.Max > 0 {
+		state.Memory.NonHeapUsagePercent = float64(metrics.Memory.NonHeap.Used) / float64(metrics.Memory.NonHeap.Max)
 	}
 
 	// Memory analytics
@@ -224,20 +262,20 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.JVMSnapshot, trends map[s
 	}
 
 	// === GC State ===
-	state.GC.YoungGCCount = metrics.YoungGCCount
-	state.GC.YoungGCTime = metrics.YoungGCTime
-	if metrics.YoungGCCount > 0 {
-		state.GC.YoungGCAvg = float64(metrics.YoungGCTime) / float64(metrics.YoungGCCount)
+	state.GC.YoungGCCount = metrics.GC.YoungGCCount
+	state.GC.YoungGCTime = metrics.GC.YoungGCTime
+	if metrics.GC.YoungGCCount > 0 {
+		state.GC.YoungGCAvg = float64(metrics.GC.YoungGCTime) / float64(metrics.GC.YoungGCCount)
 	}
 
-	state.GC.OldGCCount = metrics.OldGCCount
-	state.GC.OldGCTime = metrics.OldGCTime
-	if metrics.OldGCCount > 0 {
-		state.GC.OldGCAvg = float64(metrics.OldGCTime) / float64(metrics.OldGCCount)
+	state.GC.OldGCCount = metrics.GC.OldGCCount
+	state.GC.OldGCTime = metrics.GC.OldGCTime
+	if metrics.GC.OldGCCount > 0 {
+		state.GC.OldGCAvg = float64(metrics.GC.OldGCTime) / float64(metrics.GC.OldGCCount)
 	}
 
-	state.GC.TotalGCCount = metrics.YoungGCCount + metrics.OldGCCount
-	state.GC.TotalGCTime = metrics.YoungGCTime + metrics.OldGCTime
+	state.GC.TotalGCCount = metrics.GC.YoungGCCount + metrics.GC.OldGCCount
+	state.GC.TotalGCTime = metrics.GC.YoungGCTime + metrics.GC.OldGCTime
 
 	// GC analytics
 	state.GC.GCOverhead = gcOverhead
@@ -253,11 +291,11 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.JVMSnapshot, trends map[s
 	}
 
 	// === Thread State ===
-	state.Threads.CurrentThreadCount = metrics.ThreadCount
-	state.Threads.PeakThreadCount = metrics.PeakThreadCount
-	state.Threads.LoadedClassCount = metrics.LoadedClassCount
-	state.Threads.UnloadedClassCount = metrics.UnloadedClassCount
-	state.Threads.TotalLoadedClasses = metrics.LoadedClassCount - metrics.UnloadedClassCount
+	state.Threads.CurrentThreadCount = metrics.Threading.Count
+	state.Threads.PeakThreadCount = metrics.Threading.PeakCount
+	state.Threads.LoadedClassCount = metrics.ClassLoading.LoadedClassCount
+	state.Threads.UnloadedClassCount = metrics.ClassLoading.UnloadedClassCount
+	state.Threads.TotalLoadedClasses = metrics.ClassLoading.TotalLoadedClassCount
 
 	// Thread analytics
 	if threadTrend, exists := trends["thread_trend"]; exists {
@@ -274,23 +312,24 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.JVMSnapshot, trends map[s
 	}
 
 	// === System State ===
-	state.System.ProcessCpuLoad = metrics.ProcessCpuLoad
-	state.System.SystemCpuLoad = metrics.SystemCpuLoad
+	state.System.ProcessCpuLoad = metrics.OS.ProcessCpuLoad
+	state.System.SystemCpuLoad = metrics.OS.SystemCpuLoad
 	state.System.LastUpdateTime = metrics.Timestamp
-	state.System.JVMVersion = metrics.JVMVersion
-	state.System.JVMVendor = metrics.JVMVendor
-	state.System.JVMStartTime = metrics.JVMStartTime
-	state.System.JVMUptime = metrics.JVMUptime
-	state.System.AvailableProcessors = metrics.AvailableProcessors
-	state.System.SystemLoad = metrics.SystemLoadAverage
+	state.System.JVMVersion = metrics.Runtime.VmVersion
+	state.System.JVMVendor = metrics.Runtime.VmVendor
+	state.System.JVMStartTime = metrics.Runtime.StartTime
+	state.System.JVMUptime = metrics.Runtime.Uptime
+	state.System.AvailableProcessors = metrics.OS.AvailableProcessors
+	state.System.SystemLoad = metrics.OS.SystemLoadAverage
 
 	// Calculate system memory usage
-	if metrics.TotalSystemMemory > 0 {
-		state.System.TotalSystemMemory = metrics.TotalSystemMemory
-		state.System.FreeSystemMemory = metrics.FreeSystemMemory
-		state.System.UsedSystemMemory = metrics.TotalSystemMemory - metrics.FreeSystemMemory
-		state.System.SystemMemoryPercent = float64(state.System.UsedSystemMemory) / float64(metrics.TotalSystemMemory)
+	if metrics.OS.TotalPhysicalMemory > 0 {
+		state.System.TotalSystemMemory = metrics.OS.TotalPhysicalMemory
+		state.System.FreeSystemMemory = metrics.OS.FreePhysicalMemory
+		state.System.UsedSystemMemory = metrics.OS.TotalPhysicalMemory - metrics.OS.FreePhysicalMemory
+		state.System.SystemMemoryPercent = float64(state.System.UsedSystemMemory) / float64(metrics.OS.TotalPhysicalMemory)
 	}
+
 	// System analytics
 	if cpuTrend, exists := trends["cpu_trend"]; exists {
 		state.System.CPUTrend = cpuTrend
