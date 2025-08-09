@@ -1,15 +1,11 @@
 package jmx
 
-import (
-	"fmt"
-)
+import "fmt"
 
-// ===== THREAD METRICS =====
-// Fetch ALL available thread-related attributes
-func (jc *JMXPoller) collectThreadMetrics(metrics *JVMSnapshot) error {
+// ===== THREADING METRICS =====
+func (jc *JMXPoller) collectThreadingMetrics(metrics *MBeanSnapshot) error {
 	client := jc.getEffectiveClient()
 
-	// 1. Threading - Get ALL available attributes
 	threading, err := client.QueryMBean("java.lang:type=Threading")
 	if err != nil {
 		return fmt.Errorf("failed to query thread metrics: %w", err)
@@ -17,56 +13,56 @@ func (jc *JMXPoller) collectThreadMetrics(metrics *JVMSnapshot) error {
 
 	// Basic thread counts
 	if count, ok := threading["ThreadCount"].(float64); ok {
-		metrics.ThreadCount = int64(count)
+		metrics.Threading.Count = int64(count)
 	}
 	if peak, ok := threading["PeakThreadCount"].(float64); ok {
-		metrics.PeakThreadCount = int64(peak)
+		metrics.Threading.PeakCount = int64(peak)
 	}
 	if daemon, ok := threading["DaemonThreadCount"].(float64); ok {
-		metrics.DaemonThreadCount = int64(daemon)
+		metrics.Threading.DaemonCount = int64(daemon)
 	}
 	if totalStarted, ok := threading["TotalStartedThreadCount"].(float64); ok {
-		metrics.TotalStartedThreadCount = int64(totalStarted)
+		metrics.Threading.TotalStartedCount = int64(totalStarted)
 	}
 
-	// Thread performance metrics
+	// Current thread metrics
 	if cpuTime, ok := threading["CurrentThreadCpuTime"].(float64); ok {
-		metrics.ThreadCPUTime = int64(cpuTime)
+		metrics.Threading.CurrentCPUTime = int64(cpuTime)
 	}
 	if userTime, ok := threading["CurrentThreadUserTime"].(float64); ok {
-		metrics.ThreadUserTime = int64(userTime)
+		metrics.Threading.CurrentUserTime = int64(userTime)
 	}
 	if allocatedBytes, ok := threading["CurrentThreadAllocatedBytes"].(float64); ok {
-		metrics.CurrentThreadAllocatedBytes = int64(allocatedBytes)
+		metrics.Threading.CurrentAllocatedBytes = int64(allocatedBytes)
 	}
 
-	// Thread monitoring capabilities
+	// Monitoring capabilities
 	if cpuTimeSupported, ok := threading["ThreadCpuTimeSupported"].(bool); ok {
-		metrics.ThreadCpuTimeSupported = cpuTimeSupported
+		metrics.Threading.CpuTimeSupported = cpuTimeSupported
 	}
 	if cpuTimeEnabled, ok := threading["ThreadCpuTimeEnabled"].(bool); ok {
-		metrics.ThreadCpuTimeEnabled = cpuTimeEnabled
+		metrics.Threading.CpuTimeEnabled = cpuTimeEnabled
 	}
 	if allocMemSupported, ok := threading["ThreadAllocatedMemorySupported"].(bool); ok {
-		metrics.ThreadAllocatedMemorySupported = allocMemSupported
+		metrics.Threading.AllocatedMemorySupported = allocMemSupported
 	}
 	if allocMemEnabled, ok := threading["ThreadAllocatedMemoryEnabled"].(bool); ok {
-		metrics.ThreadAllocatedMemoryEnabled = allocMemEnabled
+		metrics.Threading.AllocatedMemoryEnabled = allocMemEnabled
 	}
 	if contentionSupported, ok := threading["ThreadContentionMonitoringSupported"].(bool); ok {
-		metrics.ThreadContentionMonitoringSupported = contentionSupported
+		metrics.Threading.ContentionMonitoringSupported = contentionSupported
 	}
 	if contentionEnabled, ok := threading["ThreadContentionMonitoringEnabled"].(bool); ok {
-		metrics.ThreadContentionMonitoringEnabled = contentionEnabled
+		metrics.Threading.ContentionMonitoringEnabled = contentionEnabled
 	}
 	if monitorUsageSupported, ok := threading["ObjectMonitorUsageSupported"].(bool); ok {
-		metrics.ObjectMonitorUsageSupported = monitorUsageSupported
+		metrics.Threading.ObjectMonitorUsageSupported = monitorUsageSupported
 	}
 	if synchronizerSupported, ok := threading["SynchronizerUsageSupported"].(bool); ok {
-		metrics.SynchronizerUsageSupported = synchronizerSupported
+		metrics.Threading.SynchronizerUsageSupported = synchronizerSupported
 	}
 
-	// Get all thread IDs for detailed analysis
+	// Get all thread IDs
 	if threadIds, ok := threading["AllThreadIds"].([]interface{}); ok && len(threadIds) > 0 {
 		var threadIdList []int64
 		for _, tid := range threadIds {
@@ -74,65 +70,33 @@ func (jc *JMXPoller) collectThreadMetrics(metrics *JVMSnapshot) error {
 				threadIdList = append(threadIdList, int64(id))
 			}
 		}
-		metrics.AllThreadIds = threadIdList
+		metrics.Threading.AllThreadIds = threadIdList
 	}
 
-	// Deadlock detection
-	jc.checkForDeadlocks(metrics)
+	return nil
+}
 
-	// 2. Class Loading Metrics - Get ALL available attributes
+// ===== CLASS LOADING METRICS =====
+func (jc *JMXPoller) collectClassLoadingMetrics(metrics *MBeanSnapshot) error {
+	client := jc.getEffectiveClient()
+
 	classLoading, err := client.QueryMBean("java.lang:type=ClassLoading")
 	if err != nil {
 		return fmt.Errorf("failed to query class loading metrics: %w", err)
 	}
 
 	if loaded, ok := classLoading["LoadedClassCount"].(float64); ok {
-		metrics.LoadedClassCount = int64(loaded)
+		metrics.ClassLoading.LoadedClassCount = int64(loaded)
 	}
 	if totalLoaded, ok := classLoading["TotalLoadedClassCount"].(float64); ok {
-		metrics.TotalLoadedClassCount = int64(totalLoaded)
+		metrics.ClassLoading.TotalLoadedClassCount = int64(totalLoaded)
 	}
 	if unloaded, ok := classLoading["UnloadedClassCount"].(float64); ok {
-		metrics.UnloadedClassCount = int64(unloaded)
+		metrics.ClassLoading.UnloadedClassCount = int64(unloaded)
 	}
 	if verbose, ok := classLoading["Verbose"].(bool); ok {
-		metrics.ClassLoadingVerboseLogging = verbose
+		metrics.ClassLoading.VerboseLogging = verbose
 	}
 
 	return nil
-}
-
-// Helper method to check for deadlocks
-func (jc *JMXPoller) checkForDeadlocks(metrics *JVMSnapshot) {
-	client := jc.getEffectiveClient()
-
-	// Try to get deadlock information
-	threadMgmt, err := client.QueryMBean("java.lang:type=Threading")
-	if err != nil {
-		return
-	}
-
-	jc.extractDeadlockInfo(threadMgmt, metrics)
-}
-
-func (jc *JMXPoller) extractDeadlockInfo(threadMgmt map[string]any, metrics *JVMSnapshot) {
-	// Check for deadlocked threads
-	if deadlocks, ok := threadMgmt["findDeadlockedThreads"].([]interface{}); ok && len(deadlocks) > 0 {
-		for _, threadID := range deadlocks {
-			if id, ok := threadID.(float64); ok {
-				threadName := fmt.Sprintf("Thread-%d", int64(id))
-				metrics.DeadlockedThreads = append(metrics.DeadlockedThreads, threadName)
-			}
-		}
-	}
-
-	// Check for monitor deadlocked threads
-	if monitorDeadlocks, ok := threadMgmt["findMonitorDeadlockedThreads"].([]interface{}); ok && len(monitorDeadlocks) > 0 {
-		for _, threadID := range monitorDeadlocks {
-			if id, ok := threadID.(float64); ok {
-				threadName := fmt.Sprintf("MonitorThread-%d", int64(id))
-				metrics.MonitorDeadlockedThreads = append(metrics.MonitorDeadlockedThreads, threadName)
-			}
-		}
-	}
 }

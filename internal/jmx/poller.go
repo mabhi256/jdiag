@@ -1,3 +1,4 @@
+// poller.go
 package jmx
 
 import (
@@ -8,23 +9,22 @@ import (
 )
 
 type JMXPoller struct {
-	config             *Config
-	client             *JMXClient
-	debugClient        *DebugJMXClient // Wrapper for debug logging
-	metrics            *JVMSnapshot
-	mu                 sync.RWMutex
-	running            bool
-	stopChan           chan struct{}
-	errChan            chan error
-	debugFile          *os.File
-	lastEdenUsed       int64
-	lastAllocationTime time.Time
+	config            *Config
+	client            *JMXClient
+	debugClient       *DebugJMXClient // Wrapper for debug logging
+	metrics           *MBeanSnapshot
+	mu                sync.RWMutex
+	running           bool
+	stopChan          chan struct{}
+	errChan           chan error
+	debugFile         *os.File // Raw JMX debug logging
+	snapshotDebugFile *os.File // Parsed snapshot debug logging
 }
 
 func NewJMXCollector(config *Config) *JMXPoller {
 	collector := &JMXPoller{
 		config: config,
-		metrics: &JVMSnapshot{
+		metrics: &MBeanSnapshot{
 			Timestamp: time.Now(),
 			Connected: false,
 		},
@@ -71,6 +71,12 @@ func (jc *JMXPoller) Start() error {
 			debugFile:      jc.debugFile,
 			enabled:        true,
 		}
+
+		// Run attribute discovery if debug mode is enabled
+		go func() {
+			time.Sleep(1 * time.Second) // Give the client time to initialize
+			jc.discoverAvailableAttributes()
+		}()
 	}
 
 	jc.running = true
@@ -101,19 +107,26 @@ func (jc *JMXPoller) Stop() {
 		jc.client.Close()
 	}
 
+	// Close debug files
 	if jc.debugFile != nil {
 		footer := fmt.Sprintf("=== JMX Debug Session Ended at %s ===\n", time.Now().Format(time.RFC3339))
 		jc.debugFile.WriteString(footer)
 		jc.debugFile.Close()
 		jc.debugFile = nil
 	}
+
+	if jc.snapshotDebugFile != nil {
+		footer := fmt.Sprintf("=== JMX Snapshot Debug Session Ended at %s ===\n", time.Now().Format(time.RFC3339))
+		jc.snapshotDebugFile.WriteString(footer)
+		jc.snapshotDebugFile.Close()
+		jc.snapshotDebugFile = nil
+	}
 }
 
 // Get the current snapshot
-func (jc *JMXPoller) GetMetrics() *JVMSnapshot {
+func (jc *JMXPoller) GetMetrics() *MBeanSnapshot {
 	jc.mu.RLock()
 	defer jc.mu.RUnlock()
-
 	metricsCopy := *jc.metrics
 	return &metricsCopy
 }
@@ -135,31 +148,45 @@ func (jc *JMXPoller) collectLoop() {
 
 // Collect a single set of metrics
 func (jc *JMXPoller) collectMetrics() {
-	metrics := &JVMSnapshot{
+	metrics := &MBeanSnapshot{
 		Timestamp: time.Now(),
 		Connected: false,
 	}
 
-	collectors := []func(*JVMSnapshot) error{
+	collectors := []func(*MBeanSnapshot) error{
 		jc.collectMemoryMetrics,
+		jc.collectMemoryPools,
+		jc.collectBufferPools,
 		jc.collectGCMetrics,
-		jc.collectThreadMetrics,
-		jc.collectSystemMetrics,
+		jc.collectThreadingMetrics,
+		jc.collectClassLoadingMetrics,
+		jc.collectOperatingSystemMetrics,
+		jc.collectRuntimeMetrics,
 	}
 
 	for _, collect := range collectors {
 		if err := collect(metrics); err != nil {
 			metrics.Error = err
 			jc.updateMetrics(metrics)
+
+			// Log failed snapshot if debug mode is enabled
+			if jc.config.Debug {
+				jc.logParsedSnapshot(metrics)
+			}
 			return
 		}
 	}
 
 	metrics.Connected = true
 	jc.updateMetrics(metrics)
+
+	// Log successful snapshot if debug mode is enabled
+	if jc.config.Debug {
+		jc.logParsedSnapshot(metrics)
+	}
 }
 
-func (jc *JMXPoller) updateMetrics(metrics *JVMSnapshot) {
+func (jc *JMXPoller) updateMetrics(metrics *MBeanSnapshot) {
 	jc.mu.Lock()
 	defer jc.mu.Unlock()
 	jc.metrics = metrics

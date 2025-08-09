@@ -2,275 +2,201 @@ package jmx
 
 import "time"
 
-// The current JVM metrics snapshot
-type JVMSnapshot struct {
-	Timestamp time.Time
-	Connected bool
-	Error     error
+type MemoryUsage struct {
+	Used      int64
+	Committed int64
+	Max       int64
+	Init      int64
+}
 
-	// ===== BASIC MEMORY METRICS =====
-	// Heap memory
-	HeapUsed      int64
-	HeapCommitted int64
-	HeapMax       int64
+type ThresholdInfo struct {
+	Supported bool
+	Threshold int64
+	Exceeded  bool
+	Count     int64
+}
 
-	// Generation-specific memory
-	YoungUsed      int64
-	YoungCommitted int64
-	YoungMax       int64
+type MemoryPool struct {
+	Usage               MemoryUsage
+	PeakUsage           MemoryUsage
+	Threshold           ThresholdInfo
+	CollectionUsage     MemoryUsage
+	CollectionThreshold ThresholdInfo
+	Valid               bool
+	Managers            []string
+}
 
-	OldUsed      int64
-	OldCommitted int64
-	OldMax       int64
+type BufferPool struct {
+	Count    int64
+	Used     int64
+	Capacity int64
+}
 
-	// Non-heap memory
-	NonHeapUsed      int64
-	NonHeapCommitted int64
-	NonHeapMax       int64
+type Memory struct {
+	// Basic heap/non-heap totals
+	Heap    MemoryUsage
+	NonHeap MemoryUsage
 
-	// ===== DETAILED NON-HEAP BREAKDOWN =====
-	// Metaspace (replaces PermGen in Java 8+)
-	MetaspaceUsed      int64
-	MetaspaceCommitted int64
-	MetaspaceMax       int64
+	// Detailed memory pools
+	Metaspace            MemoryPool
+	CompressedClassSpace MemoryPool
+	CodeCache            MemoryUsage // Code cache is spread across multiple pools
+	G1Eden               MemoryPool
+	G1Survivor           MemoryPool
+	G1OldGen             MemoryPool
 
-	// Compressed Class Space
-	CompressedClassSpaceUsed      int64
-	CompressedClassSpaceCommitted int64
-	CompressedClassSpaceMax       int64
+	// Buffer pools
+	DirectBuffers BufferPool
+	MappedBuffers BufferPool
 
-	// Code Cache Details
-	CodeCacheUsed      int64
-	CodeCacheMax       int64
-	CodeCacheCommitted int64
+	// Memory management
+	ObjectPendingFinalizationCount int64
+	VerboseLogging                 bool
+}
 
-	// ===== PEAK MEMORY USAGE =====
-	HeapPeakUsed    int64
-	YoungPeakUsed   int64
-	OldPeakUsed     int64
-	NonHeapPeakUsed int64
+type LastGCInfo struct {
+	Duration    int64
+	Timestamp   time.Time
+	EndTime     time.Time
+	Id          int64
+	ThreadCount int64
 
-	// ===== MEMORY AFTER LAST GC =====
-	HeapAfterLastGC  int64
-	YoungAfterLastGC int64
-	OldAfterLastGC   int64
+	// Per-pool memory usage before/after GC
+	EdenBefore      int64
+	EdenAfter       int64
+	SurvivorBefore  int64
+	SurvivorAfter   int64
+	OldBefore       int64
+	OldAfter        int64
+	MetaspaceBefore int64
+	MetaspaceAfter  int64
+}
 
-	// ===== MEMORY ALLOCATION TRACKING =====
-	AllocationRate      float64 // Bytes allocated per second
-	AllocationRateMBSec float64 // MB allocated per second
-	EdenAllocationRate  float64 // Eden space allocation rate
-
-	// ===== MEMORY MANAGEMENT =====
-	ObjectPendingFinalizationCount int64 // Objects waiting for finalization
-	MemoryVerboseLogging           bool  // Whether memory verbose logging is enabled
-
-	// Memory Pool Management
-	YoungGenManagers   []string // GC managers for young generation
-	OldGenManagers     []string // GC managers for old generation
-	InvalidMemoryPools []string // Pools that are no longer valid
-
-	// Memory Pool Thresholds
-	HeapThresholdExceeded    bool
-	YoungThresholdExceeded   bool
-	OldThresholdExceeded     bool
-	NonHeapThresholdExceeded bool
-	MemoryThresholdCount     int64 // Number of threshold crossings
-
-	// ===== G1GC-SPECIFIC METRICS =====
-	G1HeapRegionSize         int64 // Bytes
-	G1TotalRegions           int64
-	G1UsedRegions            int64
-	G1FreeRegions            int64
-	G1HumongousRegions       int64
-	G1HumongousObjectCount   int64
-	G1HumongousWasteBytes    int64 // Bytes wasted in humongous regions
-	G1ConcurrentMarkActive   bool
-	G1ConcurrentMarkProgress float64
-	G1MixedGCLiveThreshold   float64 // Live data threshold for mixed GC
-	G1OldGenRegionThreshold  float64 // Old gen threshold for mixed GC
-
-	// G1GC Phase Timings
-	G1YoungPauseTime       int64 // ms
-	G1MixedPauseTime       int64
-	G1EvacuationPauseTime  int64
-	G1RootScanTime         int64
-	G1UpdateRSTime         int64 // Remembered set
-	G1ScanRSTime           int64
-	G1ObjectCopyTime       int64
-	G1TerminationTime      int64
-	G1OtherTime            int64
-	G1ChooseCSetTime       int64
-	G1RefProcTime          int64
-	G1RefEnqTime           int64
-	G1RedirtyCardsTime     int64
-	G1CodeRootPurgeTime    int64
-	G1StringDedupTime      int64
-	G1YoungFreeCSetTime    int64
-	G1NonYoungFreeCSetTime int64
-	G1GCOverheadLimit      float64 // percentage
-
-	// ===== GARBAGE COLLECTION METRICS =====
-	// Basic GC counts and times
+type GarbageCollector struct {
+	// Basic GC metrics
 	YoungGCCount int64
-	YoungGCTime  int64 // ms
+	YoungGCTime  int64
 	OldGCCount   int64
-	OldGCTime    int64 // ms
+	OldGCTime    int64
 
-	// GC Management
+	// GC management
 	YoungGCManagedPools []string
 	OldGCManagedPools   []string
 	InvalidGCs          []string
 
-	// Last GC Details
-	LastGCCause        string
-	LastGCAction       string // GC action taken
-	LastGCName         string // Name of the GC that ran
-	LastGCDuration     int64  // ms
-	LastGCTimestamp    time.Time
-	LastGCEndTime      time.Time
-	LastGCId           int64 // GC sequence number
-	LastGCMemoryBefore int64
-	LastGCMemoryAfter  int64
-	LastGCMemoryFreed  int64
+	// Last GC details
+	LastGC LastGCInfo
+}
 
-	// Collection Efficiency
-	YoungGCEfficiency   float64 // Memory freed / time spent (MB/ms)
-	OldGCEfficiency     float64
-	OverallGCEfficiency float64 // Total efficiency across all GCs
-
-	// ===== THREADING METRICS =====
+type Threading struct {
 	// Basic thread counts
-	ThreadCount             int64
-	PeakThreadCount         int64
-	DaemonThreadCount       int64
-	TotalStartedThreadCount int64 // Total threads started since JVM start
+	Count             int64
+	PeakCount         int64
+	DaemonCount       int64
+	TotalStartedCount int64
 
-	// Thread states
-	BlockedThreadCount      int64
-	WaitingThreadCount      int64
-	ThreadTimedWaitingCount int64
+	// Current thread metrics
+	CurrentCPUTime        int64
+	CurrentUserTime       int64
+	CurrentAllocatedBytes int64
 
-	// Thread identification and tracking
-	AllThreadIds             []int64  // All current thread IDs
-	DeadlockedThreads        []string // Thread names in deadlock
-	MonitorDeadlockedThreads []string // Threads deadlocked on object monitors
+	// Thread IDs and deadlock detection
+	AllThreadIds             []int64
+	DeadlockedThreads        []string
+	MonitorDeadlockedThreads []string
 
-	// Thread Performance Metrics
-	ThreadCPUTime               int64 // Total CPU time used by all threads (nanoseconds)
-	ThreadUserTime              int64 // Total user CPU time (nanoseconds)
-	CurrentThreadAllocatedBytes int64
-	ThreadContentionCount       int64 // Number of times threads blocked on monitors
-	ThreadContentionTime        int64 // Total time threads spent blocked (nanoseconds)
+	// Monitoring capabilities
+	CpuTimeSupported              bool
+	CpuTimeEnabled                bool
+	AllocatedMemorySupported      bool
+	AllocatedMemoryEnabled        bool
+	ContentionMonitoringSupported bool
+	ContentionMonitoringEnabled   bool
+	ObjectMonitorUsageSupported   bool
+	SynchronizerUsageSupported    bool
+}
 
-	// Thread Monitoring Capabilities
-	ThreadCpuTimeSupported              bool // Whether thread CPU time monitoring is supported
-	ThreadCpuTimeEnabled                bool
-	ThreadAllocatedMemorySupported      bool // Whether thread memory allocation tracking is supported
-	ThreadAllocatedMemoryEnabled        bool
-	ThreadContentionMonitoringSupported bool
-	ThreadContentionMonitoringEnabled   bool
-	ObjectMonitorUsageSupported         bool
-	SynchronizerUsageSupported          bool
+type ClassLoading struct {
+	LoadedClassCount      int64
+	TotalLoadedClassCount int64
+	UnloadedClassCount    int64
+	VerboseLogging        bool
+}
 
-	// ===== CLASS LOADING METRICS =====
-	LoadedClassCount           int64 // Currently loaded classes
-	TotalLoadedClassCount      int64 // Total classes loaded since JVM start
-	UnloadedClassCount         int64 // Total classes unloaded
-	ClassLoadingVerboseLogging bool  // Whether class loading verbose logging is enabled
+type OperatingSystem struct {
+	// System identification
+	Name    string
+	Version string
+	Arch    string
 
-	// ===== CPU METRICS =====
-	ProcessCpuLoad      float64 // Process CPU usage (0.0 to 1.0)
-	SystemCpuLoad       float64 // System CPU usage (0.0 to 1.0)
-	CpuLoad             float64 // Alternative CPU load metric
-	ProcessCpuTime      int64   // Total CPU time used by process (nanoseconds)
+	// CPU metrics
 	AvailableProcessors int64
+	SystemCpuLoad       float64
+	ProcessCpuLoad      float64
+	ProcessCpuTime      int64
 	SystemLoadAverage   float64
 
-	// ===== SYSTEM MEMORY INFORMATION =====
-	// Physical memory
-	TotalSystemMemory int64 // Total physical memory
-	FreeSystemMemory  int64 // Free physical memory
-	TotalMemorySize   int64 // Alternative total memory metric
-	FreeMemorySize    int64 // Alternative free memory metric
+	// Memory metrics
+	TotalPhysicalMemory int64
+	FreePhysicalMemory  int64
+	TotalSwapSpace      int64
+	FreeSwapSpace       int64
 
-	// Swap space
-	TotalSwapSize int64
-	FreeSwapSize  int64
+	// Process memory
+	CommittedVirtualMemorySize int64
 
-	// Process memory details
-	ProcessVirtualMemorySize int64 // VSZ - Virtual memory size
-	ProcessResidentSetSize   int64 // RSS - Resident set size
-	ProcessPrivateMemory     int64 // Process private memory
-	ProcessSharedMemory      int64 // Process shared memory
-
-	// ===== FILE DESCRIPTOR USAGE =====
-	// (Unix/Linux systems only)
+	// File descriptors (Unix/Linux only)
 	OpenFileDescriptorCount int64
 	MaxFileDescriptorCount  int64
+}
 
-	// ===== JVM CONFIGURATION AND RUNTIME =====
+type Runtime struct {
 	// Process identification
 	ProcessID   int64
-	ProcessName string // usually PID@hostname
+	ProcessName string
 
-	// JVM runtime information
-	JVMName      string
-	JVMVendor    string
-	JVMVersion   string
-	JVMStartTime time.Time
-	JVMUptime    time.Duration
+	// JVM information
+	VmName    string
+	VmVendor  string
+	VmVersion string
 
-	// JVM specification information
-	JVMSpecName           string
-	JVMSpecVendor         string
-	JVMSpecVersion        string
-	ManagementSpecVersion string
+	// JVM specification
+	SpecName    string
+	SpecVendor  string
+	SpecVersion string
 
-	// JVM configuration
-	JVMArguments           []string
-	JavaClassPath          string
-	JavaLibraryPath        string
+	// Timing
+	StartTime time.Time
+	Uptime    time.Duration
+
+	// Configuration
+	InputArguments         []string
+	SystemProperties       map[string]string
+	ClassPath              string
+	LibraryPath            string
 	BootClassPath          string
 	BootClassPathSupported bool
+	ManagementSpecVersion  string
 
-	// ===== SYSTEM PROPERTIES =====
-	SystemProperties map[string]string // All system properties
-
-	// Commonly used properties (extracted for convenience)
+	// Commonly used system properties
 	JavaVersion string
 	JavaVendor  string
 	JavaHome    string
 	UserName    string
 	UserHome    string
-	OSName      string
-	OSArch      string
-	OSVersion   string
+	UserDir     string
+}
 
-	// GC configuration
-	GCName     string            // Current GC algorithm name
-	GCSettings map[string]string // GC-related system properties
+type MBeanSnapshot struct {
+	Timestamp time.Time
+	Connected bool
+	Error     error
 
-	// ===== COMPILATION STATISTICS =====
-	TotalCompilationTime               int64  // Total JIT compilation time (ms)
-	CompilerName                       string // Compiler name
-	CompilationTimeMonitoringSupported bool   // Whether compilation time monitoring is supported
-
-	// ===== BUFFER POOL METRICS =====
-	// Direct buffers (off-heap)
-	DirectBufferCount    int64
-	DirectBufferUsed     int64
-	DirectBufferCapacity int64
-
-	// Memory-mapped buffers
-	MappedBufferCount    int64
-	MappedBufferUsed     int64
-	MappedBufferCapacity int64
-
-	// ===== SAFEPOINT STATISTICS =====
-	// (HotSpot JVM specific)
-	SafepointCount         int64 // Number of safepoints reached
-	SafepointTime          int64 // Total time spent in safepoints (ms)
-	SafepointSyncTime      int64 // Time to reach safepoint (ms)
-	ApplicationTime        int64 // Time application was running (ms)
-	ApplicationStoppedTime int64 // Total stopped time (ms)
+	// ===== MBean-organized metrics =====
+	GC           GarbageCollector
+	Memory       Memory
+	Threading    Threading
+	ClassLoading ClassLoading
+	OS           OperatingSystem
+	Runtime      Runtime
 }

@@ -36,12 +36,3 @@ func (c *Config) String() string {
 
 	return "No target specified"
 }
-
-// JMXClientInterface defines the interface for JMX clients
-// This allows both regular and debug clients to be used interchangeably
-type JMXClientInterface interface {
-	QueryMBean(string) (map[string]any, error)
-	QueryMBeanPattern(string) ([]map[string]any, error)
-	TestConnection() error
-	Close() error
-}

@@ -13,6 +13,9 @@ import (
 	"sync"
 )
 
+//go:embed JMXClient.java
+var jmxClientSource string
+
 type JMXClient struct {
 	pid           int             // Process ID for local attachment
 	connectionURL string          // JMX service URL
@@ -24,8 +27,13 @@ type JMXClient struct {
 	cancel        context.CancelFunc
 }
 
-//go:embed JMXClient.java
-var jmxClientSource string
+// Interface to allow both regular and debug clients to be used interchangeably
+type JMXClientInterface interface {
+	QueryMBean(string) (map[string]any, error)
+	QueryMBeanPattern(string) ([]map[string]any, error)
+	TestConnection() error
+	Close() error
+}
 
 func NewJMXClient(pid int, url string) (*JMXClient, error) {
 	ctx, cancel := context.WithCancel(context.Background())

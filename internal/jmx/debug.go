@@ -22,6 +22,13 @@ type DebugLogEntry struct {
 	Error     string    `json:"error,omitempty"`
 }
 
+type SnapshotLogEntry struct {
+	Timestamp time.Time      `json:"timestamp"`
+	Connected bool           `json:"connected"`
+	Error     string         `json:"error,omitempty"`
+	Snapshot  *MBeanSnapshot `json:"snapshot"`
+}
+
 func (jc *JMXPoller) initDebugLogging() error {
 	if jc.config.DebugLogFile == "" {
 		timestamp := time.Now().Format("20060102_150405")
@@ -39,6 +46,31 @@ func (jc *JMXPoller) initDebugLogging() error {
 	header := fmt.Sprintf("=== JMX Debug Session Started at %s ===\n", time.Now().Format(time.RFC3339))
 	if _, err := jc.debugFile.WriteString(header); err != nil {
 		return fmt.Errorf("failed to write debug header: %w", err)
+	}
+
+	// Initialize snapshot debug logging
+	if err := jc.initSnapshotDebugLogging(); err != nil {
+		return fmt.Errorf("failed to initialize snapshot debug logging: %w", err)
+	}
+
+	return nil
+}
+
+func (jc *JMXPoller) initSnapshotDebugLogging() error {
+	timestamp := time.Now().Format("20060102_150405")
+	snapshotLogFile := fmt.Sprintf("jmx_snapshots_%s.log", timestamp)
+
+	file, err := os.OpenFile(snapshotLogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open snapshot debug log file: %w", err)
+	}
+
+	jc.snapshotDebugFile = file
+
+	// Write snapshot debug session header
+	header := fmt.Sprintf("=== JMX Snapshot Debug Session Started at %s ===\n", time.Now().Format(time.RFC3339))
+	if _, err := jc.snapshotDebugFile.WriteString(header); err != nil {
+		return fmt.Errorf("failed to write snapshot debug header: %w", err)
 	}
 
 	return nil
@@ -76,7 +108,7 @@ func (dc *DebugJMXClient) Close() error {
 	return dc.originalClient.Close()
 }
 
-func (dc *DebugJMXClient) logQueryResult(objectName, queryType string, data interface{}, err error) {
+func (dc *DebugJMXClient) logQueryResult(objectName, queryType string, data any, err error) {
 	entry := DebugLogEntry{
 		Timestamp: time.Now(),
 		MBeanName: objectName,
@@ -98,6 +130,34 @@ func (dc *DebugJMXClient) logQueryResult(objectName, queryType string, data inte
 
 	dc.debugFile.WriteString(string(jsonData) + "\n")
 	dc.debugFile.Sync()
+}
+
+// Log the complete parsed MBeanSnapshot
+func (jc *JMXPoller) logParsedSnapshot(snapshot *MBeanSnapshot) {
+	if jc.snapshotDebugFile == nil {
+		return
+	}
+
+	entry := SnapshotLogEntry{
+		Timestamp: time.Now(),
+		Connected: snapshot.Connected,
+		Snapshot:  snapshot,
+	}
+
+	if snapshot.Error != nil {
+		entry.Error = snapshot.Error.Error()
+	}
+
+	jsonData, marshalErr := json.MarshalIndent(entry, "", "  ")
+	if marshalErr != nil {
+		fallbackLog := fmt.Sprintf("[%s] ERROR: Failed to marshal snapshot data: %v\n",
+			entry.Timestamp.Format(time.RFC3339), marshalErr)
+		jc.snapshotDebugFile.WriteString(fallbackLog)
+		return
+	}
+
+	jc.snapshotDebugFile.WriteString(string(jsonData) + "\n")
+	jc.snapshotDebugFile.Sync()
 }
 
 // Debug logging method to show available attributes

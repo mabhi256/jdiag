@@ -6,12 +6,10 @@ import (
 	"time"
 )
 
-// ===== GC METRICS =====
-// Fetch ALL available attributes for comprehensive GC analysis
-func (jc *JMXPoller) collectGCMetrics(metrics *JVMSnapshot) error {
+func (jc *JMXPoller) collectGCMetrics(metrics *MBeanSnapshot) error {
 	client := jc.getEffectiveClient()
 
-	// 1. Basic GC Metrics - Get ALL available attributes
+	// Query all GC collectors
 	gcs, err := client.QueryMBeanPattern("java.lang:type=GarbageCollector,name=*")
 	if err != nil {
 		return fmt.Errorf("failed to query GC metrics: %w", err)
@@ -24,6 +22,7 @@ func (jc *JMXPoller) collectGCMetrics(metrics *JVMSnapshot) error {
 			continue
 		}
 
+		// Basic GC metrics - raw counts and times
 		count, countOk := gc["CollectionCount"].(float64)
 		gcTime, timeOk := gc["CollectionTime"].(float64)
 
@@ -31,12 +30,13 @@ func (jc *JMXPoller) collectGCMetrics(metrics *JVMSnapshot) error {
 			continue
 		}
 
+		// Classify GC type and store raw data
 		if isYoungGenGC(gcName) {
-			metrics.YoungGCCount += int64(count)
-			metrics.YoungGCTime += int64(gcTime)
+			metrics.GC.YoungGCCount = int64(count)
+			metrics.GC.YoungGCTime = int64(gcTime)
 		} else if isOldGenGC(gcName) {
-			metrics.OldGCCount += int64(count)
-			metrics.OldGCTime += int64(gcTime)
+			metrics.GC.OldGCCount = int64(count)
+			metrics.GC.OldGCTime = int64(gcTime)
 		}
 
 		// Extract Memory Pool Names managed by this GC
@@ -48,112 +48,99 @@ func (jc *JMXPoller) collectGCMetrics(metrics *JVMSnapshot) error {
 				}
 			}
 			if isYoungGenGC(gcName) {
-				metrics.YoungGCManagedPools = managedPools
+				metrics.GC.YoungGCManagedPools = managedPools
 			} else if isOldGenGC(gcName) {
-				metrics.OldGCManagedPools = managedPools
+				metrics.GC.OldGCManagedPools = managedPools
 			}
 		}
 
-		// Extract Last GC Info for detailed analysis
+		// Extract LastGcInfo - RAW DATA ONLY
 		if lastGcInfo, ok := gc["LastGcInfo"].(map[string]any); ok && lastGcInfo != nil {
 			if startTime, ok := lastGcInfo["startTime"].(float64); ok {
 				gcStartTime := time.Unix(int64(startTime/1000), 0)
 				if gcStartTime.After(lastGCTime) {
 					lastGCTime = gcStartTime
-					metrics.LastGCTimestamp = gcStartTime
 
-					// Extract all available GC info fields
-					if gcCause, ok := lastGcInfo["GcCause"].(string); ok {
-						metrics.LastGCCause = gcCause
-					}
-					if gcAction, ok := lastGcInfo["GcAction"].(string); ok {
-						metrics.LastGCAction = gcAction
-					}
-					if gcName, ok := lastGcInfo["GcName"].(string); ok {
-						metrics.LastGCName = gcName
-					}
+					// Build LastGCInfo structure
+					var lastGC LastGCInfo
+					lastGC.Timestamp = gcStartTime
+
+					// Raw GC timing data
 					if duration, ok := lastGcInfo["duration"].(float64); ok {
-						metrics.LastGCDuration = int64(duration)
+						lastGC.Duration = int64(duration)
 					}
 					if endTime, ok := lastGcInfo["endTime"].(float64); ok {
-						metrics.LastGCEndTime = time.Unix(int64(endTime/1000), 0)
+						lastGC.EndTime = time.Unix(int64(endTime/1000), 0)
 					}
 					if id, ok := lastGcInfo["id"].(float64); ok {
-						metrics.LastGCId = int64(id)
+						lastGC.Id = int64(id)
+					}
+					if threadCount, ok := lastGcInfo["GcThreadCount"].(float64); ok {
+						lastGC.ThreadCount = int64(threadCount)
 					}
 
+					// Extract per-pool memory usage before/after GC
 					if memBefore, ok := lastGcInfo["memoryUsageBeforeGc"].(map[string]any); ok {
-						metrics.LastGCMemoryBefore = jc.extractTotalMemoryFromGCInfo(memBefore)
+						jc.extractPerPoolMemoryUsage(memBefore, &lastGC, "before")
 					}
 					if memAfter, ok := lastGcInfo["memoryUsageAfterGc"].(map[string]any); ok {
-						metrics.LastGCMemoryAfter = jc.extractTotalMemoryFromGCInfo(memAfter)
+						jc.extractPerPoolMemoryUsage(memAfter, &lastGC, "after")
 					}
 
-					if metrics.LastGCMemoryBefore > 0 && metrics.LastGCMemoryAfter > 0 {
-						metrics.LastGCMemoryFreed = metrics.LastGCMemoryBefore - metrics.LastGCMemoryAfter
-					}
-
-					// Extract G1 phase timings if available
-					if phases, ok := lastGcInfo["phases"].(map[string]any); ok {
-						jc.extractG1PhaseTimings(phases, metrics)
-					}
+					metrics.GC.LastGC = lastGC
 				}
 			}
 		}
 
-		// GC validity
+		// GC validity check
 		if valid, ok := gc["Valid"].(bool); ok && !valid {
-			metrics.InvalidGCs = append(metrics.InvalidGCs, gcName)
+			metrics.GC.InvalidGCs = append(metrics.GC.InvalidGCs, gcName)
 		}
-	}
-
-	// 2. G1GC-Specific Metrics (try multiple patterns)
-	g1Patterns := []string{
-		"com.sun.management:type=HotSpotGarbageCollector,name=G1 Young Generation",
-		"java.lang:type=GarbageCollector,name=G1 Young Generation",
-	}
-
-	for _, pattern := range g1Patterns {
-		g1Info, err := client.QueryMBean(pattern)
-		if err == nil {
-			// Extract G1-specific metrics if available
-			if lastGcInfo, ok := g1Info["LastGcInfo"].(map[string]any); ok && lastGcInfo != nil {
-				if phases, ok := lastGcInfo["phases"].(map[string]any); ok {
-					jc.extractG1PhaseTimings(phases, metrics)
-				}
-			}
-			break
-		}
-	}
-
-	// Try to extract G1 region size from various sources
-	jc.extractG1RegionSize(metrics)
-
-	// 3. Calculate GC Efficiency Metrics
-	if metrics.YoungGCTime > 0 && metrics.LastGCMemoryFreed > 0 {
-		freedMB := float64(metrics.LastGCMemoryFreed) / (1024 * 1024)
-		timeMs := float64(metrics.YoungGCTime)
-		if timeMs > 0 {
-			metrics.YoungGCEfficiency = freedMB / timeMs
-		}
-	}
-
-	if metrics.OldGCTime > 0 && metrics.LastGCMemoryFreed > 0 {
-		freedMB := float64(metrics.LastGCMemoryFreed) / (1024 * 1024)
-		timeMs := float64(metrics.OldGCTime)
-		if timeMs > 0 {
-			metrics.OldGCEfficiency = freedMB / timeMs
-		}
-	}
-
-	totalTime := metrics.YoungGCTime + metrics.OldGCTime
-	if totalTime > 0 && metrics.LastGCMemoryFreed > 0 {
-		freedMB := float64(metrics.LastGCMemoryFreed) / (1024 * 1024)
-		timeMs := float64(totalTime)
-		metrics.OverallGCEfficiency = freedMB / timeMs
 	}
 
 	return nil
+}
+
+// Extract per-pool memory usage from GC info
+func (jc *JMXPoller) extractPerPoolMemoryUsage(memoryMap map[string]any, lastGC *LastGCInfo, timing string) {
+	for poolName, poolInfo := range memoryMap {
+		if poolData, ok := poolInfo.(map[string]any); ok {
+			var poolValue map[string]any
+			if valueMap, ok := poolData["value"].(map[string]any); ok {
+				poolValue = valueMap
+			} else {
+				poolValue = poolData
+			}
+
+			if used, ok := poolValue["used"].(float64); ok {
+				// Store memory usage by pool name and timing
+				switch timing {
+				case "before":
+					switch {
+					case strings.Contains(strings.ToLower(poolName), "eden"):
+						lastGC.EdenBefore = int64(used)
+					case strings.Contains(strings.ToLower(poolName), "survivor"):
+						lastGC.SurvivorBefore = int64(used)
+					case strings.Contains(strings.ToLower(poolName), "old"):
+						lastGC.OldBefore = int64(used)
+					case strings.Contains(strings.ToLower(poolName), "metaspace"):
+						lastGC.MetaspaceBefore = int64(used)
+					}
+				case "after":
+					switch {
+					case strings.Contains(strings.ToLower(poolName), "eden"):
+						lastGC.EdenAfter = int64(used)
+					case strings.Contains(strings.ToLower(poolName), "survivor"):
+						lastGC.SurvivorAfter = int64(used)
+					case strings.Contains(strings.ToLower(poolName), "old"):
+						lastGC.OldAfter = int64(used)
+					case strings.Contains(strings.ToLower(poolName), "metaspace"):
+						lastGC.MetaspaceAfter = int64(used)
+					}
+				}
+			}
+		}
+	}
 }
 
 // Extract GC name from various possible sources in the GC data
@@ -191,68 +178,30 @@ func extractGCName(objectName string) string {
 	return objectName
 }
 
-// Helper function to extract total memory from GC info memory maps
-func (jc *JMXPoller) extractTotalMemoryFromGCInfo(memoryMap map[string]any) int64 {
-	var total int64
-	for _, poolInfo := range memoryMap {
-		if poolData, ok := poolInfo.(map[string]any); ok {
-			if used, ok := poolData["used"].(float64); ok {
-				total += int64(used)
-			}
-		}
-	}
-	return total
+// GC type classification helpers
+func isYoungGenGC(gcName string) bool {
+	lowerName := strings.ToLower(gcName)
+	return strings.Contains(lowerName, "young") ||
+		strings.Contains(lowerName, "copy") ||
+		strings.Contains(lowerName, "scavenge") ||
+		strings.Contains(lowerName, "parnew") ||
+		strings.Contains(lowerName, "ps scavenge") ||
+		strings.Contains(lowerName, "g1 young") ||
+		strings.Contains(lowerName, "g1 young generation") ||
+		(strings.Contains(lowerName, "g1") &&
+			!strings.Contains(lowerName, "old") &&
+			!strings.Contains(lowerName, "mixed"))
 }
 
-// Helper method to extract G1 phase timings
-func (jc *JMXPoller) extractG1PhaseTimings(phases map[string]any, metrics *JVMSnapshot) {
-	phaseMap := map[string]*int64{
-		"Root Scanning":       &metrics.G1RootScanTime,
-		"Object Copy":         &metrics.G1ObjectCopyTime,
-		"Termination":         &metrics.G1TerminationTime,
-		"Other":               &metrics.G1OtherTime,
-		"Choose CSet":         &metrics.G1ChooseCSetTime,
-		"ref_proc":            &metrics.G1RefProcTime,
-		"ref_enq":             &metrics.G1RefEnqTime,
-		"redirty_cards":       &metrics.G1RedirtyCardsTime,
-		"code_root_purge":     &metrics.G1CodeRootPurgeTime,
-		"string_dedup":        &metrics.G1StringDedupTime,
-		"young_free_cset":     &metrics.G1YoungFreeCSetTime,
-		"non_young_free_cset": &metrics.G1NonYoungFreeCSetTime,
-		"Evacuation Pause":    &metrics.G1EvacuationPauseTime,
-		"Update RS":           &metrics.G1UpdateRSTime,
-		"Scan RS":             &metrics.G1ScanRSTime,
-	}
-
-	for phaseName, metricPtr := range phaseMap {
-		if phaseTime, ok := phases[phaseName].(float64); ok {
-			*metricPtr = int64(phaseTime)
-		}
-	}
-}
-
-// Helper method to extract G1 region size
-func (jc *JMXPoller) extractG1RegionSize(metrics *JVMSnapshot) {
-	client := jc.getEffectiveClient()
-
-	// Try to get from Runtime system properties
-	runtime, err := client.QueryMBean("java.lang:type=Runtime")
-	if err == nil {
-		if props, ok := runtime["SystemProperties"].(map[string]any); ok {
-			if regionSize, exists := props["G1HeapRegionSize"]; exists {
-				if size, ok := regionSize.(float64); ok {
-					metrics.G1HeapRegionSize = int64(size)
-				}
-			}
-		}
-	}
-
-	// Calculate derived G1 metrics
-	if metrics.G1HeapRegionSize > 0 && metrics.HeapMax > 0 {
-		metrics.G1TotalRegions = metrics.HeapMax / metrics.G1HeapRegionSize
-		if metrics.HeapUsed > 0 {
-			metrics.G1UsedRegions = (metrics.HeapUsed + metrics.G1HeapRegionSize - 1) / metrics.G1HeapRegionSize
-			metrics.G1FreeRegions = metrics.G1TotalRegions - metrics.G1UsedRegions
-		}
-	}
+func isOldGenGC(gcName string) bool {
+	lowerName := strings.ToLower(gcName)
+	return strings.Contains(lowerName, "old") ||
+		strings.Contains(lowerName, "cms") ||
+		strings.Contains(lowerName, "marksweep") ||
+		strings.Contains(lowerName, "parallel old") ||
+		strings.Contains(lowerName, "ps marksweep") ||
+		strings.Contains(lowerName, "g1 old") ||
+		strings.Contains(lowerName, "g1 old generation") ||
+		strings.Contains(lowerName, "g1 mixed") ||
+		strings.Contains(lowerName, "g1 concurrent")
 }
