@@ -55,6 +55,7 @@ func NewTabState() *TabState {
 
 // GCEvent represents a single GC event
 type GCEvent struct {
+	Id         int64
 	Timestamp  time.Time
 	Generation string // "young" or "old"
 	Duration   time.Duration

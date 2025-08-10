@@ -106,8 +106,9 @@ func (get *GCEventTracker) processGenerationGC(generation string, currentCount, 
 	}
 
 	// Create GC events for each new collection
-	for i := int64(0); i < newEvents; i++ {
+	for range newEvents {
 		get.gcEvents = append(get.gcEvents, GCEvent{
+			Id:         lastGCInfo.Id,
 			Timestamp:  eventTimestamp,
 			Generation: generation,
 			Duration:   actualDuration,
@@ -207,10 +208,10 @@ func (get *GCEventTracker) GetMostRecentGCInfo() (jmx.LastGCInfo, string) {
 }
 
 // GetMostRecentGCDetails returns processed details about the most recent GC
-func (get *GCEventTracker) GetMostRecentGCDetails() (generation string, timestamp time.Time, duration time.Duration, collected int64) {
+func (get *GCEventTracker) GetMostRecentGCDetails() (id int64, generation string, timestamp time.Time, duration time.Duration, collected int64) {
 	gcInfo, gcType := get.GetMostRecentGCInfo()
 	if !gcInfo.IsValid() {
-		return "none", time.Time{}, 0, 0
+		return -1, "none", time.Time{}, 0, 0
 	}
 
 	timestamp = get.convertJVMTimestamp(gcInfo.EndTime)
@@ -236,7 +237,7 @@ func (get *GCEventTracker) GetMostRecentGCDetails() (generation string, timestam
 		collected = 0
 	}
 
-	return gcType, timestamp, duration, collected
+	return gcInfo.Id, gcType, timestamp, duration, collected
 }
 
 // GetGCPressureLevel calculates the current GC pressure level
