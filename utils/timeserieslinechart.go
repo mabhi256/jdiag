@@ -30,7 +30,7 @@ const DefaultDataSetName = "default"
 
 func HourTimeLabelFormatter() linechart.LabelFormatter {
 	return func(i int, v float64) string {
-		t := time.Unix(int64(v), 0).UTC()
+		t := time.Unix(int64(v), 0).Local()
 		return t.Format("15:04:05")
 	}
 }

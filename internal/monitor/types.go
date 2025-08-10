@@ -32,11 +32,25 @@ func GetAllTabs() []TabType {
 	return []TabType{TabMemory, TabGC, TabThreads, TabSystem}
 }
 
-// A discovered Java process
-type JavaProcess struct {
-	PID       int    `json:"pid"`
-	MainClass string `json:"mainClass"`
-	Args      string `json:"args,omitempty"`
+type TabState struct {
+	Memory  *MemoryState
+	GC      *GCState
+	Threads *ThreadState
+	System  *SystemState
+}
+
+func NewTabState() *TabState {
+	return &TabState{
+		Memory: &MemoryState{
+			MemoryPressure: "low",
+		},
+		GC: &GCState{
+			GCPressureLevel: "low",
+			RecentGCEvents:  make([]GCEvent, 0),
+		},
+		Threads: &ThreadState{},
+		System:  &SystemState{},
+	}
 }
 
 type GCEvent struct {
@@ -189,25 +203,4 @@ type SystemState struct {
 	ConnectionUptime time.Duration
 	UpdateCount      int64
 	LastUpdateTime   time.Time
-}
-
-type TabState struct {
-	Memory  *MemoryState
-	GC      *GCState
-	Threads *ThreadState
-	System  *SystemState
-}
-
-func NewTabState() *TabState {
-	return &TabState{
-		Memory: &MemoryState{
-			MemoryPressure: "low",
-		},
-		GC: &GCState{
-			GCPressureLevel: "low",
-			RecentGCEvents:  make([]GCEvent, 0),
-		},
-		Threads: &ThreadState{},
-		System:  &SystemState{},
-	}
 }

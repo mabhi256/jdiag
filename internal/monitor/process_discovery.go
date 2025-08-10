@@ -8,6 +8,12 @@ import (
 	"strings"
 )
 
+type JavaProcess struct {
+	PID       int    `json:"pid"`
+	MainClass string `json:"mainClass"`
+	Args      string `json:"args,omitempty"`
+}
+
 // Use jps command to find Java processes
 func DiscoverJavaProcesses() ([]*JavaProcess, error) {
 	cmd := exec.Command("jps", "-l", "-v")

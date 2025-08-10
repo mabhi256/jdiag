@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -56,7 +55,7 @@ func (m *Model) refreshProcessList() {
 	m.processList.SetItems(items)
 }
 
-// selectProcess handles process selection and switches to monitoring mode
+// Selects a process and switches to monitoring mode
 func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 	// Try to enable JMX first
 	if err := jmx.EnableJMXForProcess(process.PID); err != nil {
@@ -98,7 +97,7 @@ func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 	return m, triggerImmediateTick()
 }
 
-// renderProcessSelectionView renders the entire process selection UI
+// Renders the process selection UI
 func (m *Model) renderProcessSelectionView() string {
 	header := tui.HeaderStyle.Width(m.width).Render("🔍 Select Java Process to Monitor")
 
@@ -120,52 +119,4 @@ func (m *Model) renderProcessSelectionView() string {
 		listView,
 		statusView,
 	)
-}
-
-// handleProcessModeUpdate handles all updates when in process mode
-func (m *Model) handleProcessModeUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.help.Width = msg.Width
-
-		m.processList.SetWidth(msg.Width)
-		m.processList.SetHeight(msg.Height - 4) // Leave space for header and footer
-		return m, nil
-
-	case TickMsg:
-		// Refresh list in process mode
-		m.refreshProcessList()
-		return m, m.scheduleTick()
-
-	case tea.KeyMsg:
-		return m.handleProcessModeKeys(msg)
-	}
-
-	return m, nil
-}
-
-// handleProcessModeKeys handles keyboard input when in process mode
-func (m *Model) handleProcessModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, keys.Enter):
-		if selectedItem := m.processList.SelectedItem(); selectedItem != nil {
-			if procItem, ok := selectedItem.(processItem); ok {
-				return m.selectProcess(procItem.process)
-			}
-		}
-
-	case key.Matches(msg, keys.Escape):
-		// ESC in process mode - go back to monitoring if we had selected a process previously
-		if m.selectedProcess != nil {
-			m.processMode = false
-			// return m, nil // Mode changed, next tick will use metrics interval
-		}
-	}
-
-	// Handle list navigation in process mode (for arrow keys, filtering, etc.)
-	var cmd tea.Cmd
-	m.processList, cmd = m.processList.Update(msg)
-	return m, cmd
 }
