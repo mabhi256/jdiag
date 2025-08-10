@@ -16,7 +16,6 @@ type HistoricalDataStore struct {
 	classCounts  []utils.TimeMap
 	systemUsage  []utils.TimeMap
 
-	maxPoints      int
 	windowDuration time.Duration
 }
 
@@ -26,7 +25,6 @@ func NewHistoricalDataStore() *HistoricalDataStore {
 		threadCounts:   make([]utils.TimeMap, 0),
 		classCounts:    make([]utils.TimeMap, 0),
 		systemUsage:    make([]utils.TimeMap, 0),
-		maxPoints:      300,
 		windowDuration: 5 * time.Minute,
 	}
 }
@@ -46,7 +44,6 @@ func (hds *HistoricalDataStore) AddHeapMemory(timestamp time.Time, entry *jmx.Me
 	}
 
 	hds.heapMemory = append(hds.heapMemory, *point)
-	hds.trimHistory()
 }
 
 func (hds *HistoricalDataStore) AddThreadCount(timestamp time.Time, entry *jmx.Threading) {
@@ -59,7 +56,6 @@ func (hds *HistoricalDataStore) AddThreadCount(timestamp time.Time, entry *jmx.T
 	point.Values["daemon_count"] = float64(entry.DaemonCount)
 
 	hds.threadCounts = append(hds.threadCounts, *point)
-	hds.trimHistory()
 }
 
 func (hds *HistoricalDataStore) AddClassCount(timestamp time.Time, entry *jmx.ClassLoading) {
@@ -72,7 +68,6 @@ func (hds *HistoricalDataStore) AddClassCount(timestamp time.Time, entry *jmx.Cl
 	point.Values["unloaded_count"] = float64(entry.UnloadedClassCount)
 
 	hds.classCounts = append(hds.classCounts, *point)
-	hds.trimHistory()
 }
 
 func (hds *HistoricalDataStore) AddSystemUsage(timestamp time.Time, entry *jmx.OperatingSystem) {
@@ -87,7 +82,6 @@ func (hds *HistoricalDataStore) AddSystemUsage(timestamp time.Time, entry *jmx.O
 	point.Values["swap"] = utils.MemorySize(entry.TotalSwapSpace - entry.FreeSwapSpace).GB()
 
 	hds.systemUsage = append(hds.systemUsage, *point)
-	hds.trimHistory()
 }
 
 func (hds *HistoricalDataStore) GetRecentHistory(window time.Duration, f func(*HistoricalDataStore) []utils.TimeMap) []utils.TimeMap {
@@ -124,26 +118,4 @@ func (hds *HistoricalDataStore) filterMultiValueByTime(points []utils.TimeMap, c
 		}
 	}
 	return result
-}
-
-func (hds *HistoricalDataStore) filterByTime(points []utils.TimePoint, cutoff time.Time) []utils.TimePoint {
-	var result []utils.TimePoint
-	for _, point := range points {
-		if point.Time.After(cutoff) {
-			result = append(result, point)
-		}
-	}
-	return result
-}
-
-func (hds *HistoricalDataStore) trimHistory() {
-	if len(hds.heapMemory) > hds.maxPoints {
-		hds.heapMemory = hds.heapMemory[len(hds.heapMemory)-hds.maxPoints:]
-	}
-	if len(hds.systemUsage) > hds.maxPoints {
-		hds.systemUsage = hds.systemUsage[len(hds.systemUsage)-hds.maxPoints:]
-	}
-	if len(hds.threadCounts) > hds.maxPoints {
-		hds.threadCounts = hds.threadCounts[len(hds.threadCounts)-hds.maxPoints:]
-	}
 }

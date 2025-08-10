@@ -3,7 +3,6 @@ package jmx
 import (
 	"fmt"
 	"strings"
-	"time"
 )
 
 func (jc *JMXPoller) collectGCMetrics(metrics *MBeanSnapshot) error {
@@ -15,14 +14,13 @@ func (jc *JMXPoller) collectGCMetrics(metrics *MBeanSnapshot) error {
 		return fmt.Errorf("failed to query GC metrics: %w", err)
 	}
 
-	var lastGCTime time.Time
+	// Process each GC collector separately
 	for _, gc := range gcs {
-		gcName := jc.extractGCName(gc)
+		gcName := gc["Name"].(string)
 		if gcName == "" {
 			continue
 		}
 
-		// Basic GC metrics - raw counts and times
 		count, countOk := gc["CollectionCount"].(float64)
 		gcTime, timeOk := gc["CollectionTime"].(float64)
 
@@ -30,65 +28,32 @@ func (jc *JMXPoller) collectGCMetrics(metrics *MBeanSnapshot) error {
 			continue
 		}
 
-		// Classify GC type and store raw data
-		if isYoungGenGC(gcName) {
-			metrics.GC.YoungGCCount = int64(count)
-			metrics.GC.YoungGCTime = int64(gcTime)
-		} else if isOldGenGC(gcName) {
-			metrics.GC.OldGCCount = int64(count)
-			metrics.GC.OldGCTime = int64(gcTime)
-		}
-
 		// Extract Memory Pool Names managed by this GC
+		var managedPools []string
 		if poolNames, ok := gc["MemoryPoolNames"].([]interface{}); ok {
-			var managedPools []string
 			for _, pool := range poolNames {
 				if poolName, ok := pool.(string); ok {
 					managedPools = append(managedPools, poolName)
 				}
 			}
-			if isYoungGenGC(gcName) {
-				metrics.GC.YoungGCManagedPools = managedPools
-			} else if isOldGenGC(gcName) {
-				metrics.GC.OldGCManagedPools = managedPools
-			}
 		}
 
-		// Extract LastGcInfo - RAW DATA ONLY
-		if lastGcInfo, ok := gc["LastGcInfo"].(map[string]any); ok && lastGcInfo != nil {
-			if startTime, ok := lastGcInfo["startTime"].(float64); ok {
-				gcStartTime := time.Unix(int64(startTime/1000), 0)
-				if gcStartTime.After(lastGCTime) {
-					lastGCTime = gcStartTime
+		if isYoungGenGC(gcName) {
+			metrics.GC.YoungGCCount = int64(count)
+			metrics.GC.YoungGCTime = int64(gcTime)
+			metrics.GC.YoungGCManagedPools = managedPools
 
-					// Build LastGCInfo structure
-					var lastGC LastGCInfo
-					lastGC.Timestamp = gcStartTime
+			if lastGcInfo, ok := gc["LastGcInfo"].(map[string]any); ok && lastGcInfo != nil {
+				metrics.GC.LastYoungGC = jc.extractLastGCInfo(lastGcInfo)
+			}
+		} else if isOldGenGC(gcName) {
+			metrics.GC.OldGCCount = int64(count)
+			metrics.GC.OldGCTime = int64(gcTime)
+			metrics.GC.OldGCManagedPools = managedPools
 
-					// Raw GC timing data
-					if duration, ok := lastGcInfo["duration"].(float64); ok {
-						lastGC.Duration = int64(duration)
-					}
-					if endTime, ok := lastGcInfo["endTime"].(float64); ok {
-						lastGC.EndTime = time.Unix(int64(endTime/1000), 0)
-					}
-					if id, ok := lastGcInfo["id"].(float64); ok {
-						lastGC.Id = int64(id)
-					}
-					if threadCount, ok := lastGcInfo["GcThreadCount"].(float64); ok {
-						lastGC.ThreadCount = int64(threadCount)
-					}
-
-					// Extract per-pool memory usage before/after GC
-					if memBefore, ok := lastGcInfo["memoryUsageBeforeGc"].(map[string]any); ok {
-						jc.extractPerPoolMemoryUsage(memBefore, &lastGC, "before")
-					}
-					if memAfter, ok := lastGcInfo["memoryUsageAfterGc"].(map[string]any); ok {
-						jc.extractPerPoolMemoryUsage(memAfter, &lastGC, "after")
-					}
-
-					metrics.GC.LastGC = lastGC
-				}
+			// Extract LastGcInfo for Old GC - RAW DATA ONLY
+			if lastGcInfo, ok := gc["LastGcInfo"].(map[string]any); ok && lastGcInfo != nil {
+				metrics.GC.LastOldGC = jc.extractLastGCInfo(lastGcInfo)
 			}
 		}
 
@@ -101,7 +66,71 @@ func (jc *JMXPoller) collectGCMetrics(metrics *MBeanSnapshot) error {
 	return nil
 }
 
-// Extract per-pool memory usage from GC info
+func (jc *JMXPoller) extractLastGCInfo(lastGcInfo map[string]any) LastGCInfo {
+	var lastGC LastGCInfo
+
+	// Extract raw timing data (milliseconds since JVM startup)
+	if startTime, ok := lastGcInfo["startTime"].(float64); ok {
+		lastGC.StartTime = int64(startTime)
+	}
+	if endTime, ok := lastGcInfo["endTime"].(float64); ok {
+		lastGC.EndTime = int64(endTime)
+	}
+	if duration, ok := lastGcInfo["duration"].(float64); ok {
+		lastGC.Duration = int64(duration)
+	}
+	if id, ok := lastGcInfo["id"].(float64); ok {
+		lastGC.Id = int64(id)
+	}
+	if threadCount, ok := lastGcInfo["GcThreadCount"].(float64); ok {
+		lastGC.GcThreadCount = int64(threadCount)
+	}
+
+	if memBefore, ok := lastGcInfo["memoryUsageBeforeGc"].(map[string]any); ok {
+		lastGC.MemoryUsageBeforeGc = jc.extractMemoryUsageMap(memBefore)
+		jc.extractPerPoolMemoryUsage(memBefore, &lastGC, "before")
+	}
+	if memAfter, ok := lastGcInfo["memoryUsageAfterGc"].(map[string]any); ok {
+		lastGC.MemoryUsageAfterGc = jc.extractMemoryUsageMap(memAfter)
+		jc.extractPerPoolMemoryUsage(memAfter, &lastGC, "after")
+	}
+
+	return lastGC
+}
+
+func (jc *JMXPoller) extractMemoryUsageMap(memoryMap map[string]any) map[string]MemoryUsage {
+	result := make(map[string]MemoryUsage)
+
+	for poolName, poolInfo := range memoryMap {
+		if poolData, ok := poolInfo.(map[string]any); ok {
+			var poolValue map[string]any
+			if valueMap, ok := poolData["value"].(map[string]any); ok {
+				poolValue = valueMap
+			} else {
+				poolValue = poolData
+			}
+
+			var memUsage MemoryUsage
+			if used, ok := poolValue["used"].(float64); ok {
+				memUsage.Used = int64(used)
+			}
+			if committed, ok := poolValue["committed"].(float64); ok {
+				memUsage.Committed = int64(committed)
+			}
+			if max, ok := poolValue["max"].(float64); ok {
+				memUsage.Max = int64(max)
+			}
+			if init, ok := poolValue["init"].(float64); ok {
+				memUsage.Init = int64(init)
+			}
+
+			result[poolName] = memUsage
+		}
+	}
+
+	return result
+}
+
 func (jc *JMXPoller) extractPerPoolMemoryUsage(memoryMap map[string]any, lastGC *LastGCInfo, timing string) {
 	for poolName, poolInfo := range memoryMap {
 		if poolData, ok := poolInfo.(map[string]any); ok {
@@ -113,7 +142,6 @@ func (jc *JMXPoller) extractPerPoolMemoryUsage(memoryMap map[string]any, lastGC 
 			}
 
 			if used, ok := poolValue["used"].(float64); ok {
-				// Store memory usage by pool name and timing
 				switch timing {
 				case "before":
 					switch {
@@ -143,42 +171,40 @@ func (jc *JMXPoller) extractPerPoolMemoryUsage(memoryMap map[string]any, lastGC 
 	}
 }
 
-// Extract GC name from various possible sources in the GC data
-func (jc *JMXPoller) extractGCName(gc map[string]any) string {
-	// Try multiple possible fields for GC name
-	nameFields := []string{"Name", "name"}
-	for _, field := range nameFields {
-		if name, ok := gc[field].(string); ok && name != "" {
-			return name
-		}
-	}
+// func (jc *JMXPoller) extractGCName(gc map[string]any) string {
+// 	// Try multiple possible fields for GC name
+// 	nameFields := []string{"Name", "name"}
+// 	for _, field := range nameFields {
+// 		if name, ok := gc[field].(string); ok && name != "" {
+// 			return name
+// 		}
+// 	}
 
-	// Extract from ObjectName
-	objectNameFields := []string{"ObjectName", "objectName"}
-	for _, field := range objectNameFields {
-		if objectName, ok := gc[field].(string); ok {
-			return extractGCName(objectName)
-		}
-	}
+// 	// Extract from ObjectName
+// 	objectNameFields := []string{"ObjectName", "objectName"}
+// 	for _, field := range objectNameFields {
+// 		if objectName, ok := gc[field].(string); ok {
+// 			return extractGCName(objectName)
+// 		}
+// 	}
 
-	return ""
-}
+// 	return ""
+// }
 
-func extractGCName(objectName string) string {
-	if objectName == "" {
-		return ""
-	}
-	if idx := strings.Index(objectName, "name="); idx != -1 {
-		name := objectName[idx+5:]
-		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
-			name = name[:commaIdx]
-		}
-		return name
-	}
-	return objectName
-}
+// func extractGCName(objectName string) string {
+// 	if objectName == "" {
+// 		return ""
+// 	}
+// 	if idx := strings.Index(objectName, "name="); idx != -1 {
+// 		name := objectName[idx+5:]
+// 		if commaIdx := strings.Index(name, ","); commaIdx != -1 {
+// 			name = name[:commaIdx]
+// 		}
+// 		return name
+// 	}
+// 	return objectName
+// }
 
-// GC type classification helpers
 func isYoungGenGC(gcName string) bool {
 	lowerName := strings.ToLower(gcName)
 	return strings.Contains(lowerName, "young") ||

@@ -55,11 +55,12 @@ type Memory struct {
 }
 
 type LastGCInfo struct {
-	Duration    int64
-	Timestamp   time.Time
-	EndTime     time.Time
-	Id          int64
-	ThreadCount int64
+	StartTime int64
+	EndTime   int64
+	Duration  int64 // milliseconds
+	Id        int64 // GC event ID for this collector type
+
+	GcThreadCount int64 // GcThreadCount from LastGcInfo
 
 	// Per-pool memory usage before/after GC
 	EdenBefore      int64
@@ -70,6 +71,15 @@ type LastGCInfo struct {
 	OldAfter        int64
 	MetaspaceBefore int64
 	MetaspaceAfter  int64
+
+	// Complete raw memory pool data
+	MemoryUsageBeforeGc map[string]MemoryUsage
+	MemoryUsageAfterGc  map[string]MemoryUsage
+}
+
+// IsValid checks if this raw GC info contains valid data
+func (lgi *LastGCInfo) IsValid() bool {
+	return lgi.EndTime > 0 && lgi.Duration > 0 && lgi.Id > 0
 }
 
 type GarbageCollector struct {
@@ -85,7 +95,8 @@ type GarbageCollector struct {
 	InvalidGCs          []string
 
 	// Last GC details
-	LastGC LastGCInfo
+	LastYoungGC LastGCInfo
+	LastOldGC   LastGCInfo
 }
 
 type Threading struct {

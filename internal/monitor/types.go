@@ -53,6 +53,7 @@ func NewTabState() *TabState {
 	}
 }
 
+// GCEvent represents a single GC event
 type GCEvent struct {
 	Timestamp  time.Time
 	Generation string // "young" or "old"
@@ -98,6 +99,8 @@ type MemoryState struct {
 	LastMemoryAlert *PerformanceAlert
 }
 
+// GCState contains ONLY basic structure - NO calculation methods
+// All derived data comes from GCEventTracker
 type GCState struct {
 	YoungGCCount int64
 	YoungGCTime  int64 // ms
@@ -113,23 +116,10 @@ type GCState struct {
 	// GC performance metrics
 	GCOverhead      float64 // percentage of total time
 	GCFrequency     float64 // GCs per minute
-	LastGCEvent     *GCEvent
-	GCPressureLevel string // "low", "moderate", "high", "critical"
+	GCPressureLevel string  // "low", "moderate", "high", "critical"
 	RecentGCEvents  []GCEvent
 	AvgGCPauseTime  time.Duration
-}
-
-func (gs *GCState) GetGCPressureLevel() string {
-	switch {
-	case gs.GCOverhead > 0.10: // 10% overhead
-		return "critical"
-	case gs.GCOverhead > 0.05: // 5% overhead
-		return "high"
-	case gs.GCFrequency > 60: // More than 1 GC per second
-		return "moderate"
-	default:
-		return "low"
-	}
+	LastGCEvent     *GCEvent
 }
 
 type ThreadState struct {
@@ -163,10 +153,11 @@ type SystemState struct {
 	FreeSystemMemory    int64
 	UsedSystemMemory    int64
 	SystemMemoryPercent float64
-	TotalSwap           int64
-	FreeSwap            int64
-	UsedSwap            int64
-	SwapPercent         float64
+
+	TotalSwap   int64
+	FreeSwap    int64
+	UsedSwap    int64
+	SwapPercent float64
 
 	// JVM uptime and info
 	JVMUptime    time.Duration

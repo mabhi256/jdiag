@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/tui"
@@ -10,10 +11,6 @@ import (
 
 func RenderMemoryTab(state *TabState, width int, heapHistory []utils.TimeMap) string {
 	var sections []string
-
-	// Title
-	titleStyled := tui.InfoStyle.Render("Heap Memory (Used vs Committed)")
-	sections = append(sections, titleStyled)
 
 	// ntcharts timeseries graph
 	graphSection := renderHeapGraph(heapHistory, width)
@@ -114,7 +111,7 @@ func getMostRecentGCInfo(state *TabState) (string, bool) {
 	}
 
 	// Format timestamp
-	timeStr := recentEvent.Timestamp.Format("15:04:05")
+	timeAgo := time.Since(recentEvent.Timestamp)
 
 	// Format freed memory
 	freedStr := utils.MemorySize(recentEvent.Collected).MB()
@@ -123,7 +120,7 @@ func getMostRecentGCInfo(state *TabState) (string, bool) {
 	gcTimeStr := recentEvent.Duration.String()
 
 	// Create the formatted string
-	gcInfo := fmt.Sprintf("%s GC @ %s, freed %0.2f MB, %s", emoji, timeStr, freedStr, gcTimeStr)
+	gcInfo := fmt.Sprintf("%s GC %s ago, freed %0.2f MB, %s", emoji, utils.FormatDuration(timeAgo), freedStr, gcTimeStr)
 
 	return gcInfo, isYoungGen
 }
@@ -162,7 +159,7 @@ func renderHeapGraph(history []utils.TimeMap, width int) string {
 	// Create legend
 	usedLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("■ Used")
 	committedLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Committed")
-	legend := lipgloss.JoinHorizontal(lipgloss.Left, usedLegend, "  ", committedLegend)
+	legend := lipgloss.JoinHorizontal(lipgloss.Left, "Heap Memory ", usedLegend, "  ", committedLegend)
 
 	// Get the chart view
 	chartView := chart.View()

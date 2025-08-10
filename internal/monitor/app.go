@@ -81,7 +81,7 @@ func (m *Model) renderActiveTab() string {
 		heapHistory := m.GetHistoricalHeapMemory(5 * time.Minute)
 		return RenderMemoryTab(m.tabState, m.width, heapHistory)
 	case TabGC:
-		return RenderGCTab(m.tabState)
+		return RenderGCTab(m.tabState, m.metricsProcessor.gcTracker)
 	case TabThreads:
 		classHistory := m.GetHistoricalClassCount(5 * time.Minute)
 		threadHistory := m.GetHistoricaThreadCount(5 * time.Minute)

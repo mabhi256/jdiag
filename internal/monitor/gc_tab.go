@@ -10,101 +10,71 @@ import (
 	"github.com/mabhi256/jdiag/utils"
 )
 
-// Render renders the GC tab view
-func RenderGCTab(state *TabState) string {
+func RenderGCTab(state *TabState, tracker *GCEventTracker) string {
 	var sections []string
 
-	// GC pressure overview
-	pressureOverview := renderGCPressureOverview(state.GC)
-	sections = append(sections, pressureOverview)
+	// Analysis window for calculations
+	window := 5 * time.Minute
 
 	// GC statistics summary
-	summarySection := renderGCSummary(state.GC)
+	summarySection := renderGCSummary(tracker, window)
 	sections = append(sections, summarySection)
+
+	// Most recent GC information
+	recentGCSection := renderMostRecentGC(tracker)
+	sections = append(sections, recentGCSection)
 
 	// Young Generation GC
 	youngGCSection := renderGCSection("Young Generation GC",
-		state.GC.YoungGCCount,
-		state.GC.YoungGCTime,
-		state.GC.YoungGCAvg)
+		tracker, "young", window)
 	sections = append(sections, youngGCSection)
 
 	// Old Generation GC
 	oldGCSection := renderGCSection("Old Generation GC",
-		state.GC.OldGCCount,
-		state.GC.OldGCTime,
-		state.GC.OldGCAvg)
+		tracker, "old", window)
 	sections = append(sections, oldGCSection)
 
 	// GC Overhead analysis
-	overheadSection := renderGCOverhead(state.GC)
+	overheadSection := renderGCOverhead(tracker, window)
 	sections = append(sections, overheadSection)
 
+	// GC Performance analysis
+	performanceSection := renderGCPerformance(tracker, window)
+	sections = append(sections, performanceSection)
+
 	// Recent GC events
-	if len(state.GC.RecentGCEvents) > 0 {
-		recentEventsSection := renderRecentGCEvents(state.GC)
+	recentEvents := tracker.GetRecentEvents(5)
+	if len(recentEvents) > 0 {
+		recentEventsSection := renderRecentGCEvents(recentEvents)
 		sections = append(sections, recentEventsSection)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
 
-// renderGCPressureOverview shows overall GC pressure status
-func renderGCPressureOverview(gc *GCState) string {
-	pressureLevel := gc.GetGCPressureLevel()
+// renderGCSummary shows overall GC statistics from tracker
+func renderGCSummary(tracker *GCEventTracker, window time.Duration) string {
+	totalGCs := tracker.GetTotalGCCount()
+	totalTime := time.Duration(tracker.GetTotalGCTime()) * time.Millisecond
+	avgPauseTime := tracker.GetAveragePauseTime(window)
+	frequency := tracker.GetGCFrequency(window)
 
-	var pressureColor lipgloss.Color
-	var pressureIcon string
-
-	switch pressureLevel {
-	case "critical":
-		pressureColor = tui.CriticalColor
-		pressureIcon = "🔴"
-	case "high":
-		pressureColor = tui.WarningColor
-		pressureIcon = "🟡"
-	case "moderate":
-		pressureColor = tui.InfoColor
-		pressureIcon = "🟠"
-	default:
-		pressureColor = tui.GoodColor
-		pressureIcon = "🟢"
-	}
-
-	pressureText := fmt.Sprintf("%s GC Pressure: %s", pressureIcon, pressureLevel)
-
-	// Add overhead info
-	overheadText := ""
-	if gc.GCOverhead > 0 {
-		overheadText = fmt.Sprintf(" (%.1f%% overhead)", gc.GCOverhead*100)
-	}
-
-	overview := lipgloss.NewStyle().
-		Foreground(pressureColor).
-		Bold(true).
-		Render(pressureText + overheadText)
-
-	return overview + "\n"
-}
-
-// renderGCSummary shows overall GC statistics
-func renderGCSummary(gc *GCState) string {
-	totalGCs := gc.TotalGCCount
-	totalTime := time.Duration(gc.TotalGCTime) * time.Millisecond
-
-	var avgPauseTime time.Duration
-	if totalGCs > 0 {
-		avgPauseTime = totalTime / time.Duration(totalGCs)
-	}
+	// Calculate overall average if we have data
+	overallAvg := tracker.GetOverallGCAverage()
 
 	summaryLines := []string{
 		fmt.Sprintf("Total GCs: %d", totalGCs),
 		fmt.Sprintf("Total GC Time: %s", totalTime),
-		fmt.Sprintf("Average Pause: %s", avgPauseTime),
 	}
 
-	if gc.GCFrequency > 0 {
-		summaryLines = append(summaryLines, fmt.Sprintf("GC Frequency: %.1f/min", gc.GCFrequency))
+	if avgPauseTime > 0 {
+		summaryLines = append(summaryLines, fmt.Sprintf("Recent Avg Pause: %s", avgPauseTime))
+	} else if overallAvg > 0 {
+		summaryLines = append(summaryLines, fmt.Sprintf("Overall Avg Pause: %.1fms", overallAvg))
+	}
+
+	if frequency > 0 {
+		summaryLines = append(summaryLines, fmt.Sprintf("Recent Frequency: %.1f/min", frequency))
 	}
 
 	summaryText := fmt.Sprintf("• %s", summaryLines[0])
@@ -121,8 +91,98 @@ func renderGCSummary(gc *GCState) string {
 	return summary
 }
 
-// renderGCSection renders individual GC generation statistics
-func renderGCSection(title string, count int64, totalTime int64, avgTime float64) string {
+// renderMostRecentGC shows information about the most recent GC event
+func renderMostRecentGC(tracker *GCEventTracker) string {
+	generation, timestamp, duration, collected := tracker.GetMostRecentGCDetails()
+
+	if generation == "none" || timestamp.IsZero() {
+		return ""
+	}
+
+	var generationIcon string
+	var generationColor lipgloss.Color
+
+	if generation == "young" {
+		generationIcon = "🐣"
+		generationColor = tui.InfoColor
+	} else {
+		generationIcon = "👵"
+		generationColor = tui.WarningColor
+	}
+
+	// Determine pause time color
+	var pauseColor lipgloss.Color = tui.GoodColor
+	if duration > 500*time.Millisecond {
+		pauseColor = tui.CriticalColor
+	} else if duration > 100*time.Millisecond {
+		pauseColor = tui.WarningColor
+	}
+
+	timeAgo := time.Since(timestamp)
+
+	recentGCLines := []string{
+		fmt.Sprintf("%s %s Generation GC", generationIcon,
+			lipgloss.NewStyle().Foreground(generationColor).Render(generation)),
+		fmt.Sprintf("Duration: %s",
+			lipgloss.NewStyle().Foreground(pauseColor).Render(duration.String())),
+		fmt.Sprintf("Occurred: %s ago", utils.FormatDuration(timeAgo)),
+	}
+
+	if collected > 0 {
+		recentGCLines = append(recentGCLines,
+			fmt.Sprintf("Freed: %0.2f MB", utils.MemorySize(collected).MB()))
+	}
+
+	recentGCText := ""
+	for i, line := range recentGCLines {
+		if i == 0 {
+			recentGCText = "• " + line
+		} else {
+			recentGCText += "\n• " + line
+		}
+	}
+
+	recentGC := lipgloss.JoinVertical(lipgloss.Left,
+		tui.InfoStyle.Render("Most Recent GC"),
+		tui.MutedStyle.Render(recentGCText),
+		"", // Empty line for spacing
+	)
+
+	return recentGC
+}
+
+// renderGCSection renders individual GC generation statistics using tracker data
+func renderGCSection(title string, tracker *GCEventTracker, generation string, window time.Duration) string {
+	var count int64
+	var totalTime int64
+	var avgTime float64
+
+	// Get raw data from tracker
+	if generation == "young" {
+		if tracker.currentSnapshot != nil {
+			count = tracker.currentSnapshot.GC.YoungGCCount
+			totalTime = tracker.currentSnapshot.GC.YoungGCTime
+		}
+		avgTime = tracker.GetYoungGCAverage()
+	} else {
+		if tracker.currentSnapshot != nil {
+			count = tracker.currentSnapshot.GC.OldGCCount
+			totalTime = tracker.currentSnapshot.GC.OldGCTime
+		}
+		avgTime = tracker.GetOldGCAverage()
+	}
+
+	// Get calculated metrics
+	frequency := tracker.GetGCFrequencyByGeneration(generation, window)
+	youngEff, oldEff, _ := tracker.CalculateEfficiency(window)
+
+	var efficiency float64
+	if generation == "young" {
+		efficiency = youngEff
+	} else {
+		efficiency = oldEff
+	}
+
 	// Determine color based on frequency and time
 	var color lipgloss.Color = tui.GoodColor
 
@@ -143,11 +203,20 @@ func renderGCSection(title string, count int64, totalTime int64, avgTime float64
 		fmt.Sprintf("Avg Time: %.1fms", avgTime),
 	}
 
-	// Add frequency if we have enough data
+	// Add frequency if available
+	if frequency > 0 {
+		statsLines = append(statsLines, fmt.Sprintf("Frequency: %.1f/min", frequency))
+	}
+
+	// Add efficiency if available
+	if efficiency > 0 {
+		statsLines = append(statsLines, fmt.Sprintf("Efficiency: %.1f%%", efficiency))
+	}
+
+	// Add activity level assessment using tracker's calculation
 	if count > 0 {
-		// Estimate frequency (would need more context for accurate calculation)
-		statsLines = append(statsLines, fmt.Sprintf("Recent Activity: %s",
-			getGCActivityLevel(count, avgTime)))
+		activityLevel := tracker.GetGCActivityLevel(count, avgTime, frequency)
+		statsLines = append(statsLines, fmt.Sprintf("Activity: %s", activityLevel))
 	}
 
 	statsText := ""
@@ -168,40 +237,40 @@ func renderGCSection(title string, count int64, totalTime int64, avgTime float64
 	return section
 }
 
-// getGCActivityLevel determines activity level based on count and average time
-func getGCActivityLevel(count int64, avgTime float64) string {
-	switch {
-	case avgTime > 500:
-		return "High Impact"
-	case avgTime > 100:
-		return "Moderate Impact"
-	case count > 1000:
-		return "Frequent"
-	case count > 100:
-		return "Regular"
-	default:
-		return "Low"
-	}
-}
+// renderGCOverhead shows GC overhead analysis using tracker calculations
+func renderGCOverhead(tracker *GCEventTracker, window time.Duration) string {
+	recentOverhead := tracker.CalculateGCOverhead(window)
 
-// renderGCOverhead shows GC overhead analysis
-func renderGCOverhead(gc *GCState) string {
-	overhead := gc.GCOverhead
+	// Also calculate overall overhead for comparison
+	totalTime := float64(tracker.GetTotalGCTime())
+	var overallOverhead float64
+	if tracker.currentSnapshot != nil && !tracker.currentSnapshot.Runtime.StartTime.IsZero() {
+		uptime := time.Since(tracker.currentSnapshot.Runtime.StartTime)
+		if uptime > 0 {
+			overallOverhead = totalTime / float64(uptime.Milliseconds())
+		}
+	}
+
+	// Use recent overhead if available, otherwise fall back to overall
+	displayOverhead := recentOverhead
+	if displayOverhead == 0 {
+		displayOverhead = overallOverhead
+	}
 
 	var overheadColor lipgloss.Color
 	var status string
 
 	switch {
-	case overhead > 0.20: // 20%
+	case displayOverhead > 0.20: // 20%
 		overheadColor = tui.CriticalColor
 		status = "CRITICAL - Application severely impacted"
-	case overhead > 0.10: // 10%
+	case displayOverhead > 0.10: // 10%
 		overheadColor = tui.CriticalColor
 		status = "HIGH - Performance significantly impacted"
-	case overhead > 0.05: // 5%
+	case displayOverhead > 0.05: // 5%
 		overheadColor = tui.WarningColor
 		status = "MODERATE - Monitor for performance impact"
-	case overhead > 0.02: // 2%
+	case displayOverhead > 0.02: // 2%
 		overheadColor = tui.InfoColor
 		status = "LOW - Normal GC overhead"
 	default:
@@ -209,10 +278,27 @@ func renderGCOverhead(gc *GCState) string {
 		status = "MINIMAL - Excellent GC performance"
 	}
 
+	overheadLines := []string{
+		fmt.Sprintf("%.2f%% of time spent in GC", displayOverhead*100),
+	}
+
+	if recentOverhead > 0 && overallOverhead > 0 && recentOverhead != overallOverhead {
+		overheadLines = append(overheadLines,
+			fmt.Sprintf("Recent: %.2f%% | Overall: %.2f%%", recentOverhead*100, overallOverhead*100))
+	}
+
+	overheadText := ""
+	for i, line := range overheadLines {
+		if i == 0 {
+			overheadText = line
+		} else {
+			overheadText += "\n" + line
+		}
+	}
+
 	overheadSection := lipgloss.JoinVertical(lipgloss.Left,
 		tui.InfoStyle.Render("GC Overhead Analysis"),
-		lipgloss.NewStyle().Foreground(overheadColor).Render(
-			fmt.Sprintf("%.2f%% of total time spent in GC", overhead*100)),
+		lipgloss.NewStyle().Foreground(overheadColor).Render(overheadText),
 		tui.MutedStyle.Render(status),
 		"", // Empty line for spacing
 	)
@@ -220,17 +306,90 @@ func renderGCOverhead(gc *GCState) string {
 	return overheadSection
 }
 
-// renderRecentGCEvents shows recent GC events
-func renderRecentGCEvents(gc *GCState) string {
-	if len(gc.RecentGCEvents) == 0 {
+// renderGCPerformance shows GC performance analysis using tracker metrics
+func renderGCPerformance(tracker *GCEventTracker, window time.Duration) string {
+	maxPause := tracker.GetMaxPause(window)
+	longPauses := tracker.GetLongPauses(100*time.Millisecond, window)
+	_, _, overallEfficiency := tracker.CalculateEfficiency(window)
+	pressureLevel := tracker.GetGCPressureLevel(window)
+
+	var performanceLines []string
+
+	if maxPause > 0 {
+		pauseColor := tui.GoodColor
+		if maxPause > 1*time.Second {
+			pauseColor = tui.CriticalColor
+		} else if maxPause > 500*time.Millisecond {
+			pauseColor = tui.WarningColor
+		}
+
+		performanceLines = append(performanceLines,
+			fmt.Sprintf("Max Recent Pause: %s",
+				lipgloss.NewStyle().Foreground(pauseColor).Render(maxPause.String())))
+	}
+
+	if longPauses > 0 {
+		performanceLines = append(performanceLines,
+			fmt.Sprintf("Long Pauses (>100ms): %d", longPauses))
+	}
+
+	if overallEfficiency > 0 {
+		efficiencyColor := tui.GoodColor
+		if overallEfficiency < 30 {
+			efficiencyColor = tui.WarningColor
+		}
+		if overallEfficiency < 10 {
+			efficiencyColor = tui.CriticalColor
+		}
+
+		performanceLines = append(performanceLines,
+			fmt.Sprintf("Collection Efficiency: %s",
+				lipgloss.NewStyle().Foreground(efficiencyColor).Render(fmt.Sprintf("%.1f%%", overallEfficiency))))
+	}
+
+	// Add pressure level
+	pressureColor := tui.GoodColor
+	switch pressureLevel {
+	case "critical":
+		pressureColor = tui.CriticalColor
+	case "high":
+		pressureColor = tui.CriticalColor
+	case "moderate":
+		pressureColor = tui.WarningColor
+	case "low":
+		pressureColor = tui.InfoColor
+	}
+
+	performanceLines = append(performanceLines,
+		fmt.Sprintf("GC Pressure: %s",
+			lipgloss.NewStyle().Foreground(pressureColor).Render(pressureLevel)))
+
+	if len(performanceLines) == 0 {
 		return ""
 	}
 
-	// Show last few GC events
-	maxEvents := 5
-	events := gc.RecentGCEvents
-	if len(events) > maxEvents {
-		events = events[len(events)-maxEvents:]
+	performanceText := ""
+	for i, line := range performanceLines {
+		if i == 0 {
+			performanceText = "• " + line
+		} else {
+			performanceText += "\n• " + line
+		}
+	}
+
+	performanceSection := lipgloss.JoinVertical(lipgloss.Left,
+		tui.InfoStyle.Render("GC Performance Metrics"),
+		tui.MutedStyle.Render(performanceText),
+		"", // Empty line for spacing
+	)
+
+	return performanceSection
+}
+
+// renderRecentGCEvents shows recent GC events (events come from tracker)
+func renderRecentGCEvents(events []GCEvent) string {
+	if len(events) == 0 {
+		return ""
 	}
 
 	var eventLines []string
@@ -239,17 +398,33 @@ func renderRecentGCEvents(gc *GCState) string {
 		durationStr := event.Duration.String()
 
 		var generationIcon string
+		var durationColor lipgloss.Color = tui.GoodColor
+
 		if event.Generation == "young" {
 			generationIcon = "🐣"
 		} else {
 			generationIcon = "👵"
 		}
 
+		// Color duration based on length
+		if event.Duration > 500*time.Millisecond {
+			durationColor = tui.CriticalColor
+		} else if event.Duration > 100*time.Millisecond {
+			durationColor = tui.WarningColor
+		}
+
 		eventLine := fmt.Sprintf("%s [%s] %s GC - %s",
-			timeStr, generationIcon, event.Generation, durationStr)
+			timeStr, generationIcon, event.Generation,
+			lipgloss.NewStyle().Foreground(durationColor).Render(durationStr))
 
 		if event.Collected > 0 {
-			eventLine += fmt.Sprintf(" (freed %v)", utils.MemorySize(event.Collected).MB())
+			eventLine += fmt.Sprintf(" (freed %0.2f MB)", utils.MemorySize(event.Collected).MB())
+		}
+
+		// Add efficiency indicator if we have before/after data
+		if event.Before > 0 {
+			efficiency := float64(event.Collected) / float64(event.Before) * 100
+			eventLine += fmt.Sprintf(" [%.1f%% efficiency]", efficiency)
 		}
 
 		eventLines = append(eventLines, eventLine)
