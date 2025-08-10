@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/mabhi256/jdiag/internal/jmx"
 	"github.com/mabhi256/jdiag/internal/tui"
@@ -12,36 +11,20 @@ import (
 )
 
 // Render renders the system tab view
-func RenderSystemTab(state *TabState, config *jmx.Config, width int) string {
+func RenderSystemTab(state *TabState, config *jmx.Config, width int, systemHistory []utils.TimeMap) string {
 	var sections []string
 
 	// System overview
 	overviewSection := renderSystemOverview(state.System)
 	sections = append(sections, overviewSection)
 
-	// CPU usage section
-	cpuSection := renderCPUUsage(state.System, width)
-	sections = append(sections, cpuSection)
-
-	// System memory section
-	if state.System.TotalSystemMemory > 0 {
-		systemMemorySection := renderSystemMemory(state.System, width)
-		sections = append(sections, systemMemorySection)
-	}
+	// Charts section (CPU and Memory charts side by side)
+	chartsSection := renderSystemCharts(state.System, width, systemHistory)
+	sections = append(sections, chartsSection)
 
 	// JVM information section
 	jvmInfoSection := renderJVMInfo(state.System)
 	sections = append(sections, jvmInfoSection)
-
-	// Connection information section
-	connectionSection := renderConnectionInfo(state.System, config)
-	sections = append(sections, connectionSection)
-
-	// Performance trends
-	if state.System.CPUTrend != 0 {
-		trendsSection := renderSystemTrends(state.System)
-		sections = append(sections, trendsSection)
-	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
@@ -89,97 +72,126 @@ func renderSystemOverview(system *SystemState) string {
 	return overview + "\n"
 }
 
-// renderCPUUsage shows CPU usage with progress bars
-func renderCPUUsage(system *SystemState, width int) string {
-	// Process CPU usage
-	var processCpuColor lipgloss.Color = tui.GoodColor
-	if system.ProcessCpuLoad > 0.7 {
-		processCpuColor = tui.WarningColor
-	}
-	if system.ProcessCpuLoad > 0.9 {
-		processCpuColor = tui.CriticalColor
-	}
+// renderSystemCharts shows CPU and Memory charts side by side
+func renderSystemCharts(system *SystemState, width int, systemHistory []utils.TimeMap) string {
+	chartWidth := width - 20
 
-	// System CPU usage
-	var systemCpuColor lipgloss.Color = tui.GoodColor
-	if system.SystemCpuLoad > 0.8 {
-		systemCpuColor = tui.WarningColor
-	}
-	if system.SystemCpuLoad > 0.95 {
-		systemCpuColor = tui.CriticalColor
-	}
+	cpuChartSection := renderCPUChart(system, chartWidth, systemHistory)
+	memoryChartSection := renderMemoryChart(system, chartWidth, systemHistory)
 
-	// Create progress bars
-	barWidth := width/3 - 5
-	if barWidth < 15 {
-		barWidth = 15
-	}
+	chartsRow := lipgloss.JoinVertical(lipgloss.Top, "", cpuChartSection, "", memoryChartSection)
 
-	processBar := tui.CreateProgressBar(system.ProcessCpuLoad, barWidth, processCpuColor)
-	systemBar := tui.CreateProgressBar(system.SystemCpuLoad, barWidth, systemCpuColor)
-
-	// Format the section
-	titleStyled := tui.InfoStyle.Render("CPU Usage")
-
-	processCpuLine := fmt.Sprintf("Process: %s %.1f%%", processBar, system.ProcessCpuLoad*100)
-	systemCpuLine := fmt.Sprintf("System:  %s %.1f%%", systemBar, system.SystemCpuLoad*100)
-
-	// Add CPU trend if available
-	trendLine := ""
-	if system.CPUTrend != 0 {
-		trendIcon := "📈"
-		if system.CPUTrend < 0 {
-			trendIcon = "📉"
-		}
-		trendLine = fmt.Sprintf("Trend: %s %.1f%%/min", trendIcon, system.CPUTrend*100)
-	}
-
-	lines := []string{processCpuLine, systemCpuLine}
-	if trendLine != "" {
-		lines = append(lines, trendLine)
-	}
-
-	section := lipgloss.JoinVertical(lipgloss.Left,
-		titleStyled,
-		lines[0],
-		lines[1],
-	)
-
-	if len(lines) > 2 {
-		section = lipgloss.JoinVertical(lipgloss.Left, section, tui.MutedStyle.Render(lines[2]))
-	}
-
-	return section + "\n"
+	return chartsRow + "\n"
 }
 
-// renderSystemMemory shows system-level memory usage
-func renderSystemMemory(system *SystemState, width int) string {
-	memoryUsage := system.SystemMemoryPercent
+// renderCPUChart renders the CPU usage chart
+func renderCPUChart(system *SystemState, width int, systemHistory []utils.TimeMap) string {
+	valuesText := fmt.Sprintf("Process: %.1f%% | System: %.1f%%",
+		system.ProcessCpuLoad*100,
+		system.SystemCpuLoad*100)
 
-	var color lipgloss.Color = tui.GoodColor
-	if memoryUsage > 0.8 {
-		color = tui.WarningColor
-	}
-	if memoryUsage > 0.95 {
-		color = tui.CriticalColor
+	if system.SystemLoad > 0 {
+		valuesText += fmt.Sprintf(" | Load: %.2f", system.SystemLoad)
 	}
 
-	// Create progress bar
-	barWidth := max(width/2-10, 20)
+	var chartView string
 
-	progressBar := tui.CreateProgressBar(memoryUsage, barWidth, color)
-	percentStr := fmt.Sprintf("%.1f%%", memoryUsage*100)
+	graphWidth := max(width-10, 30)
+	graphHeight := 8
 
-	progressLine := fmt.Sprintf("%s %s", progressBar, percentStr)
-	detailLine := fmt.Sprintf("Used: %s | Free: %s | Total: %s",
+	chart := utils.NewChart(graphWidth, graphHeight)
+
+	// Add process CPU data
+	for _, point := range systemHistory {
+		processCpu := point.GetOrDefault("process_cpu", 0)
+		chart.Push(utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: processCpu * 100, // Convert to percentage
+		})
+	}
+
+	// Set process CPU style (blue/info)
+	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.InfoColor))
+
+	// Add system CPU data as second dataset
+	for _, point := range systemHistory {
+		systemCpu := point.GetOrDefault("system_cpu", 0)
+		chart.PushDataSet("system", utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: systemCpu * 100, // Convert to percentage
+		})
+	}
+	chart.SetDataSetStyle("system", lipgloss.NewStyle().Foreground(tui.WarningColor))
+
+	chart.DrawBrailleAll()
+
+	// Create legend
+	processLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Process CPU")
+	systemLegend := lipgloss.NewStyle().Foreground(tui.WarningColor).Render("■ System CPU")
+	legend := lipgloss.JoinHorizontal(lipgloss.Left, processLegend, "  ", systemLegend)
+
+	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
+
+	section := lipgloss.JoinVertical(lipgloss.Left,
+		tui.InfoStyle.Render("CPU Usage"),
+		chartView,
+		tui.MutedStyle.Render(valuesText),
+		"", // Empty line for spacing
+	)
+
+	return section
+}
+
+// renderMemoryChart renders the RAM and Swap usage chart
+func renderMemoryChart(system *SystemState, width int, systemHistory []utils.TimeMap) string {
+	valuesText := fmt.Sprintf("RAM: %s (%.1f%%) | Swap: %s (%.1f%%)",
 		utils.MemorySize(system.UsedSystemMemory),
-		utils.MemorySize(system.FreeSystemMemory),
-		utils.MemorySize(system.TotalSystemMemory))
+		system.SystemMemoryPercent*100,
+		utils.MemorySize(system.UsedSwap),
+		system.SwapPercent*100)
+
+	var chartView string
+
+	graphWidth := max(width-10, 30)
+	graphHeight := 8
+
+	chart := utils.NewChart(graphWidth, graphHeight)
+
+	// Add RAM usage data
+	for _, point := range systemHistory {
+		ramUsage := point.GetOrDefault("ram", 0)
+		chart.Push(utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: ramUsage, // Already in GB
+		})
+	}
+
+	// Set RAM style (green)
+	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.GoodColor))
+
+	// Add Swap usage data as second dataset
+	for _, point := range systemHistory {
+		swapUsage := point.GetOrDefault("swap", 0)
+		chart.PushDataSet("swap", utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: swapUsage, // Already in GB
+		})
+	}
+	chart.SetDataSetStyle("swap", lipgloss.NewStyle().Foreground(tui.CriticalColor))
+
+	chart.DrawBrailleAll()
+
+	// Create legend
+	ramLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("■ RAM (GB)")
+	swapLegend := lipgloss.NewStyle().Foreground(tui.CriticalColor).Render("■ Swap (GB)")
+	legend := lipgloss.JoinHorizontal(lipgloss.Left, ramLegend, "  ", swapLegend)
+
+	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
 		tui.InfoStyle.Render("System Memory"),
-		progressLine,
-		tui.MutedStyle.Render(detailLine),
+		chartView,
+		tui.MutedStyle.Render(valuesText),
 		"", // Empty line for spacing
 	)
 
@@ -223,106 +235,6 @@ func renderJVMInfo(system *SystemState) string {
 	section := lipgloss.JoinVertical(lipgloss.Left,
 		tui.InfoStyle.Render("JVM Information"),
 		tui.MutedStyle.Render(jvmText),
-		"", // Empty line for spacing
-	)
-
-	return section
-}
-
-// renderConnectionInfo shows connection and monitoring statistics
-func renderConnectionInfo(system *SystemState, config *jmx.Config) string {
-	var connectionLines []string
-
-	// Target information
-	target := config.String()
-	if system.ProcessName != "" {
-		target = fmt.Sprintf("%s (%s)", target, system.ProcessName)
-	}
-	connectionLines = append(connectionLines, fmt.Sprintf("Target: %s", target))
-
-	// Monitoring interval
-	interval := config.GetInterval().String()
-	connectionLines = append(connectionLines, fmt.Sprintf("Interval: %s", interval))
-
-	// Connection uptime
-	if system.ConnectionUptime > 0 {
-		connectionLines = append(connectionLines,
-			fmt.Sprintf("Monitoring: %s", utils.FormatDuration(system.ConnectionUptime)))
-	}
-
-	// Update count
-	if system.UpdateCount > 0 {
-		connectionLines = append(connectionLines,
-			fmt.Sprintf("Updates: %d", system.UpdateCount))
-	}
-
-	// Last update time
-	if !system.LastUpdateTime.IsZero() {
-		lastUpdate := time.Since(system.LastUpdateTime)
-		connectionLines = append(connectionLines,
-			fmt.Sprintf("Last Update: %s ago", utils.FormatDuration(lastUpdate)))
-	}
-
-	connectionText := "• " + connectionLines[0]
-	for _, line := range connectionLines[1:] {
-		connectionText += "\n• " + line
-	}
-
-	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Connection Info"),
-		tui.MutedStyle.Render(connectionText),
-		"", // Empty line for spacing
-	)
-
-	return section
-}
-
-// renderSystemTrends shows system performance trends
-func renderSystemTrends(system *SystemState) string {
-	var trendLines []string
-
-	if system.CPUTrend != 0 {
-		trendIcon := "📈"
-		trendColor := tui.InfoColor
-
-		if system.CPUTrend < 0 {
-			trendIcon = "📉"
-			trendColor = tui.GoodColor
-		} else if system.CPUTrend > 0.1 { // Rising more than 10%/min
-			trendColor = tui.WarningColor
-		}
-
-		trendLine := lipgloss.NewStyle().Foreground(trendColor).Render(
-			fmt.Sprintf("%s CPU Trend: %.1f%%/min", trendIcon, system.CPUTrend*100))
-		trendLines = append(trendLines, "• "+trendLine)
-	}
-
-	if system.SystemLoad > 0 {
-		loadColor := tui.GoodColor
-		if system.SystemLoad > float64(system.AvailableProcessors) {
-			loadColor = tui.WarningColor
-		}
-		if system.SystemLoad > float64(system.AvailableProcessors*2) {
-			loadColor = tui.CriticalColor
-		}
-
-		loadLine := lipgloss.NewStyle().Foreground(loadColor).Render(
-			fmt.Sprintf("System Load: %.2f", system.SystemLoad))
-		trendLines = append(trendLines, "• "+loadLine)
-	}
-
-	if len(trendLines) == 0 {
-		return ""
-	}
-
-	trendsText := trendLines[0]
-	for _, line := range trendLines[1:] {
-		trendsText += "\n" + line
-	}
-
-	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("System Trends"),
-		trendsText,
 		"", // Empty line for spacing
 	)
 

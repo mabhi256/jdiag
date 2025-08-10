@@ -87,7 +87,8 @@ func (m *Model) renderActiveTab() string {
 		threadHistory := m.GetHistoricaThreadCount(5 * time.Minute)
 		return RenderThreadsTab(m.tabState, m.width, classHistory, threadHistory)
 	case TabSystem:
-		return RenderSystemTab(m.tabState, m.config, m.width)
+		systemHistory := m.GetHistoricalSystemUsage(5 * time.Minute)
+		return RenderSystemTab(m.tabState, m.config, m.width, systemHistory)
 	default:
 		return tui.CriticalStyle.Render("Unknown tab")
 	}

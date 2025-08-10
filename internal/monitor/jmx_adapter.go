@@ -28,16 +28,12 @@ func (mp *MetricsProcessor) ProcessMetrics(metrics *jmx.MBeanSnapshot) *TabState
 		return NewTabState()
 	}
 
-	// Update historical data
 	mp.updateHistoricalData(metrics)
 
-	// Process GC events
 	mp.gcTracker.ProcessGCMetrics(metrics)
 
-	// Calculate GC overhead
 	gcOverhead := mp.calculateGCOverhead(metrics)
 
-	// Build complete tab state
 	tabState := mp.buildTabState(metrics, gcOverhead)
 
 	mp.lastMetrics = metrics
@@ -50,7 +46,7 @@ func (mp *MetricsProcessor) updateHistoricalData(metrics *jmx.MBeanSnapshot) {
 	mp.dataStore.AddHeapMemory(now, &metrics.Memory.Heap)
 	mp.dataStore.AddThreadCount(now, &metrics.Threading)
 	mp.dataStore.AddClassCount(now, &metrics.ClassLoading)
-	mp.dataStore.AddCPUUsage(now, metrics.OS.ProcessCpuLoad)
+	mp.dataStore.AddSystemUsage(now, &metrics.OS)
 
 }
 
@@ -69,6 +65,12 @@ func (m *Model) GetHistoricalClassCount(window time.Duration) []utils.TimeMap {
 func (m *Model) GetHistoricaThreadCount(window time.Duration) []utils.TimeMap {
 	return m.metricsProcessor.dataStore.GetRecentHistory(window, func(hds *HistoricalDataStore) []utils.TimeMap {
 		return hds.threadCounts
+	})
+}
+
+func (m *Model) GetHistoricalSystemUsage(window time.Duration) []utils.TimeMap {
+	return m.metricsProcessor.dataStore.GetRecentHistory(window, func(hds *HistoricalDataStore) []utils.TimeMap {
+		return hds.systemUsage
 	})
 }
 
@@ -181,6 +183,10 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, gcOverhead
 		state.System.FreeSystemMemory = metrics.OS.FreePhysicalMemory
 		state.System.UsedSystemMemory = metrics.OS.TotalPhysicalMemory - metrics.OS.FreePhysicalMemory
 		state.System.SystemMemoryPercent = float64(state.System.UsedSystemMemory) / float64(metrics.OS.TotalPhysicalMemory)
+		state.System.TotalSwap = metrics.OS.TotalSwapSpace
+		state.System.FreeSwap = metrics.OS.FreeSwapSpace
+		state.System.UsedSwap = metrics.OS.TotalSwapSpace - metrics.OS.FreeSwapSpace
+		state.System.SwapPercent = float64(state.System.UsedSwap) / float64(metrics.OS.TotalSwapSpace)
 	}
 
 	return state

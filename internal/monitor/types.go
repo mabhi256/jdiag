@@ -163,6 +163,10 @@ type SystemState struct {
 	FreeSystemMemory    int64
 	UsedSystemMemory    int64
 	SystemMemoryPercent float64
+	TotalSwap           int64
+	FreeSwap            int64
+	UsedSwap            int64
+	SwapPercent         float64
 
 	// JVM uptime and info
 	JVMUptime    time.Duration

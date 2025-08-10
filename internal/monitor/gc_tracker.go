@@ -56,7 +56,7 @@ func (get *GCEventTracker) ProcessGCMetrics(metrics *jmx.MBeanSnapshot) {
 				afterMem = youngUsed
 			}
 
-			for i := int64(0); i < newEvents; i++ {
+			for range newEvents {
 				get.gcEvents = append(get.gcEvents, GCEvent{
 					Timestamp:  metrics.Timestamp,
 					Generation: "young",
@@ -87,7 +87,7 @@ func (get *GCEventTracker) ProcessGCMetrics(metrics *jmx.MBeanSnapshot) {
 				afterMem = oldUsed
 			}
 
-			for i := int64(0); i < newEvents; i++ {
+			for range newEvents {
 				get.gcEvents = append(get.gcEvents, GCEvent{
 					Timestamp:  metrics.Timestamp,
 					Generation: "old",

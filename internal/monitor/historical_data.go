@@ -14,7 +14,7 @@ type HistoricalDataStore struct {
 	heapMemory   []utils.TimeMap
 	threadCounts []utils.TimeMap
 	classCounts  []utils.TimeMap
-	cpuUsage     []utils.TimePoint
+	systemUsage  []utils.TimeMap
 
 	maxPoints      int
 	windowDuration time.Duration
@@ -25,7 +25,7 @@ func NewHistoricalDataStore() *HistoricalDataStore {
 		heapMemory:     make([]utils.TimeMap, 0),
 		threadCounts:   make([]utils.TimeMap, 0),
 		classCounts:    make([]utils.TimeMap, 0),
-		cpuUsage:       make([]utils.TimePoint, 0),
+		systemUsage:    make([]utils.TimeMap, 0),
 		maxPoints:      300,
 		windowDuration: 5 * time.Minute,
 	}
@@ -75,11 +75,18 @@ func (hds *HistoricalDataStore) AddClassCount(timestamp time.Time, entry *jmx.Cl
 	hds.trimHistory()
 }
 
-func (hds *HistoricalDataStore) AddCPUUsage(timestamp time.Time, cpuLoad float64) {
+func (hds *HistoricalDataStore) AddSystemUsage(timestamp time.Time, entry *jmx.OperatingSystem) {
 	hds.mu.Lock()
 	defer hds.mu.Unlock()
 
-	hds.cpuUsage = append(hds.cpuUsage, utils.TimePoint{Time: timestamp, Value: cpuLoad})
+	point := utils.NewTimeMap(timestamp)
+
+	point.Values["process_cpu"] = float64(entry.ProcessCpuLoad)
+	point.Values["system_cpu"] = float64(entry.SystemCpuLoad)
+	point.Values["ram"] = utils.MemorySize(entry.TotalPhysicalMemory - entry.FreePhysicalMemory).GB()
+	point.Values["swap"] = utils.MemorySize(entry.TotalSwapSpace - entry.FreeSwapSpace).GB()
+
+	hds.systemUsage = append(hds.systemUsage, *point)
 	hds.trimHistory()
 }
 
@@ -133,8 +140,8 @@ func (hds *HistoricalDataStore) trimHistory() {
 	if len(hds.heapMemory) > hds.maxPoints {
 		hds.heapMemory = hds.heapMemory[len(hds.heapMemory)-hds.maxPoints:]
 	}
-	if len(hds.cpuUsage) > hds.maxPoints {
-		hds.cpuUsage = hds.cpuUsage[len(hds.cpuUsage)-hds.maxPoints:]
+	if len(hds.systemUsage) > hds.maxPoints {
+		hds.systemUsage = hds.systemUsage[len(hds.systemUsage)-hds.maxPoints:]
 	}
 	if len(hds.threadCounts) > hds.maxPoints {
 		hds.threadCounts = hds.threadCounts[len(hds.threadCounts)-hds.maxPoints:]
