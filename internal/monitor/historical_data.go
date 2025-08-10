@@ -14,9 +14,8 @@ type HistoricalDataStore struct {
 	heapMemory []utils.MultiValueTimePoint
 
 	// Single value metrics (keeping existing)
-	cpuUsage        []utils.TimePoint
-	threadCounts    []utils.TimePoint
-	allocationRates []utils.TimePoint
+	cpuUsage     []utils.TimePoint
+	threadCounts []utils.TimePoint
 
 	maxPoints      int
 	windowDuration time.Duration
@@ -24,12 +23,11 @@ type HistoricalDataStore struct {
 
 func NewHistoricalDataStore() *HistoricalDataStore {
 	return &HistoricalDataStore{
-		heapMemory:      make([]utils.MultiValueTimePoint, 0),
-		cpuUsage:        make([]utils.TimePoint, 0),
-		threadCounts:    make([]utils.TimePoint, 0),
-		allocationRates: make([]utils.TimePoint, 0),
-		maxPoints:       300,
-		windowDuration:  5 * time.Minute,
+		heapMemory:     make([]utils.MultiValueTimePoint, 0),
+		cpuUsage:       make([]utils.TimePoint, 0),
+		threadCounts:   make([]utils.TimePoint, 0),
+		maxPoints:      300,
+		windowDuration: 5 * time.Minute,
 	}
 }
 
@@ -73,16 +71,6 @@ func (hds *HistoricalDataStore) AddThreadCount(timestamp time.Time, count float6
 	hds.trimHistory()
 }
 
-func (hds *HistoricalDataStore) AddAllocationRate(timestamp time.Time, rate float64) {
-	hds.mu.Lock()
-	defer hds.mu.Unlock()
-
-	if rate >= 0 {
-		hds.allocationRates = append(hds.allocationRates, utils.TimePoint{Time: timestamp, Value: rate})
-		hds.trimHistory()
-	}
-}
-
 // GetRecentHeapMemory returns multi-value heap memory data
 func (hds *HistoricalDataStore) GetRecentHeapMemory(window time.Duration) []utils.MultiValueTimePoint {
 	hds.mu.RLock()
@@ -92,8 +80,7 @@ func (hds *HistoricalDataStore) GetRecentHeapMemory(window time.Duration) []util
 	return hds.filterMultiValueByTime(hds.heapMemory, cutoff)
 }
 
-// Backwards compatibility method - converts multi-value points to simple points
-func (hds *HistoricalDataStore) GetRecentData(window time.Duration) ([]utils.TimePoint, []utils.TimePoint, []utils.TimePoint, []utils.TimePoint) {
+func (hds *HistoricalDataStore) GetRecentData(window time.Duration) ([]utils.TimePoint, []utils.TimePoint, []utils.TimePoint) {
 	hds.mu.RLock()
 	defer hds.mu.RUnlock()
 
@@ -110,8 +97,7 @@ func (hds *HistoricalDataStore) GetRecentData(window time.Duration) ([]utils.Tim
 
 	return heapUsagePoints,
 		hds.filterByTime(hds.cpuUsage, cutoff),
-		hds.filterByTime(hds.threadCounts, cutoff),
-		hds.filterByTime(hds.allocationRates, cutoff)
+		hds.filterByTime(hds.threadCounts, cutoff)
 }
 
 // GetRecentDataField returns a specific field from multi-value heap memory as simple TimePoint array
@@ -162,8 +148,5 @@ func (hds *HistoricalDataStore) trimHistory() {
 	}
 	if len(hds.threadCounts) > hds.maxPoints {
 		hds.threadCounts = hds.threadCounts[len(hds.threadCounts)-hds.maxPoints:]
-	}
-	if len(hds.allocationRates) > hds.maxPoints {
-		hds.allocationRates = hds.allocationRates[len(hds.allocationRates)-hds.maxPoints:]
 	}
 }

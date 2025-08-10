@@ -240,9 +240,9 @@ func renderRecentGCEvents(gc *GCState) string {
 
 		var generationIcon string
 		if event.Generation == "young" {
-			generationIcon = "👶"
+			generationIcon = "🐣"
 		} else {
-			generationIcon = "👴"
+			generationIcon = "👵"
 		}
 
 		eventLine := fmt.Sprintf("%s [%s] %s GC - %s",

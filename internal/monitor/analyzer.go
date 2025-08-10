@@ -8,22 +8,18 @@ import (
 )
 
 type MetricsProcessor struct {
-	dataStore   *HistoricalDataStore
-	gcTracker   *GCEventTracker
-	alertEngine *AlertEngine
+	dataStore *HistoricalDataStore
+	gcTracker *GCEventTracker
 
-	lastMetrics         *jmx.MBeanSnapshot
-	startTime           time.Time
-	lastAllocationCheck time.Time
-	lastHeapUsed        int64
+	lastMetrics *jmx.MBeanSnapshot
+	startTime   time.Time
 }
 
 func NewMetricsProcessor() *MetricsProcessor {
 	return &MetricsProcessor{
-		dataStore:   NewHistoricalDataStore(),
-		gcTracker:   NewGCEventTracker(),
-		alertEngine: NewAlertEngine(),
-		startTime:   time.Now(),
+		dataStore: NewHistoricalDataStore(),
+		gcTracker: NewGCEventTracker(),
+		startTime: time.Now(),
 	}
 }
 
@@ -38,23 +34,16 @@ func (mp *MetricsProcessor) ProcessMetrics(metrics *jmx.MBeanSnapshot) *TabState
 	// Process GC events
 	mp.gcTracker.ProcessGCMetrics(metrics)
 
-	// Calculate trends using utils
-	trends := mp.calculateCurrentTrends()
-
 	// Calculate GC overhead
 	gcOverhead := mp.calculateGCOverhead(metrics)
 
-	// Generate alerts (now includes GC frequency/pause analysis)
-	mp.alertEngine.AnalyzeMetrics(metrics, trends, gcOverhead, mp.gcTracker)
-
 	// Build complete tab state
-	tabState := mp.buildTabState(metrics, trends, gcOverhead)
+	tabState := mp.buildTabState(metrics, gcOverhead)
 
 	mp.lastMetrics = metrics
 	return tabState
 }
 
-// updateHistoricalData - UPDATED to use AddHeapMemory with complete information
 func (mp *MetricsProcessor) updateHistoricalData(metrics *jmx.MBeanSnapshot) {
 	now := metrics.Timestamp
 
@@ -72,37 +61,10 @@ func (mp *MetricsProcessor) updateHistoricalData(metrics *jmx.MBeanSnapshot) {
 	// Thread count
 	mp.dataStore.AddThreadCount(now, float64(metrics.Threading.Count))
 
-	// Allocation rate
-	allocationRate := mp.calculateAllocationRate(metrics)
-	mp.dataStore.AddAllocationRate(now, allocationRate)
-}
-
-// calculateCurrentTrends - UPDATED to use multi-value trend calculation
-func (mp *MetricsProcessor) calculateCurrentTrends() map[string]float64 {
-	trends := make(map[string]float64)
-
-	// Get recent data from storage
-	heapData := mp.dataStore.GetRecentHeapMemory(time.Minute)
-	_, cpuData, threadData, _ := mp.dataStore.GetRecentData(time.Minute)
-
-	// Calculate trends using multi-value trend calculation for heap memory
-	trends["heap_usage_trend"], _ = utils.CalculateMultiValueTrend(heapData, "usage_percent", time.Minute)
-	trends["heap_used_trend"], _ = utils.CalculateMultiValueTrend(heapData, "used_mb", time.Minute)
-	trends["heap_committed_trend"], _ = utils.CalculateMultiValueTrend(heapData, "committed_mb", time.Minute)
-
-	// Calculate trends for single-value metrics
-	trends["cpu_trend"], _ = utils.CalculateHistoryTrend(cpuData, time.Minute)
-	trends["thread_trend"], _ = utils.CalculateHistoryTrend(threadData, time.Minute)
-
-	return trends
 }
 
 func (mp *MetricsProcessor) GetHistoricalHeapMemory(window time.Duration) []utils.MultiValueTimePoint {
 	return mp.dataStore.GetRecentHeapMemory(window)
-}
-
-func (mp *MetricsProcessor) GetHistoricalDataField(window time.Duration, fieldName string) []utils.TimePoint {
-	return mp.dataStore.GetRecentDataField(window, fieldName)
 }
 
 // calculateGCOverhead
@@ -117,41 +79,8 @@ func (mp *MetricsProcessor) calculateGCOverhead(metrics *jmx.MBeanSnapshot) floa
 	return float64(totalGCTime.Milliseconds()) / float64(uptime.Milliseconds())
 }
 
-// calculateAllocationRate
-func (mp *MetricsProcessor) calculateAllocationRate(metrics *jmx.MBeanSnapshot) float64 {
-	now := metrics.Timestamp
-
-	// Need baseline measurement
-	if mp.lastMetrics == nil || mp.lastAllocationCheck.IsZero() {
-		mp.lastAllocationCheck = now
-		mp.lastHeapUsed = metrics.Memory.Heap.Used
-		return -1
-	}
-
-	timeDiff := now.Sub(mp.lastAllocationCheck).Seconds()
-	if timeDiff <= 0 {
-		return -1
-	}
-
-	// Calculate heap usage change
-	heapChange := metrics.Memory.Heap.Used - mp.lastHeapUsed
-
-	// Only consider positive changes as allocations
-	if heapChange > 0 {
-		rate := float64(heapChange) / timeDiff
-		mp.lastAllocationCheck = now
-		mp.lastHeapUsed = metrics.Memory.Heap.Used
-		return rate
-	}
-
-	// Reset baseline after GC or negative change
-	mp.lastAllocationCheck = now
-	mp.lastHeapUsed = metrics.Memory.Heap.Used
-	return 0
-}
-
 // buildTabState - UPDATED to use multi-value trends
-func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, trends map[string]float64, gcOverhead float64) *TabState {
+func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, gcOverhead float64) *TabState {
 	state := NewTabState()
 
 	// === Memory State ===
@@ -191,17 +120,6 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, trends map
 		state.Memory.NonHeapUsagePercent = float64(metrics.Memory.NonHeap.Used) / float64(metrics.Memory.NonHeap.Committed)
 	}
 
-	// Memory analytics - UPDATED to use allocation rate from single-value data
-	_, _, _, allocationRates := mp.dataStore.GetRecentData(time.Minute)
-	if len(allocationRates) > 0 {
-		state.Memory.AllocationRate = allocationRates[len(allocationRates)-1].Value
-	}
-
-	// Use the heap usage trend from multi-value calculation
-	if heapTrend, exists := trends["heap_usage_trend"]; exists {
-		state.Memory.MemoryTrend = heapTrend
-	}
-
 	// === GC State ===
 	state.GC.YoungGCCount = metrics.GC.YoungGCCount
 	state.GC.YoungGCTime = metrics.GC.YoungGCTime
@@ -238,20 +156,6 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, trends map
 	state.Threads.UnloadedClassCount = metrics.ClassLoading.UnloadedClassCount
 	state.Threads.TotalLoadedClasses = metrics.ClassLoading.TotalLoadedClassCount
 
-	// Thread analytics
-	if threadTrend, exists := trends["thread_trend"]; exists {
-		state.Threads.ThreadCreationRate = threadTrend
-	}
-
-	// Check for thread alerts
-	alerts := mp.alertEngine.GetAlerts()
-	for _, alert := range alerts {
-		if alert.MetricName == "thread_contention" {
-			state.Threads.ThreadContention = true
-			break
-		}
-	}
-
 	// === System State ===
 	state.System.ProcessCpuLoad = metrics.OS.ProcessCpuLoad
 	state.System.SystemCpuLoad = metrics.OS.SystemCpuLoad
@@ -269,11 +173,6 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, trends map
 		state.System.FreeSystemMemory = metrics.OS.FreePhysicalMemory
 		state.System.UsedSystemMemory = metrics.OS.TotalPhysicalMemory - metrics.OS.FreePhysicalMemory
 		state.System.SystemMemoryPercent = float64(state.System.UsedSystemMemory) / float64(metrics.OS.TotalPhysicalMemory)
-	}
-
-	// System analytics
-	if cpuTrend, exists := trends["cpu_trend"]; exists {
-		state.System.CPUTrend = cpuTrend
 	}
 
 	return state
@@ -311,89 +210,4 @@ func (mp *MetricsProcessor) getOldGenUsage(metrics *jmx.MBeanSnapshot) (used, co
 	}
 
 	return used, committed, max
-}
-
-// Existing methods
-func (mp *MetricsProcessor) GetAlerts() []PerformanceAlert {
-	return mp.alertEngine.GetAlerts()
-}
-
-func (mp *MetricsProcessor) GetCurrentTrends() map[string]float64 {
-	return mp.calculateCurrentTrends()
-}
-
-func (mp *MetricsProcessor) GetSummaryStats() map[string]any {
-	stats := make(map[string]any)
-
-	// Session duration
-	stats["uptime"] = time.Since(mp.startTime)
-
-	// GC statistics from tracker
-	recentEvents := mp.gcTracker.GetRecentEvents(1000)
-	youngGCs := 0
-	oldGCs := 0
-	totalGCTime := time.Duration(0)
-
-	for _, event := range recentEvents {
-		if event.Generation == "young" {
-			youngGCs++
-		} else {
-			oldGCs++
-		}
-		totalGCTime += event.Duration
-	}
-
-	stats["total_young_gcs"] = youngGCs
-	stats["total_old_gcs"] = oldGCs
-	stats["total_gc_time"] = totalGCTime
-
-	// Heap usage statistics from multi-value historical data
-	heapData := mp.dataStore.GetRecentHeapMemory(time.Since(mp.startTime))
-	if len(heapData) > 0 {
-		var min, max, sum float64 = 1.0, 0.0, 0.0
-		for _, point := range heapData {
-			usage := point.GetUsagePercent()
-			if usage < min {
-				min = usage
-			}
-			if usage > max {
-				max = usage
-			}
-			sum += usage
-		}
-
-		stats["heap_usage_min"] = min
-		stats["heap_usage_max"] = max
-		stats["heap_usage_avg"] = sum / float64(len(heapData))
-	}
-
-	// Alert counts
-	alerts := mp.alertEngine.GetAlerts()
-	criticalAlerts := 0
-	warningAlerts := 0
-
-	for _, alert := range alerts {
-		switch alert.Level {
-		case "critical":
-			criticalAlerts++
-		case "warning":
-			warningAlerts++
-		}
-	}
-
-	stats["critical_alerts"] = criticalAlerts
-	stats["warning_alerts"] = warningAlerts
-
-	return stats
-}
-
-// Reset clears all historical data and starts fresh
-func (mp *MetricsProcessor) Reset() {
-	mp.dataStore = NewHistoricalDataStore()
-	mp.gcTracker = NewGCEventTracker()
-	mp.alertEngine = NewAlertEngine()
-	mp.lastMetrics = nil
-	mp.startTime = time.Now()
-	mp.lastAllocationCheck = time.Time{}
-	mp.lastHeapUsed = 0
 }

@@ -94,28 +94,8 @@ type MemoryState struct {
 	NonHeapUsagePercent float64
 
 	// Memory trends and alerts
-	AllocationRate  float64 // bytes per second
-	MemoryPressure  string  // "low", "moderate", "high", "critical"
+	MemoryPressure  string // "low", "moderate", "high", "critical"
 	LastMemoryAlert *PerformanceAlert
-	MemoryTrend     float64 // percentage change per minute
-}
-
-func (ms *MemoryState) GetMemoryPressureLevel() string {
-	maxUsage := ms.HeapUsagePercent
-	if ms.OldUsagePercent > maxUsage {
-		maxUsage = ms.OldUsagePercent
-	}
-
-	switch {
-	case maxUsage > 0.90:
-		return "critical"
-	case maxUsage > 0.75:
-		return "high"
-	case maxUsage > 0.50:
-		return "moderate"
-	default:
-		return "low"
-	}
 }
 
 type GCState struct {
