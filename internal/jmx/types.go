@@ -96,9 +96,9 @@ type Threading struct {
 	TotalStartedCount int64
 
 	// Current thread metrics
-	CurrentCPUTime        int64
-	CurrentUserTime       int64
-	CurrentAllocatedBytes int64
+	CurrentCPUTime        int64 // CurrentThreadCpuTime
+	CurrentUserTime       int64 // CurrentThreadUserTime
+	CurrentAllocatedBytes int64 // CurrentThreadAllocatedBytes
 
 	// Thread IDs and deadlock detection
 	AllThreadIds             []int64

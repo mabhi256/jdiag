@@ -5,59 +5,33 @@ import (
 	"time"
 )
 
-// MultiValueTimePoint for storing multiple related values
-type MultiValueTimePoint struct {
+// TimeMap for storing multiple related values
+type TimeMap struct {
 	Timestamp time.Time
 	Values    map[string]float64
 }
 
-func NewMultiValuePoint(timestamp time.Time) *MultiValueTimePoint {
-	return &MultiValueTimePoint{
+func NewTimeMap(timestamp time.Time) *TimeMap {
+	return &TimeMap{
 		Timestamp: timestamp,
 		Values:    make(map[string]float64),
 	}
 }
 
-func (m *MultiValueTimePoint) Set(name string, value float64) {
+func (m *TimeMap) Set(name string, value float64) {
 	m.Values[name] = value
 }
 
-func (m *MultiValueTimePoint) Get(name string) (float64, bool) {
+func (m *TimeMap) Get(name string) (float64, bool) {
 	val, exists := m.Values[name]
 	return val, exists
 }
 
-func (m *MultiValueTimePoint) GetOrDefault(name string, defaultValue float64) float64 {
+func (m *TimeMap) GetOrDefault(name string, defaultValue float64) float64 {
 	if val, exists := m.Values[name]; exists {
 		return val
 	}
 	return defaultValue
-}
-
-func (m *MultiValueTimePoint) SetMemoryValues(used, committed, max int64) {
-	m.Set("used_mb", float64(used)/(1024*1024))
-	m.Set("committed_mb", float64(committed)/(1024*1024))
-
-	if max > 0 {
-		m.Set("max_mb", float64(max)/(1024*1024))
-		m.Set("usage_percent", float64(used)/float64(max))
-	}
-}
-
-func (m *MultiValueTimePoint) GetUsedMB() float64 {
-	return m.GetOrDefault("used_mb", 0)
-}
-
-func (m *MultiValueTimePoint) GetCommittedMB() float64 {
-	return m.GetOrDefault("committed_mb", 0)
-}
-
-func (m *MultiValueTimePoint) GetMaxMB() float64 {
-	return m.GetOrDefault("max_mb", 0)
-}
-
-func (m *MultiValueTimePoint) GetUsagePercent() float64 {
-	return m.GetOrDefault("usage_percent", 0)
 }
 
 func LinearRegression(x, y []float64) (slope, correlation float64) {

@@ -5,23 +5,15 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/tui"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 // Render renders the threads tab view
-func RenderThreadsTab(state *TabState, width int) string {
+func RenderThreadsTab(state *TabState, width int, classHistory []utils.TimeMap, threadHistory []utils.TimeMap) string {
 	var sections []string
 
-	// Thread overview
-	overviewSection := renderThreadOverview(state.Threads)
-	sections = append(sections, overviewSection)
-
-	// Thread counts section
-	threadCountsSection := renderThreadCounts(state.Threads, width)
-	sections = append(sections, threadCountsSection)
-
-	// Class loading section
-	classLoadingSection := renderClassLoading(state.Threads)
-	sections = append(sections, classLoadingSection)
+	chartsSection := renderThreadsCharts(state.Threads, width, classHistory, threadHistory)
+	sections = append(sections, chartsSection)
 
 	// Thread performance metrics
 	if state.Threads.ThreadCreationRate > 0 || state.Threads.ThreadContention {
@@ -38,113 +30,118 @@ func RenderThreadsTab(state *TabState, width int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
 
-// renderThreadOverview shows high-level thread status
-func renderThreadOverview(threads *ThreadState) string {
-	var statusColor lipgloss.Color
-	var statusIcon string
-	var statusText string
+// Show thread and class charts side by side
+func renderThreadsCharts(threads *ThreadState, width int, classHistory []utils.TimeMap, threadHistory []utils.TimeMap) string {
+	chartWidth := width - 20
 
-	threadUtilization := float64(threads.CurrentThreadCount) / float64(threads.PeakThreadCount)
-	if threads.PeakThreadCount == 0 {
-		threadUtilization = 0
-	}
+	threadsChartSection := renderThreadChart(threads, chartWidth, threadHistory)
+	classChartSection := renderClassChart(threads, chartWidth, classHistory)
 
-	switch {
-	case threads.DeadlockedThreads > 0:
-		statusColor = tui.CriticalColor
-		statusIcon = "🔴"
-		statusText = fmt.Sprintf("DEADLOCK DETECTED (%d threads)", threads.DeadlockedThreads)
-	case threads.ThreadContention:
-		statusColor = tui.WarningColor
-		statusIcon = "🟡"
-		statusText = "Thread contention detected"
-	case threadUtilization > 0.9:
-		statusColor = tui.WarningColor
-		statusIcon = "🟡"
-		statusText = "High thread utilization"
-	case threads.CurrentThreadCount > 1000:
-		statusColor = tui.InfoColor
-		statusIcon = "🟠"
-		statusText = "High thread count"
-	default:
-		statusColor = tui.GoodColor
-		statusIcon = "🟢"
-		statusText = "Normal thread activity"
-	}
+	chartsRow := lipgloss.JoinVertical(lipgloss.Top, "", threadsChartSection, "", classChartSection)
 
-	overview := lipgloss.NewStyle().
-		Foreground(statusColor).
-		Bold(true).
-		Render(fmt.Sprintf("%s %s", statusIcon, statusText))
-
-	return overview + "\n"
+	return chartsRow + "\n"
 }
 
-// renderThreadCounts shows thread count statistics
-func renderThreadCounts(threads *ThreadState, width int) string {
-	// Create progress bar for thread usage
-	var threadProgress float64
-	if threads.PeakThreadCount > 0 {
-		threadProgress = float64(threads.CurrentThreadCount) / float64(threads.PeakThreadCount)
-	}
-
-	var color lipgloss.Color = tui.GoodColor
-	if threadProgress > 0.8 {
-		color = tui.WarningColor
-	}
-	if threadProgress > 0.95 {
-		color = tui.CriticalColor
-	}
-
-	barWidth := width/2 - 10
-	if barWidth < 20 {
-		barWidth = 20
-	}
-
-	progressBar := tui.CreateProgressBar(threadProgress, barWidth, color)
-	percentStr := fmt.Sprintf("%.1f%% of peak", threadProgress*100)
-
-	progressLine := fmt.Sprintf("%s %s", progressBar, percentStr)
-	detailLine := fmt.Sprintf("Current: %d | Peak: %d | Daemon: %d",
+func renderThreadChart(threads *ThreadState, width int, threadHistory []utils.TimeMap) string {
+	valuesText := fmt.Sprintf("Current: %d | Peak: %d | Daemon: %d | Total Started: %d",
 		threads.CurrentThreadCount,
 		threads.PeakThreadCount,
-		threads.DaemonThreadCount)
+		threads.DaemonThreadCount,
+		threads.TotalStartedCount)
+
+	var chartView string
+
+	graphWidth := max(width-10, 30)
+	graphHeight := 8
+
+	chart := utils.NewChart(graphWidth, graphHeight)
+
+	for _, point := range threadHistory {
+		currentCount := point.GetOrDefault("current_count", 0)
+		chart.Push(utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: float64(currentCount),
+		})
+	}
+
+	// Set total loaded style (blue/info)
+	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.InfoColor))
+
+	for _, point := range threadHistory {
+		daemonCount := point.GetOrDefault("daemon_count", 0)
+		chart.PushDataSet("daemon", utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: float64(daemonCount),
+		})
+	}
+	chart.SetDataSetStyle("daemon", lipgloss.NewStyle().Foreground(tui.WarningColor))
+
+	chart.DrawBrailleAll()
+
+	// Create legend
+	currentLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Current")
+	daemonLegend := lipgloss.NewStyle().Foreground(tui.WarningColor).Render("■ Daemon")
+	legend := lipgloss.JoinHorizontal(lipgloss.Left, currentLegend, "  ", daemonLegend)
+
+	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Thread Count"),
-		progressLine,
-		tui.MutedStyle.Render(detailLine),
+		tui.InfoStyle.Render("Threads"),
+		chartView,
+		tui.MutedStyle.Render(valuesText),
 		"", // Empty line for spacing
 	)
 
 	return section
 }
 
-// renderClassLoading shows class loading statistics
-func renderClassLoading(threads *ThreadState) string {
-	classStats := []string{
-		fmt.Sprintf("Loaded: %d", threads.LoadedClassCount),
-		fmt.Sprintf("Unloaded: %d", threads.UnloadedClassCount),
-		fmt.Sprintf("Currently Loaded: %d", threads.TotalLoadedClasses),
+// renderClassChart renders the class loading chart
+func renderClassChart(threads *ThreadState, width int, classHistory []utils.TimeMap) string {
+	valuesText := fmt.Sprintf("Loaded: %d | Unloaded: %d | Currently Loaded: %d",
+		threads.LoadedClassCount,
+		threads.UnloadedClassCount,
+		threads.TotalLoadedClasses)
+
+	var chartView string
+
+	graphWidth := max(width-10, 30)
+	graphHeight := 8
+
+	chart := utils.NewChart(graphWidth, graphHeight)
+
+	for _, point := range classHistory {
+		totalLoaded := point.GetOrDefault("total_loaded", 0)
+		chart.Push(utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: float64(totalLoaded),
+		})
 	}
 
-	// Add loading rates if available
-	if threads.ClassLoadingRate > 0 {
-		classStats = append(classStats, fmt.Sprintf("Loading Rate: %.1f/min", threads.ClassLoadingRate))
-	}
+	// Set current threads style (green)
+	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.GoodColor))
 
-	if threads.ClassUnloadingRate > 0 {
-		classStats = append(classStats, fmt.Sprintf("Unloading Rate: %.1f/min", threads.ClassUnloadingRate))
+	for _, point := range classHistory {
+		unloadedCount := point.GetOrDefault("unloaded_count", 0)
+		chart.PushDataSet("unloaded", utils.TimePoint{
+			Time:  point.Timestamp,
+			Value: float64(unloadedCount),
+		})
 	}
+	chart.SetDataSetStyle("unloaded", lipgloss.NewStyle().Foreground(tui.InfoColor))
 
-	statsText := "• " + classStats[0]
-	for _, stat := range classStats[1:] {
-		statsText += "\n• " + stat
-	}
+	chart.DrawBrailleAll()
+
+	// Create legend
+	loadedLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("■ Total Loaded")
+	unloadedLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Unloaded")
+	legend := lipgloss.JoinHorizontal(lipgloss.Left, loadedLegend, "  ", unloadedLegend)
+
+	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Class Loading"),
-		tui.MutedStyle.Render(statsText),
+		tui.InfoStyle.Render("Classes"),
+		chartView,
+		tui.MutedStyle.Render(valuesText),
 		"", // Empty line for spacing
 	)
 
@@ -199,7 +196,6 @@ func renderThreadPerformance(threads *ThreadState) string {
 	return section
 }
 
-// renderThreadStates shows breakdown of thread states
 func renderThreadStates(threads *ThreadState) string {
 	runningThreads := threads.CurrentThreadCount - threads.BlockedThreadCount - threads.WaitingThreadCount
 

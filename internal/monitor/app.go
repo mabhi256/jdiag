@@ -78,12 +78,14 @@ func (m *Model) renderActiveTab() string {
 
 	switch m.activeTab {
 	case TabMemory:
-		heapHistory := m.metricsProcessor.GetHistoricalHeapMemory(5 * time.Minute)
+		heapHistory := m.GetHistoricalHeapMemory(5 * time.Minute)
 		return RenderMemoryTab(m.tabState, m.width, heapHistory)
 	case TabGC:
 		return RenderGCTab(m.tabState)
 	case TabThreads:
-		return RenderThreadsTab(m.tabState, m.width)
+		classHistory := m.GetHistoricalClassCount(5 * time.Minute)
+		threadHistory := m.GetHistoricaThreadCount(5 * time.Minute)
+		return RenderThreadsTab(m.tabState, m.width, classHistory, threadHistory)
 	case TabSystem:
 		return RenderSystemTab(m.tabState, m.config, m.width)
 	default:

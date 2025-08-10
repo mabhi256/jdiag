@@ -136,6 +136,7 @@ type ThreadState struct {
 	CurrentThreadCount int64
 	PeakThreadCount    int64
 	DaemonThreadCount  int64
+	TotalStartedCount  int64
 
 	LoadedClassCount   int64
 	UnloadedClassCount int64

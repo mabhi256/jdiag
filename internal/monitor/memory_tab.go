@@ -8,7 +8,7 @@ import (
 	"github.com/mabhi256/jdiag/utils"
 )
 
-func RenderMemoryTab(state *TabState, width int, heapHistory []utils.MultiValueTimePoint) string {
+func RenderMemoryTab(state *TabState, width int, heapHistory []utils.TimeMap) string {
 	var sections []string
 
 	// Title
@@ -128,7 +128,7 @@ func getMostRecentGCInfo(state *TabState) (string, bool) {
 	return gcInfo, isYoungGen
 }
 
-func renderHeapGraph(history []utils.MultiValueTimePoint, width int) string {
+func renderHeapGraph(history []utils.TimeMap, width int) string {
 	if len(history) < 2 {
 		return ""
 	}
@@ -141,7 +141,7 @@ func renderHeapGraph(history []utils.MultiValueTimePoint, width int) string {
 	for _, point := range history {
 		chart.Push(utils.TimePoint{
 			Time:  point.Timestamp,
-			Value: point.GetUsedMB(),
+			Value: point.GetOrDefault("used_mb", 0),
 		})
 	}
 
@@ -152,7 +152,7 @@ func renderHeapGraph(history []utils.MultiValueTimePoint, width int) string {
 	for _, point := range history {
 		chart.PushDataSet("committed", utils.TimePoint{
 			Time:  point.Timestamp,
-			Value: point.GetCommittedMB(),
+			Value: point.GetOrDefault("committed_mb", 0),
 		})
 	}
 	chart.SetDataSetStyle("committed", lipgloss.NewStyle().Foreground(tui.InfoColor))

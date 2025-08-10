@@ -47,24 +47,29 @@ func (mp *MetricsProcessor) ProcessMetrics(metrics *jmx.MBeanSnapshot) *TabState
 func (mp *MetricsProcessor) updateHistoricalData(metrics *jmx.MBeanSnapshot) {
 	now := metrics.Timestamp
 
-	// Store complete heap memory information using multi-value point
-	mp.dataStore.AddHeapMemory(
-		now,
-		metrics.Memory.Heap.Used,
-		metrics.Memory.Heap.Committed,
-		metrics.Memory.Heap.Max,
-	)
-
-	// CPU usage
+	mp.dataStore.AddHeapMemory(now, &metrics.Memory.Heap)
+	mp.dataStore.AddThreadCount(now, &metrics.Threading)
+	mp.dataStore.AddClassCount(now, &metrics.ClassLoading)
 	mp.dataStore.AddCPUUsage(now, metrics.OS.ProcessCpuLoad)
-
-	// Thread count
-	mp.dataStore.AddThreadCount(now, float64(metrics.Threading.Count))
 
 }
 
-func (mp *MetricsProcessor) GetHistoricalHeapMemory(window time.Duration) []utils.MultiValueTimePoint {
-	return mp.dataStore.GetRecentHeapMemory(window)
+func (m *Model) GetHistoricalHeapMemory(window time.Duration) []utils.TimeMap {
+	return m.metricsProcessor.dataStore.GetRecentHistory(window, func(hds *HistoricalDataStore) []utils.TimeMap {
+		return hds.heapMemory
+	})
+}
+
+func (m *Model) GetHistoricalClassCount(window time.Duration) []utils.TimeMap {
+	return m.metricsProcessor.dataStore.GetRecentHistory(window, func(hds *HistoricalDataStore) []utils.TimeMap {
+		return hds.classCounts
+	})
+}
+
+func (m *Model) GetHistoricaThreadCount(window time.Duration) []utils.TimeMap {
+	return m.metricsProcessor.dataStore.GetRecentHistory(window, func(hds *HistoricalDataStore) []utils.TimeMap {
+		return hds.threadCounts
+	})
 }
 
 // calculateGCOverhead
@@ -152,6 +157,9 @@ func (mp *MetricsProcessor) buildTabState(metrics *jmx.MBeanSnapshot, gcOverhead
 	// === Thread State ===
 	state.Threads.CurrentThreadCount = metrics.Threading.Count
 	state.Threads.PeakThreadCount = metrics.Threading.PeakCount
+	state.Threads.DaemonThreadCount = metrics.Threading.DaemonCount
+	state.Threads.TotalStartedCount = metrics.Threading.TotalStartedCount
+
 	state.Threads.LoadedClassCount = metrics.ClassLoading.LoadedClassCount
 	state.Threads.UnloadedClassCount = metrics.ClassLoading.UnloadedClassCount
 	state.Threads.TotalLoadedClasses = metrics.ClassLoading.TotalLoadedClassCount

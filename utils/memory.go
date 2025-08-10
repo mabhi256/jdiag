@@ -139,8 +139,8 @@ func (m MemorySize) Mul(factor float64) MemorySize {
 }
 
 // Div implements division for MemorySize
-func (m MemorySize) Div(divisor float64) MemorySize {
-	return MemorySize(float64(m) / divisor)
+func (m MemorySize) Div(divisor float64) float64 {
+	return float64(m) / divisor
 }
 
 // Ratio returns the ratio of this memory size to another

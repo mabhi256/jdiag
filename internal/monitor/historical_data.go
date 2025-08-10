@@ -4,18 +4,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mabhi256/jdiag/internal/jmx"
 	"github.com/mabhi256/jdiag/utils"
 )
 
 type HistoricalDataStore struct {
 	mu sync.RWMutex
 
-	// Heap memory using multi-value points
-	heapMemory []utils.MultiValueTimePoint
-
-	// Single value metrics (keeping existing)
+	heapMemory   []utils.TimeMap
+	threadCounts []utils.TimeMap
+	classCounts  []utils.TimeMap
 	cpuUsage     []utils.TimePoint
-	threadCounts []utils.TimePoint
 
 	maxPoints      int
 	windowDuration time.Duration
@@ -23,35 +22,56 @@ type HistoricalDataStore struct {
 
 func NewHistoricalDataStore() *HistoricalDataStore {
 	return &HistoricalDataStore{
-		heapMemory:     make([]utils.MultiValueTimePoint, 0),
+		heapMemory:     make([]utils.TimeMap, 0),
+		threadCounts:   make([]utils.TimeMap, 0),
+		classCounts:    make([]utils.TimeMap, 0),
 		cpuUsage:       make([]utils.TimePoint, 0),
-		threadCounts:   make([]utils.TimePoint, 0),
 		maxPoints:      300,
 		windowDuration: 5 * time.Minute,
 	}
 }
 
-// AddHeapMemory stores complete heap memory information in a multi-value point
-func (hds *HistoricalDataStore) AddHeapMemory(timestamp time.Time, used, committed, max int64) {
+func (hds *HistoricalDataStore) AddHeapMemory(timestamp time.Time, entry *jmx.MemoryUsage) {
 	hds.mu.Lock()
 	defer hds.mu.Unlock()
 
-	point := utils.NewMultiValuePoint(timestamp)
-	point.SetMemoryValues(used, committed, max)
+	point := utils.NewTimeMap(timestamp)
+
+	point.Values["used_mb"] = utils.MemorySize(entry.Used).MB()
+	point.Values["committed_mb"] = utils.MemorySize(entry.Committed).MB()
+
+	if entry.Max > 0 {
+		point.Values["max_mb"] = utils.MemorySize(entry.Max).MB()
+		point.Values["usage_percent"] = float64(entry.Used) / float64(entry.Max)
+	}
 
 	hds.heapMemory = append(hds.heapMemory, *point)
 	hds.trimHistory()
 }
 
-// Backwards compatibility - converts percentage to multi-value point
-func (hds *HistoricalDataStore) AddHeapUsage(timestamp time.Time, percentage float64) {
+func (hds *HistoricalDataStore) AddThreadCount(timestamp time.Time, entry *jmx.Threading) {
 	hds.mu.Lock()
 	defer hds.mu.Unlock()
 
-	point := utils.NewMultiValuePoint(timestamp)
-	point.Set("usage_percent", percentage)
+	point := utils.NewTimeMap(timestamp)
 
-	hds.heapMemory = append(hds.heapMemory, *point)
+	point.Values["current_count"] = float64(entry.Count)
+	point.Values["daemon_count"] = float64(entry.DaemonCount)
+
+	hds.threadCounts = append(hds.threadCounts, *point)
+	hds.trimHistory()
+}
+
+func (hds *HistoricalDataStore) AddClassCount(timestamp time.Time, entry *jmx.ClassLoading) {
+	hds.mu.Lock()
+	defer hds.mu.Unlock()
+
+	point := utils.NewTimeMap(timestamp)
+
+	point.Values["total_loaded"] = float64(entry.TotalLoadedClassCount)
+	point.Values["unloaded_count"] = float64(entry.UnloadedClassCount)
+
+	hds.classCounts = append(hds.classCounts, *point)
 	hds.trimHistory()
 }
 
@@ -63,44 +83,14 @@ func (hds *HistoricalDataStore) AddCPUUsage(timestamp time.Time, cpuLoad float64
 	hds.trimHistory()
 }
 
-func (hds *HistoricalDataStore) AddThreadCount(timestamp time.Time, count float64) {
-	hds.mu.Lock()
-	defer hds.mu.Unlock()
-
-	hds.threadCounts = append(hds.threadCounts, utils.TimePoint{Time: timestamp, Value: count})
-	hds.trimHistory()
-}
-
-// GetRecentHeapMemory returns multi-value heap memory data
-func (hds *HistoricalDataStore) GetRecentHeapMemory(window time.Duration) []utils.MultiValueTimePoint {
+func (hds *HistoricalDataStore) GetRecentHistory(window time.Duration, f func(*HistoricalDataStore) []utils.TimeMap) []utils.TimeMap {
 	hds.mu.RLock()
 	defer hds.mu.RUnlock()
 
 	cutoff := time.Now().Add(-window)
-	return hds.filterMultiValueByTime(hds.heapMemory, cutoff)
+	return hds.filterMultiValueByTime(f(hds), cutoff)
 }
 
-func (hds *HistoricalDataStore) GetRecentData(window time.Duration) ([]utils.TimePoint, []utils.TimePoint, []utils.TimePoint) {
-	hds.mu.RLock()
-	defer hds.mu.RUnlock()
-
-	cutoff := time.Now().Add(-window)
-
-	// Convert multi-value heap memory points to simple history points for backwards compatibility
-	heapUsagePoints := make([]utils.TimePoint, 0)
-	for _, memPoint := range hds.filterMultiValueByTime(hds.heapMemory, cutoff) {
-		heapUsagePoints = append(heapUsagePoints, utils.TimePoint{
-			Time:  memPoint.Timestamp,
-			Value: memPoint.GetUsagePercent(),
-		})
-	}
-
-	return heapUsagePoints,
-		hds.filterByTime(hds.cpuUsage, cutoff),
-		hds.filterByTime(hds.threadCounts, cutoff)
-}
-
-// GetRecentDataField returns a specific field from multi-value heap memory as simple TimePoint array
 func (hds *HistoricalDataStore) GetRecentDataField(window time.Duration, fieldName string) []utils.TimePoint {
 	hds.mu.RLock()
 	defer hds.mu.RUnlock()
@@ -119,8 +109,8 @@ func (hds *HistoricalDataStore) GetRecentDataField(window time.Duration, fieldNa
 	return result
 }
 
-func (hds *HistoricalDataStore) filterMultiValueByTime(points []utils.MultiValueTimePoint, cutoff time.Time) []utils.MultiValueTimePoint {
-	var result []utils.MultiValueTimePoint
+func (hds *HistoricalDataStore) filterMultiValueByTime(points []utils.TimeMap, cutoff time.Time) []utils.TimeMap {
+	var result []utils.TimeMap
 	for _, point := range points {
 		if point.Timestamp.After(cutoff) {
 			result = append(result, point)
