@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mabhi256/jdiag/internal/jmx"
-	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/mabhi256/jdiag/utils"
 
 	"github.com/charmbracelet/lipgloss"
@@ -41,19 +40,19 @@ func renderSystemOverview(system *SystemState) string {
 
 	switch {
 	case cpuLoad > 0.95 || systemLoad > 0.95:
-		statusColor = tui.CriticalColor
+		statusColor = utils.CriticalColor
 		statusIcon = "🔴"
 		statusText = "Critical system load"
 	case cpuLoad > 0.80 || systemLoad > 0.85:
-		statusColor = tui.WarningColor
+		statusColor = utils.WarningColor
 		statusIcon = "🟡"
 		statusText = "High system load"
 	case cpuLoad > 0.60 || systemLoad > 0.70:
-		statusColor = tui.InfoColor
+		statusColor = utils.InfoColor
 		statusIcon = "🟠"
 		statusText = "Moderate system load"
 	default:
-		statusColor = tui.GoodColor
+		statusColor = utils.GoodColor
 		statusIcon = "🟢"
 		statusText = "Normal system load"
 	}
@@ -111,7 +110,7 @@ func renderCPUChart(system *SystemState, width int, systemHistory []utils.TimeMa
 	}
 
 	// Set process CPU style (blue/info)
-	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.InfoColor))
+	chart.SetStyle(lipgloss.NewStyle().Foreground(utils.InfoColor))
 
 	// Add system CPU data as second dataset
 	for _, point := range systemHistory {
@@ -121,21 +120,21 @@ func renderCPUChart(system *SystemState, width int, systemHistory []utils.TimeMa
 			Value: systemCpu * 100, // Convert to percentage
 		})
 	}
-	chart.SetDataSetStyle("system", lipgloss.NewStyle().Foreground(tui.WarningColor))
+	chart.SetDataSetStyle("system", lipgloss.NewStyle().Foreground(utils.WarningColor))
 
 	chart.DrawBrailleAll()
 
 	// Create legend
-	processLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Process CPU")
-	systemLegend := lipgloss.NewStyle().Foreground(tui.WarningColor).Render("■ System CPU")
+	processLegend := lipgloss.NewStyle().Foreground(utils.InfoColor).Render("■ Process CPU")
+	systemLegend := lipgloss.NewStyle().Foreground(utils.WarningColor).Render("■ System CPU")
 	legend := lipgloss.JoinHorizontal(lipgloss.Left, processLegend, "  ", systemLegend)
 
 	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("CPU Usage"),
+		utils.InfoStyle.Render("CPU Usage"),
 		chartView,
-		tui.MutedStyle.Render(valuesText),
+		utils.MutedStyle.Render(valuesText),
 		"", // Empty line for spacing
 	)
 
@@ -167,7 +166,7 @@ func renderMemoryChart(system *SystemState, width int, systemHistory []utils.Tim
 	}
 
 	// Set RAM style (green)
-	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.GoodColor))
+	chart.SetStyle(lipgloss.NewStyle().Foreground(utils.GoodColor))
 
 	// Add Swap usage data as second dataset
 	for _, point := range systemHistory {
@@ -177,21 +176,21 @@ func renderMemoryChart(system *SystemState, width int, systemHistory []utils.Tim
 			Value: swapUsage, // Already in GB
 		})
 	}
-	chart.SetDataSetStyle("swap", lipgloss.NewStyle().Foreground(tui.CriticalColor))
+	chart.SetDataSetStyle("swap", lipgloss.NewStyle().Foreground(utils.CriticalColor))
 
 	chart.DrawBrailleAll()
 
 	// Create legend
-	ramLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("■ RAM (GB)")
-	swapLegend := lipgloss.NewStyle().Foreground(tui.CriticalColor).Render("■ Swap (GB)")
+	ramLegend := lipgloss.NewStyle().Foreground(utils.GoodColor).Render("■ RAM (GB)")
+	swapLegend := lipgloss.NewStyle().Foreground(utils.CriticalColor).Render("■ Swap (GB)")
 	legend := lipgloss.JoinHorizontal(lipgloss.Left, ramLegend, "  ", swapLegend)
 
 	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("System Memory"),
+		utils.InfoStyle.Render("System Memory"),
 		chartView,
-		tui.MutedStyle.Render(valuesText),
+		utils.MutedStyle.Render(valuesText),
 		"", // Empty line for spacing
 	)
 
@@ -233,8 +232,8 @@ func renderJVMInfo(system *SystemState) string {
 	}
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("JVM Information"),
-		tui.MutedStyle.Render(jvmText),
+		utils.InfoStyle.Render("JVM Information"),
+		utils.MutedStyle.Render(jvmText),
 		"", // Empty line for spacing
 	)
 

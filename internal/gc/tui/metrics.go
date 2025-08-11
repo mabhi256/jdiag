@@ -40,9 +40,9 @@ func renderMetricsSubTabs(currentSub MetricsSubTab) string {
 	var rendered []string
 
 	for i, tab := range tabs {
-		style := TabInactiveStyle
+		style := utils.TabInactiveStyle
 		if MetricsSubTab(i) == currentSub {
-			style = TabActiveStyle
+			style = utils.TabActiveStyle
 		}
 		rendered = append(rendered, style.Render(tab))
 	}
@@ -93,23 +93,23 @@ func renderSection(title string, lines []string) string {
 		}
 	}
 
-	return TitleStyle.Render(title) + "\n" + strings.Join(formatted, "\n")
+	return utils.TitleStyle.Render(title) + "\n" + strings.Join(formatted, "\n")
 }
 
 func getStatusIndicator(current, warning, critical float64) string {
 	if warning > critical {
 		// Higher is better (e.g., throughput: warning=90%, critical=80%)
 		if current <= critical {
-			return CriticalStyle.Render("🔴 Critical")
+			return utils.CriticalStyle.Render("🔴 Critical")
 		} else if current <= warning {
-			return WarningStyle.Render("⚠️ Below Target")
+			return utils.WarningStyle.Render("⚠️ Below Target")
 		}
 	} else {
 		// Lower is better (e.g., pause time: warning=100ms, critical=500ms)
 		if current >= critical {
-			return CriticalStyle.Render("🔴 Critical")
+			return utils.CriticalStyle.Render("🔴 Critical")
 		} else if current >= warning {
-			return WarningStyle.Render("⚠️ High")
+			return utils.WarningStyle.Render("⚠️ High")
 		}
 	}
 	return "" // Good - no indicator needed
@@ -138,7 +138,7 @@ func renderGeneralMetrics(analysis *gc.GCAnalysis) string {
 		fmt.Sprintf("• Mixed GCs: %d (%.1f%%)", analysis.MixedGCCount, float64(analysis.MixedGCCount)/total*100),
 	}
 	if analysis.FullGCCount > 0 {
-		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%) %s", analysis.FullGCCount, float64(analysis.FullGCCount)/total*100, CriticalStyle.Render("🔴 Critical")))
+		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%) %s", analysis.FullGCCount, float64(analysis.FullGCCount)/total*100, utils.CriticalStyle.Render("🔴 Critical")))
 	} else {
 		collection = append(collection, fmt.Sprintf("• Full GCs: %d (%.1f%%)", analysis.FullGCCount, float64(analysis.FullGCCount)/total*100))
 	}
@@ -198,9 +198,9 @@ func renderTimingMetrics(analysis *gc.GCAnalysis) string {
 	if analysis.PauseTargetMissRate > 0 {
 		var status string
 		if analysis.PauseTargetMissRate > 0.2 {
-			status = CriticalStyle.Render("🔴 High")
+			status = utils.CriticalStyle.Render("🔴 High")
 		} else if analysis.PauseTargetMissRate > 0.1 {
-			status = WarningStyle.Render("⚠️ Elevated")
+			status = utils.WarningStyle.Render("⚠️ Elevated")
 		}
 
 		targetMissStr := fmt.Sprintf("• Target Miss Rate: %.1f%%", analysis.PauseTargetMissRate*100)
@@ -211,15 +211,15 @@ func renderTimingMetrics(analysis *gc.GCAnalysis) string {
 	}
 
 	if analysis.LongPauseCount > 0 {
-		lines = append(lines, fmt.Sprintf("• Long Pauses: %d %s", analysis.LongPauseCount, WarningStyle.Render("⚠️")))
+		lines = append(lines, fmt.Sprintf("• Long Pauses: %d %s", analysis.LongPauseCount, utils.WarningStyle.Render("⚠️")))
 	}
 
 	if analysis.PauseTimeVariance > 0 {
 		var status string
 		if analysis.PauseTimeVariance > gc.PauseVarianceCritical {
-			status = CriticalStyle.Render("🔴 Very High Variance")
+			status = utils.CriticalStyle.Render("🔴 Very High Variance")
 		} else if analysis.PauseTimeVariance > gc.PauseVarianceWarning {
-			status = WarningStyle.Render("⚠️ High Variance")
+			status = utils.WarningStyle.Render("⚠️ High Variance")
 		}
 
 		varianceStr := fmt.Sprintf("• Pause Variance: %.3f", analysis.PauseTimeVariance)
@@ -355,7 +355,7 @@ func renderG1GCAnalysis(analysis *gc.GCAnalysis) string {
 		}
 
 		if analysis.RegionExhaustionEvents > 0 {
-			region = append(region, fmt.Sprintf("• Region Exhaustion: %d %s", analysis.RegionExhaustionEvents, CriticalStyle.Render("🔴")))
+			region = append(region, fmt.Sprintf("• Region Exhaustion: %d %s", analysis.RegionExhaustionEvents, utils.CriticalStyle.Render("🔴")))
 		}
 		sections = append(sections, renderSection("Region Statistics", region))
 	}
@@ -379,15 +379,15 @@ func renderConcurrentMetrics(analysis *gc.GCAnalysis) string {
 	lines := []string{}
 
 	if !analysis.ConcurrentMarkingKeepup {
-		lines = append(lines, fmt.Sprintf("• Marking Keepup: %s", CriticalStyle.Render("🔴 Falling Behind")))
+		lines = append(lines, fmt.Sprintf("• Marking Keepup: %s", utils.CriticalStyle.Render("🔴 Falling Behind")))
 	}
 
 	if analysis.ConcurrentCycleDuration > 0 {
 		var status string
 		if analysis.ConcurrentCycleDuration > gc.ConcurrentCycleCritical {
-			status = CriticalStyle.Render("🔴 Too Long")
+			status = utils.CriticalStyle.Render("🔴 Too Long")
 		} else if analysis.ConcurrentCycleDuration > gc.ConcurrentCycleWarning {
-			status = WarningStyle.Render("⚠️ Long")
+			status = utils.WarningStyle.Render("⚠️ Long")
 		}
 
 		cycleDurationStr := fmt.Sprintf("• Cycle Duration: %s", utils.FormatDuration(analysis.ConcurrentCycleDuration))
@@ -402,7 +402,7 @@ func renderConcurrentMetrics(analysis *gc.GCAnalysis) string {
 	}
 
 	if analysis.ConcurrentCycleFailures > 0 {
-		lines = append(lines, fmt.Sprintf("• Cycle Failures: %d %s", analysis.ConcurrentCycleFailures, CriticalStyle.Render("🔴")))
+		lines = append(lines, fmt.Sprintf("• Cycle Failures: %d %s", analysis.ConcurrentCycleFailures, utils.CriticalStyle.Render("🔴")))
 	}
 
 	// If no issues to show, show basic concurrent status

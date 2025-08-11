@@ -49,9 +49,9 @@ func (m *Model) RenderEvents() string {
 
 func (m *Model) renderEventsHeader(events []*gc.GCEvent) string {
 	// Filter and sort status
-	filterStyle := TabInactiveStyle
+	filterStyle := utils.TabInactiveStyle
 	if m.eventsState.eventFilter != AllEvent {
-		filterStyle = TabActiveStyle
+		filterStyle = utils.TabActiveStyle
 	}
 
 	// Convert enum to display string
@@ -75,8 +75,8 @@ func (m *Model) renderEventsHeader(events []*gc.GCEvent) string {
 
 	statusLine := fmt.Sprintf("%s | %s | %s",
 		filterStyle.Render(filterText),
-		MutedStyle.Render(sortText),
-		MutedStyle.Render(countText))
+		utils.MutedStyle.Render(sortText),
+		utils.MutedStyle.Render(countText))
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		statusLine,
@@ -124,8 +124,8 @@ func (m *Model) renderEventsTable(events []*gc.GCEvent, maxHeight int) string {
 	table := strings.Join(lines, "\n")
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		TitleStyle.Render(headerLine),
-		MutedStyle.Render(separator),
+		utils.TitleStyle.Render(headerLine),
+		utils.MutedStyle.Render(separator),
 		table,
 	)
 }
@@ -174,18 +174,18 @@ func (m *Model) renderEventRow(event *gc.GCEvent, isSelected bool) string {
 	// Apply selection highlighting
 	if isSelected {
 		return lipgloss.NewStyle().
-			Background(InfoColor).
+			Background(utils.InfoColor).
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Render("▶ " + row)
 	}
 
 	// Analyze issues for row-level styling
 	issues := m.analyzeEventIssues(event)
-	style := TextStyle
+	style := utils.TextStyle
 	if len(issues.critical) > 0 {
-		style = CriticalStyle
+		style = utils.CriticalStyle
 	} else if len(issues.warning) > 0 {
-		style = WarningStyle
+		style = utils.WarningStyle
 	}
 
 	return style.Render("  " + row)
@@ -355,13 +355,13 @@ func (m *Model) renderEventDetails(event *gc.GCEvent) string {
 		// Add critical issues in red
 		if len(issues.critical) > 0 {
 			criticalText := fmt.Sprintf("Critical: %s", strings.Join(issues.critical, ", "))
-			issueParts = append(issueParts, CriticalStyle.Render(criticalText))
+			issueParts = append(issueParts, utils.CriticalStyle.Render(criticalText))
 		}
 
 		// Add warning issues in orange
 		if len(issues.warning) > 0 {
 			warningText := fmt.Sprintf("Warning: %s", strings.Join(issues.warning, ", "))
-			issueParts = append(issueParts, WarningStyle.Render(warningText))
+			issueParts = append(issueParts, utils.WarningStyle.Render(warningText))
 		}
 
 		issuesLine = fmt.Sprintf("Issues: %s", strings.Join(issueParts, " | "))
@@ -369,7 +369,7 @@ func (m *Model) renderEventDetails(event *gc.GCEvent) string {
 
 	// Build content lines - filter out empty lines
 	lines := []string{
-		TitleStyle.Render(title),
+		utils.TitleStyle.Render(title),
 		timingLine,
 	}
 
@@ -390,7 +390,7 @@ func (m *Model) renderEventDetails(event *gc.GCEvent) string {
 	// Fixed size border
 	detailsStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(BorderColor).
+		BorderForeground(utils.BorderColor).
 		Padding(0, 1).
 		Width(m.width - 2).
 		Height(5)
@@ -424,5 +424,5 @@ func (m *Model) getSortedEvents(events []*gc.GCEvent) []*gc.GCEvent {
 }
 
 func renderNoEvents() string {
-	return MutedStyle.Render("No GC events found in the log.")
+	return utils.MutedStyle.Render("No GC events found in the log.")
 }

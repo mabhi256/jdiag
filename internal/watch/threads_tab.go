@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/mabhi256/jdiag/utils"
 )
 
@@ -65,7 +64,7 @@ func renderThreadChart(threads *ThreadState, width int, threadHistory []utils.Ti
 	}
 
 	// Set total loaded style (blue/info)
-	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.InfoColor))
+	chart.SetStyle(lipgloss.NewStyle().Foreground(utils.InfoColor))
 
 	for _, point := range threadHistory {
 		daemonCount := point.GetOrDefault("daemon_count", 0)
@@ -74,21 +73,21 @@ func renderThreadChart(threads *ThreadState, width int, threadHistory []utils.Ti
 			Value: float64(daemonCount),
 		})
 	}
-	chart.SetDataSetStyle("daemon", lipgloss.NewStyle().Foreground(tui.WarningColor))
+	chart.SetDataSetStyle("daemon", lipgloss.NewStyle().Foreground(utils.WarningColor))
 
 	chart.DrawBrailleAll()
 
 	// Create legend
-	currentLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Current")
-	daemonLegend := lipgloss.NewStyle().Foreground(tui.WarningColor).Render("■ Daemon")
+	currentLegend := lipgloss.NewStyle().Foreground(utils.InfoColor).Render("■ Current")
+	daemonLegend := lipgloss.NewStyle().Foreground(utils.WarningColor).Render("■ Daemon")
 	legend := lipgloss.JoinHorizontal(lipgloss.Left, currentLegend, "  ", daemonLegend)
 
 	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Threads"),
+		utils.InfoStyle.Render("Threads"),
 		chartView,
-		tui.MutedStyle.Render(valuesText),
+		utils.MutedStyle.Render(valuesText),
 		"", // Empty line for spacing
 	)
 
@@ -118,7 +117,7 @@ func renderClassChart(threads *ThreadState, width int, classHistory []utils.Time
 	}
 
 	// Set current threads style (green)
-	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.GoodColor))
+	chart.SetStyle(lipgloss.NewStyle().Foreground(utils.GoodColor))
 
 	for _, point := range classHistory {
 		unloadedCount := point.GetOrDefault("unloaded_count", 0)
@@ -127,21 +126,21 @@ func renderClassChart(threads *ThreadState, width int, classHistory []utils.Time
 			Value: float64(unloadedCount),
 		})
 	}
-	chart.SetDataSetStyle("unloaded", lipgloss.NewStyle().Foreground(tui.InfoColor))
+	chart.SetDataSetStyle("unloaded", lipgloss.NewStyle().Foreground(utils.InfoColor))
 
 	chart.DrawBrailleAll()
 
 	// Create legend
-	loadedLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("■ Total Loaded")
-	unloadedLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Unloaded")
+	loadedLegend := lipgloss.NewStyle().Foreground(utils.GoodColor).Render("■ Total Loaded")
+	unloadedLegend := lipgloss.NewStyle().Foreground(utils.InfoColor).Render("■ Unloaded")
 	legend := lipgloss.JoinHorizontal(lipgloss.Left, loadedLegend, "  ", unloadedLegend)
 
 	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chart.View(), "", legend)
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Classes"),
+		utils.InfoStyle.Render("Classes"),
 		chartView,
-		tui.MutedStyle.Render(valuesText),
+		utils.MutedStyle.Render(valuesText),
 		"", // Empty line for spacing
 	)
 
@@ -153,12 +152,12 @@ func renderThreadPerformance(threads *ThreadState) string {
 	var performanceLines []string
 
 	if threads.ThreadCreationRate > 0 {
-		creationColor := tui.GoodColor
+		creationColor := utils.GoodColor
 		if threads.ThreadCreationRate > 10 { // More than 10 threads/min
-			creationColor = tui.WarningColor
+			creationColor = utils.WarningColor
 		}
 		if threads.ThreadCreationRate > 30 { // More than 30 threads/min
-			creationColor = tui.CriticalColor
+			creationColor = utils.CriticalColor
 		}
 
 		creationLine := lipgloss.NewStyle().Foreground(creationColor).Render(
@@ -167,13 +166,13 @@ func renderThreadPerformance(threads *ThreadState) string {
 	}
 
 	if threads.ThreadContention {
-		contentionLine := lipgloss.NewStyle().Foreground(tui.WarningColor).Render(
+		contentionLine := lipgloss.NewStyle().Foreground(utils.WarningColor).Render(
 			"Thread Contention: Detected")
 		performanceLines = append(performanceLines, "• "+contentionLine)
 	}
 
 	if threads.DeadlockedThreads > 0 {
-		deadlockLine := lipgloss.NewStyle().Foreground(tui.CriticalColor).Render(
+		deadlockLine := lipgloss.NewStyle().Foreground(utils.CriticalColor).Render(
 			fmt.Sprintf("Deadlocked Threads: %d", threads.DeadlockedThreads))
 		performanceLines = append(performanceLines, "• "+deadlockLine)
 	}
@@ -188,7 +187,7 @@ func renderThreadPerformance(threads *ThreadState) string {
 	}
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Thread Performance"),
+		utils.InfoStyle.Render("Thread Performance"),
 		performanceText,
 		"", // Empty line for spacing
 	)
@@ -207,9 +206,9 @@ func renderThreadStates(threads *ThreadState) string {
 	}
 
 	if threads.BlockedThreadCount > 0 {
-		blockedColor := tui.WarningColor
+		blockedColor := utils.WarningColor
 		if threads.BlockedThreadCount > threads.CurrentThreadCount/4 { // More than 25% blocked
-			blockedColor = tui.CriticalColor
+			blockedColor = utils.CriticalColor
 		}
 
 		blockedLine := lipgloss.NewStyle().Foreground(blockedColor).Render(
@@ -232,7 +231,7 @@ func renderThreadStates(threads *ThreadState) string {
 	}
 
 	section := lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Thread States"),
+		utils.InfoStyle.Render("Thread States"),
 		statesText,
 		"", // Empty line for spacing
 	)

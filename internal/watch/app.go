@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/jmx"
-	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/mabhi256/jdiag/utils"
 )
 
@@ -36,7 +35,7 @@ func (m *Model) View() string {
 
 	// Add error overlay if needed
 	if m.showError {
-		errorBox := tui.ErrorStyle.Render(m.errorMessage)
+		errorBox := utils.ErrorStyle.Render(m.errorMessage)
 		errorOverlay := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, errorBox)
 		return errorOverlay
 	}
@@ -71,9 +70,9 @@ func (m *Model) renderMonitorView() string {
 func (m *Model) renderActiveTab() string {
 	if !m.connected {
 		if m.errorMessage != "" {
-			return tui.CriticalStyle.Render(fmt.Sprintf("Connection error: %s", m.errorMessage))
+			return utils.CriticalStyle.Render(fmt.Sprintf("Connection error: %s", m.errorMessage))
 		}
-		return tui.CriticalStyle.Render("No connection to JVM")
+		return utils.CriticalStyle.Render("No connection to JVM")
 	}
 
 	switch m.activeTab {
@@ -90,7 +89,7 @@ func (m *Model) renderActiveTab() string {
 		systemHistory := m.GetHistoricalSystemUsage(5 * time.Minute)
 		return RenderSystemTab(m.tabState, m.config, m.width, systemHistory)
 	default:
-		return tui.CriticalStyle.Render("Unknown tab")
+		return utils.CriticalStyle.Render("Unknown tab")
 	}
 }
 
@@ -102,8 +101,8 @@ func (m *Model) renderHeader() string {
 	separatorLine := strings.Repeat("─", m.width)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		tui.HeaderStyle.Width(m.width).Render(headerLine),
-		tui.MutedStyle.Render(separatorLine),
+		utils.HeaderStyle.Width(m.width).Render(headerLine),
+		utils.MutedStyle.Render(separatorLine),
 	)
 }
 
@@ -123,14 +122,14 @@ func (m *Model) getStatus() string {
 	var status string
 	if m.connected {
 		uptime := m.tabState.System.JVMUptime
-		status = tui.GoodStyle.Render(fmt.Sprintf("🟢 Connected • Uptime: %s", utils.FormatDuration(uptime)))
+		status = utils.GoodStyle.Render(fmt.Sprintf("🟢 Connected • Uptime: %s", utils.FormatDuration(uptime)))
 		if m.errorMessage != "" {
-			status = tui.WarningStyle.Render("⚠️ Connected (Warning)")
+			status = utils.WarningStyle.Render("⚠️ Connected (Warning)")
 		}
 	} else {
-		status = tui.CriticalStyle.Render("🔴 Disconnected")
+		status = utils.CriticalStyle.Render("🔴 Disconnected")
 		if m.errorMessage != "" {
-			status = tui.CriticalStyle.Render("🔴 Error")
+			status = utils.CriticalStyle.Render("🔴 Error")
 		}
 	}
 
@@ -142,9 +141,9 @@ func (m *Model) renderTabBar() string {
 
 	for _, tab := range GetAllTabs() {
 		if tab == m.activeTab {
-			tabs = append(tabs, tui.TabActiveStyle.Render(tab.String()))
+			tabs = append(tabs, utils.TabActiveStyle.Render(tab.String()))
 		} else {
-			tabs = append(tabs, tui.TabInactiveStyle.Render(tab.String()))
+			tabs = append(tabs, utils.TabInactiveStyle.Render(tab.String()))
 		}
 	}
 

@@ -32,12 +32,12 @@ var trendNames = map[TrendSubTab]string{
 
 func (m *Model) RenderTrends() string {
 	if len(m.events) == 0 {
-		return MutedStyle.Render("No GC events available for trend analysis.")
+		return utils.MutedStyle.Render("No GC events available for trend analysis.")
 	}
 
 	events := m.getRecentEvents()
 	if len(events) < 2 {
-		return MutedStyle.Render("Insufficient data for trend analysis.\n\nAt least 2 GC events are required.")
+		return utils.MutedStyle.Render("Insufficient data for trend analysis.\n\nAt least 2 GC events are required.")
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
@@ -50,15 +50,15 @@ func (m *Model) renderTrendsHeader() string {
 	// Build tab line with active/inactive styling
 	var tabs []string
 	for trend := HeapAfterTrend; trend <= FrequencyTrend; trend++ {
-		style := TabInactiveStyle
+		style := utils.TabInactiveStyle
 		if trend == m.trendsState.trendSubTab {
-			style = TabActiveStyle
+			style = utils.TabActiveStyle
 		}
 		tabs = append(tabs, style.Render(trendNames[trend]))
 	}
 
 	tabLine := strings.Join(tabs, "  ")
-	infoLine := MutedStyle.Render(fmt.Sprintf("Showing last %d events", m.trendsState.timeWindow))
+	infoLine := utils.MutedStyle.Render(fmt.Sprintf("Showing last %d events", m.trendsState.timeWindow))
 
 	return lipgloss.JoinVertical(lipgloss.Left, tabLine, infoLine)
 }
@@ -97,7 +97,7 @@ func (m *Model) renderTrendsContent(events []*gc.GCEvent) string {
 			func(e *gc.GCEvent) float64 {
 				return e.RegionSize.Mul(float64(GetPromotedRegions(e))).MB()
 			})
-		return result + "\n" + MutedStyle.Render("Cannot calculate reliably for Mixed and Full GC")
+		return result + "\n" + utils.MutedStyle.Render("Cannot calculate reliably for Mixed and Full GC")
 	case FrequencyTrend:
 		return m.renderFrequencyTrends(events)
 	default:
@@ -114,7 +114,7 @@ func (m *Model) renderHeapTrends(
 		return "No events to display"
 	}
 
-	title := TitleStyle.Render(header)
+	title := utils.TitleStyle.Render(header)
 
 	// Extract data from events
 	values := make([]float64, 0)
@@ -131,20 +131,20 @@ func (m *Model) renderHeapTrends(
 	}
 
 	if len(values) == 0 {
-		return TitleStyle.Render(title) + "\n\nNo data available"
+		return utils.TitleStyle.Render(title) + "\n\nNo data available"
 	}
 
 	chart := CreatePlotFromGCData(values, timestamps, gcTypes, unit, m.calculateChartWidth(), ChartHeight)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		TitleStyle.Render(title),
+		utils.TitleStyle.Render(title),
 		"",
 		chart)
 }
 
 func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
-	title := TitleStyle.Render("Collection Time Analysis")
+	title := utils.TitleStyle.Render("Collection Time Analysis")
 
 	// Use pre-calculated data from analysis
 	if m.analysis == nil || m.analysis.GCTypeDurations == nil || m.analysis.GCTypeEventCounts == nil {
@@ -163,11 +163,11 @@ func (m *Model) renderFrequencyTrends(events []*gc.GCEvent) string {
 
 	// Create bars for time distribution
 	styleMap := map[string]lipgloss.Style{
-		"Young":           GoodStyle,
-		"Mixed":           InfoStyle,
-		"Full":            CriticalStyle,
-		"Concurrent Mark": WarningStyle,
-		"Other":           MutedStyle,
+		"Young":           utils.GoodStyle,
+		"Mixed":           utils.InfoStyle,
+		"Full":            utils.CriticalStyle,
+		"Concurrent Mark": utils.WarningStyle,
+		"Other":           utils.MutedStyle,
 	}
 
 	var bars []utils.BarData
@@ -236,7 +236,7 @@ func (m *Model) renderGCCausesChart(events []*gc.GCEvent) string {
 
 	// Create and sort bars
 	var bars []utils.BarData
-	colors := []lipgloss.Style{GoodStyle, InfoStyle, WarningStyle, CriticalStyle, MutedStyle}
+	colors := []lipgloss.Style{utils.GoodStyle, utils.InfoStyle, utils.WarningStyle, utils.CriticalStyle, utils.MutedStyle}
 
 	for cause, duration := range m.analysis.GCCauseDurations {
 		// Calculate percentage of total duration

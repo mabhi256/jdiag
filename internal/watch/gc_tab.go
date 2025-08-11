@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mabhi256/jdiag/internal/tui"
-
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/utils"
 )
@@ -93,7 +91,7 @@ func renderGCEventsChart(tracker *GCEventTracker, width int, filter GCChartFilte
 	}
 
 	// Set young generation style (light green)
-	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.GoodColor))
+	chart.SetStyle(lipgloss.NewStyle().Foreground(utils.GoodColor))
 
 	// Add old generation events as separate dataset
 	for _, event := range oldEvents {
@@ -114,22 +112,22 @@ func renderGCEventsChart(tracker *GCEventTracker, width int, filter GCChartFilte
 	}
 
 	// Set old generation style (orange/warning color)
-	chart.SetDataSetStyle("old", lipgloss.NewStyle().Foreground(tui.WarningColor))
+	chart.SetDataSetStyle("old", lipgloss.NewStyle().Foreground(utils.WarningColor))
 
 	chart.DrawBrailleAll()
 
 	// Create title with current filter prominently displayed
 	currentFilter := lipgloss.NewStyle().
-		Foreground(tui.InfoColor).
+		Foreground(utils.InfoColor).
 		Bold(true).
 		Render(fmt.Sprintf("Showing: %s Memory", filter.String()))
 	filterHint := lipgloss.NewStyle().
-		Foreground(tui.MutedStyle.GetForeground()).
+		Foreground(utils.MutedStyle.GetForeground()).
 		Render("[Press 'f' to cycle filters]")
 
 	// Create legend with generation info
-	youngLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("🐣 Young Gen")
-	oldLegend := lipgloss.NewStyle().Foreground(tui.WarningColor).Render("👵 Old Gen")
+	youngLegend := lipgloss.NewStyle().Foreground(utils.GoodColor).Render("🐣 Young Gen")
+	oldLegend := lipgloss.NewStyle().Foreground(utils.WarningColor).Render("👵 Old Gen")
 
 	// Build header and legend lines
 	legendCol := lipgloss.JoinVertical(lipgloss.Top, currentFilter, filterHint, "", youngLegend, oldLegend)
@@ -172,8 +170,8 @@ func renderGCSummaryGrid(tracker *GCEventTracker, window time.Duration) string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("GC Summary"),
-		tui.MutedStyle.Render(summaryLine),
+		utils.InfoStyle.Render("GC Summary"),
+		utils.MutedStyle.Render(summaryLine),
 		"")
 }
 
@@ -203,12 +201,12 @@ func renderGenerationColumns(tracker *GCEventTracker, window time.Duration) stri
 
 	youngColumn := lipgloss.NewStyle().Width(35).Render(
 		lipgloss.JoinVertical(lipgloss.Left,
-			tui.InfoStyle.Render("Young Generation"),
+			utils.InfoStyle.Render("Young Generation"),
 			youngStats))
 
 	oldColumn := lipgloss.NewStyle().Width(35).Render(
 		lipgloss.JoinVertical(lipgloss.Left,
-			tui.InfoStyle.Render("Old Generation"),
+			utils.InfoStyle.Render("Old Generation"),
 			oldStats))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, youngColumn, "  ", oldColumn)
@@ -243,12 +241,12 @@ func buildGenerationColumn(tracker *GCEventTracker, generation string, window ti
 		efficiency = oldEff
 	}
 
-	var color lipgloss.Color = tui.GoodColor
+	var color lipgloss.Color = utils.GoodColor
 	if avgTime > 100 {
-		color = tui.WarningColor
+		color = utils.WarningColor
 	}
 	if avgTime > 500 {
-		color = tui.CriticalColor
+		color = utils.CriticalColor
 	}
 
 	// Create clean metric rows
@@ -289,20 +287,20 @@ func renderMostRecentGCBox(tracker *GCEventTracker) string {
 
 	var generationIcon string
 	var generationColor lipgloss.Color
-	var pauseColor lipgloss.Color = tui.GoodColor
+	var pauseColor lipgloss.Color = utils.GoodColor
 
 	if generation == "young" {
 		generationIcon = "🐣"
-		generationColor = tui.InfoColor
+		generationColor = utils.InfoColor
 	} else {
 		generationIcon = "👵"
-		generationColor = tui.WarningColor
+		generationColor = utils.WarningColor
 	}
 
 	if duration > 500*time.Millisecond {
-		pauseColor = tui.CriticalColor
+		pauseColor = utils.CriticalColor
 	} else if duration > 100*time.Millisecond {
-		pauseColor = tui.WarningColor
+		pauseColor = utils.WarningColor
 	}
 
 	timeAgo := time.Since(timestamp)
@@ -328,8 +326,8 @@ func renderMostRecentGCBox(tracker *GCEventTracker) string {
 
 	return lipgloss.NewStyle().Width(30).Render(
 		lipgloss.JoinVertical(lipgloss.Left,
-			tui.InfoStyle.Render("Most Recent GC"),
-			tui.MutedStyle.Render(content)))
+			utils.InfoStyle.Render("Most Recent GC"),
+			utils.MutedStyle.Render(content)))
 }
 
 // renderPerformanceGrid creates organized performance metrics
@@ -341,7 +339,7 @@ func renderPerformanceGrid(tracker *GCEventTracker, window time.Duration) string
 	metricsColumn := renderMetricsColumn(tracker, window)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		tui.InfoStyle.Render("Performance Analysis"),
+		utils.InfoStyle.Render("Performance Analysis"),
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			overheadColumn,
 			"    ",
@@ -370,19 +368,19 @@ func renderOverheadColumn(tracker *GCEventTracker, window time.Duration) string 
 
 	switch {
 	case displayOverhead > 0.20:
-		overheadColor = tui.CriticalColor
+		overheadColor = utils.CriticalColor
 		status = "CRITICAL"
 	case displayOverhead > 0.10:
-		overheadColor = tui.CriticalColor
+		overheadColor = utils.CriticalColor
 		status = "HIGH"
 	case displayOverhead > 0.05:
-		overheadColor = tui.WarningColor
+		overheadColor = utils.WarningColor
 		status = "MODERATE"
 	case displayOverhead > 0.02:
-		overheadColor = tui.InfoColor
+		overheadColor = utils.InfoColor
 		status = "LOW"
 	default:
-		overheadColor = tui.GoodColor
+		overheadColor = utils.GoodColor
 		status = "MINIMAL"
 	}
 
@@ -405,8 +403,8 @@ func renderOverheadColumn(tracker *GCEventTracker, window time.Duration) string 
 
 	return lipgloss.NewStyle().Width(40).Render(
 		lipgloss.JoinVertical(lipgloss.Left,
-			tui.MutedStyle.Render("Overhead Analysis"),
-			tui.MutedStyle.Render(content)))
+			utils.MutedStyle.Render("Overhead Analysis"),
+			utils.MutedStyle.Render(content)))
 }
 
 func renderMetricsColumn(tracker *GCEventTracker, window time.Duration) string {
@@ -418,11 +416,11 @@ func renderMetricsColumn(tracker *GCEventTracker, window time.Duration) string {
 	var lines []string
 
 	if maxPause > 0 {
-		pauseColor := tui.GoodColor
+		pauseColor := utils.GoodColor
 		if maxPause > 1*time.Second {
-			pauseColor = tui.CriticalColor
+			pauseColor = utils.CriticalColor
 		} else if maxPause > 500*time.Millisecond {
-			pauseColor = tui.WarningColor
+			pauseColor = utils.WarningColor
 		}
 		lines = append(lines,
 			fmt.Sprintf("Max Pause: %s",
@@ -434,26 +432,26 @@ func renderMetricsColumn(tracker *GCEventTracker, window time.Duration) string {
 	}
 
 	if overallEfficiency > 0 {
-		efficiencyColor := tui.GoodColor
+		efficiencyColor := utils.GoodColor
 		if overallEfficiency < 30 {
-			efficiencyColor = tui.WarningColor
+			efficiencyColor = utils.WarningColor
 		}
 		if overallEfficiency < 10 {
-			efficiencyColor = tui.CriticalColor
+			efficiencyColor = utils.CriticalColor
 		}
 		lines = append(lines,
 			fmt.Sprintf("Efficiency: %s",
 				lipgloss.NewStyle().Foreground(efficiencyColor).Render(fmt.Sprintf("%.1f%%", overallEfficiency))))
 	}
 
-	pressureColor := tui.GoodColor
+	pressureColor := utils.GoodColor
 	switch pressureLevel {
 	case "critical", "high":
-		pressureColor = tui.CriticalColor
+		pressureColor = utils.CriticalColor
 	case "moderate":
-		pressureColor = tui.WarningColor
+		pressureColor = utils.WarningColor
 	case "low":
-		pressureColor = tui.InfoColor
+		pressureColor = utils.InfoColor
 	}
 
 	lines = append(lines,
@@ -467,8 +465,8 @@ func renderMetricsColumn(tracker *GCEventTracker, window time.Duration) string {
 
 	return lipgloss.NewStyle().Width(40).Render(
 		lipgloss.JoinVertical(lipgloss.Left,
-			tui.MutedStyle.Render("Key Metrics"),
-			tui.MutedStyle.Render(content)))
+			utils.MutedStyle.Render("Key Metrics"),
+			utils.MutedStyle.Render(content)))
 }
 
 // renderRecentEventsClean creates a clean, scannable event list
@@ -478,14 +476,14 @@ func renderRecentEventsClean(events []GCEvent) string {
 	}
 
 	lines := []string{
-		tui.InfoStyle.Render("Recent GC Events"),
+		utils.InfoStyle.Render("Recent GC Events"),
 	}
 
 	for _, event := range events {
 		timeStr := event.Timestamp.Format("15:04:05")
 
 		var generationIcon string
-		var durationColor lipgloss.Color = tui.GoodColor
+		var durationColor lipgloss.Color = utils.GoodColor
 
 		if event.Generation == "young" {
 			generationIcon = "🐣"
@@ -494,9 +492,9 @@ func renderRecentEventsClean(events []GCEvent) string {
 		}
 
 		if event.Duration > 500*time.Millisecond {
-			durationColor = tui.CriticalColor
+			durationColor = utils.CriticalColor
 		} else if event.Duration > 100*time.Millisecond {
-			durationColor = tui.WarningColor
+			durationColor = utils.WarningColor
 		}
 
 		// Create a clean, readable event line
@@ -519,7 +517,7 @@ func renderRecentEventsClean(events []GCEvent) string {
 			eventLine += "  |  " + detail
 		}
 
-		lines = append(lines, tui.MutedStyle.Render(eventLine))
+		lines = append(lines, utils.MutedStyle.Render(eventLine))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)

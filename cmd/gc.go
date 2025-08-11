@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/mabhi256/jdiag/internal/gc"
-	"github.com/mabhi256/jdiag/internal/html"
-	"github.com/mabhi256/jdiag/internal/tui"
+	"github.com/mabhi256/jdiag/internal/gc/html"
+	"github.com/mabhi256/jdiag/internal/gc/tui"
 	"github.com/spf13/cobra"
 )
 

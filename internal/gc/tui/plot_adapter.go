@@ -49,11 +49,11 @@ func CreateGCLegend(styles utils.ChartStyles) string {
 // CreateChartStyles creates chart styles using your existing TUI styles
 func CreateChartStyles() utils.ChartStyles {
 	return utils.ChartStyles{
-		Muted:    LipglossRenderer{MutedStyle},
-		Good:     LipglossRenderer{GoodStyle},
-		Info:     LipglossRenderer{InfoStyle},
-		Critical: LipglossRenderer{CriticalStyle},
-		Warning:  LipglossRenderer{WarningStyle},
+		Muted:    LipglossRenderer{utils.MutedStyle},
+		Good:     LipglossRenderer{utils.GoodStyle},
+		Info:     LipglossRenderer{utils.InfoStyle},
+		Critical: LipglossRenderer{utils.CriticalStyle},
+		Warning:  LipglossRenderer{utils.WarningStyle},
 	}
 }
 

@@ -82,7 +82,7 @@ func renderDashboardRight(analysis *gc.GCAnalysis, issues *gc.GCIssues, width in
 }
 
 func renderPerformanceOverview(analysis *gc.GCAnalysis) string {
-	title := TitleStyle.Render("Performance Overview")
+	title := utils.TitleStyle.Render("Performance Overview")
 
 	var rows []string
 
@@ -165,7 +165,7 @@ func renderPerformanceOverview(analysis *gc.GCAnalysis) string {
 }
 
 func renderCollectionBreakdown(analysis *gc.GCAnalysis, width int) string {
-	title := TitleStyle.Render("Collection Types")
+	title := utils.TitleStyle.Render("Collection Types")
 
 	total := float64(analysis.TotalEvents)
 	if total == 0 {
@@ -176,21 +176,21 @@ func renderCollectionBreakdown(analysis *gc.GCAnalysis, width int) string {
 
 	// Young GC percentage
 	youngPct := float64(analysis.YoungGCCount) / total
-	youngBar := CreateProgressBar(youngPct, barWidth, GoodColor)
+	youngBar := utils.CreateProgressBar(youngPct, barWidth, utils.GoodColor)
 	youngLine := fmt.Sprintf("Young  %s %d%%", youngBar, int(youngPct*100))
 
 	// Mixed GC percentage
 	mixedPct := float64(analysis.MixedGCCount) / total
-	mixedBar := CreateProgressBar(mixedPct, barWidth, InfoColor)
+	mixedBar := utils.CreateProgressBar(mixedPct, barWidth, utils.InfoColor)
 	mixedLine := fmt.Sprintf("Mixed  %s %d%%", mixedBar, int(mixedPct*100))
 
 	// Full GC percentage
 	fullPct := float64(analysis.FullGCCount) / total
-	fullColor := GoodColor
+	fullColor := utils.GoodColor
 	if analysis.FullGCCount > 0 {
-		fullColor = CriticalColor
+		fullColor = utils.CriticalColor
 	}
-	fullBar := CreateProgressBar(fullPct, barWidth, fullColor)
+	fullBar := utils.CreateProgressBar(fullPct, barWidth, fullColor)
 	fullLine := fmt.Sprintf("Full   %s %d%%", fullBar, int(fullPct*100))
 
 	content := strings.Join([]string{youngLine, mixedLine, fullLine}, "\n")
@@ -204,7 +204,7 @@ func renderCollectionBreakdown(analysis *gc.GCAnalysis, width int) string {
 }
 
 func renderIssuesSummary(issues *gc.GCIssues, width int) string {
-	title := TitleStyle.Render("Issues Summary")
+	title := utils.TitleStyle.Render("Issues Summary")
 
 	criticalCount := len(issues.Critical)
 	warningCount := len(issues.Warning)
@@ -215,26 +215,26 @@ func renderIssuesSummary(issues *gc.GCIssues, width int) string {
 
 	// Issue counts
 	if criticalCount > 0 {
-		lines = append(lines, CriticalStyle.Render(fmt.Sprintf("Critical: %d", criticalCount)))
+		lines = append(lines, utils.CriticalStyle.Render(fmt.Sprintf("Critical: %d", criticalCount)))
 	}
 	if warningCount > 0 {
-		lines = append(lines, WarningStyle.Render(fmt.Sprintf("Warning: %d", warningCount)))
+		lines = append(lines, utils.WarningStyle.Render(fmt.Sprintf("Warning: %d", warningCount)))
 	}
 	if infoCount > 0 {
-		lines = append(lines, InfoStyle.Render(fmt.Sprintf("ℹ️  Info: %d", infoCount)))
+		lines = append(lines, utils.InfoStyle.Render(fmt.Sprintf("ℹ️  Info: %d", infoCount)))
 	}
 
 	if len(lines) == 0 {
-		lines = append(lines, GoodStyle.Render("✅ No issues detected"))
+		lines = append(lines, utils.GoodStyle.Render("✅ No issues detected"))
 	} else {
 		lines = append(lines, "")
 
 		// Show top issue
 		topIssue := getTopIssue(issues)
 		if topIssue != nil {
-			lines = append(lines, MutedStyle.Render("Top Issue:"))
+			lines = append(lines, utils.MutedStyle.Render("Top Issue:"))
 
-			issueTitle := TruncateString(topIssue.Type, width-2)
+			issueTitle := utils.TruncateString(topIssue.Type, width-2)
 			lines = append(lines, issueTitle)
 		}
 	}
@@ -248,21 +248,21 @@ func renderIssuesSummary(issues *gc.GCIssues, width int) string {
 }
 
 func renderMemoryPressure(analysis *gc.GCAnalysis, width int) string {
-	title := TitleStyle.Render("Memory Pressure")
+	title := utils.TitleStyle.Render("Memory Pressure")
 
 	var lines []string
 	barWidth := width - 20
 
 	// Heap Utilization
 	heapTarget := 0.70 // 70%
-	heapColor := GoodColor
+	heapColor := utils.GoodColor
 	if analysis.AvgHeapUtil > 0.90 {
-		heapColor = CriticalColor
+		heapColor = utils.CriticalColor
 	} else if analysis.AvgHeapUtil > heapTarget {
-		heapColor = WarningColor
+		heapColor = utils.WarningColor
 	}
 
-	heapBar := CreateProgressBar(analysis.AvgHeapUtil, barWidth, heapColor)
+	heapBar := utils.CreateProgressBar(analysis.AvgHeapUtil, barWidth, heapColor)
 	heapStatus := "✅"
 	if analysis.AvgHeapUtil > 0.90 {
 		heapStatus = "🔴"
@@ -277,14 +277,14 @@ func renderMemoryPressure(analysis *gc.GCAnalysis, width int) string {
 	// Region Utilization (if available)
 	if analysis.AvgRegionUtilization > 0 {
 		regionTarget := 0.75 // 75%
-		regionColor := GoodColor
+		regionColor := utils.GoodColor
 		if analysis.AvgRegionUtilization > 0.85 {
-			regionColor = CriticalColor
+			regionColor = utils.CriticalColor
 		} else if analysis.AvgRegionUtilization > regionTarget {
-			regionColor = WarningColor
+			regionColor = utils.WarningColor
 		}
 
-		regionBar := CreateProgressBar(analysis.AvgRegionUtilization, barWidth, regionColor)
+		regionBar := utils.CreateProgressBar(analysis.AvgRegionUtilization, barWidth, regionColor)
 		regionStatus := "✅"
 		if analysis.AvgRegionUtilization > 0.85 {
 			regionStatus = "🔴"
@@ -306,9 +306,9 @@ func renderMemoryPressure(analysis *gc.GCAnalysis, width int) string {
 	if analysis.EvacuationFailureRate > 0 {
 		evacLine := fmt.Sprintf("Evac Failures: %.1f%%", analysis.EvacuationFailureRate*100)
 		if analysis.EvacuationFailureRate > 0.01 {
-			evacLine = CriticalStyle.Render(evacLine)
+			evacLine = utils.CriticalStyle.Render(evacLine)
 		} else {
-			evacLine = WarningStyle.Render(evacLine)
+			evacLine = utils.WarningStyle.Render(evacLine)
 		}
 		lines = append(lines, evacLine)
 	}

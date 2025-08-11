@@ -311,11 +311,11 @@ func (m *Model) renderHeader() string {
 	tabNames := []string{"Summary", "Metrics", "Issues", "Events", "Trends"}
 
 	for i, name := range tabNames {
-		style := TabInactiveStyle
+		style := utils.TabInactiveStyle
 		indicator := " "
 
 		if TabType(i) == m.currentTab {
-			style = TabActiveStyle
+			style = utils.TabActiveStyle
 			indicator = "●" // Active indicator
 		}
 
@@ -362,7 +362,7 @@ func GetShortcuts(currentTab TabType) string {
 func (m *Model) renderFooter() string {
 	shortcuts := GetShortcuts(m.currentTab)
 
-	return HelpBarStyle.Width(m.width).Render(shortcuts)
+	return utils.HelpBarStyle.Width(m.width).Render(shortcuts)
 }
 
 func StartTUI(events []*gc.GCEvent, analysis *gc.GCAnalysis, issues *gc.GCIssues) error {

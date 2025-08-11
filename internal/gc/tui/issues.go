@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/gc"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 func (m *Model) RenderIssues() string {
@@ -57,21 +58,21 @@ func renderIssuesHeader(issues *gc.GCIssues, subTab IssuesSubTab) string {
 	infoCount := len(issues.Info)
 
 	counts := []string{}
-	criticalStyle := TabInactiveStyle
+	criticalStyle := utils.TabInactiveStyle
 	if subTab == CriticalIssues {
-		criticalStyle = TabActiveStyle
+		criticalStyle = utils.TabActiveStyle
 	}
 	counts = append(counts, criticalStyle.Render(fmt.Sprintf("🔴 Critical: %d", criticalCount)))
 
-	warningStyle := TabInactiveStyle
+	warningStyle := utils.TabInactiveStyle
 	if subTab == WarningIssues {
-		warningStyle = TabActiveStyle
+		warningStyle = utils.TabActiveStyle
 	}
 	counts = append(counts, warningStyle.Render(fmt.Sprintf("⚠️  Warning: %d", warningCount)))
 
-	infoStyle := TabInactiveStyle
+	infoStyle := utils.TabInactiveStyle
 	if subTab == InfoIssues {
-		infoStyle = TabActiveStyle
+		infoStyle = utils.TabActiveStyle
 	}
 	counts = append(counts, infoStyle.Render(fmt.Sprintf("ℹ️  Info: %d", infoCount)))
 
@@ -81,7 +82,7 @@ func renderIssuesHeader(issues *gc.GCIssues, subTab IssuesSubTab) string {
 }
 
 func renderNoIssues() string {
-	return GoodStyle.Render("✅ No performance issues detected!\n\nYour G1GC configuration appears to be working well.")
+	return utils.GoodStyle.Render("✅ No performance issues detected!\n\nYour G1GC configuration appears to be working well.")
 }
 
 func renderNoSubTabIssues(subTab IssuesSubTab) string {
@@ -111,8 +112,8 @@ func (m *Model) renderIssuesList(issues []gc.PerformanceIssue) string {
 func renderIssueItem(issue gc.PerformanceIssue, isSelected, isExpanded bool, width int) []string {
 	var lines []string
 
-	icon := GetSeverityIcon(issue.Severity)
-	style := GetSeverityStyle(issue.Severity)
+	icon := utils.GetSeverityIcon(issue.Severity)
+	style := utils.GetSeverityStyle(issue.Severity)
 
 	// Selection indicator
 	selector := " "
@@ -130,7 +131,7 @@ func renderIssueItem(issue gc.PerformanceIssue, isSelected, isExpanded bool, wid
 	titleLine := fmt.Sprintf("%s %s %s", selector, icon, issue.Type)
 	if isSelected {
 		titleLine = lipgloss.NewStyle().
-			Background(InfoColor).
+			Background(utils.InfoColor).
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Render(titleLine)
 	} else {
@@ -144,21 +145,21 @@ func renderIssueItem(issue gc.PerformanceIssue, isSelected, isExpanded bool, wid
 	// if len(descLine) > width-2 {
 	// 	descLine = TruncateString(descLine, width-2)
 	// }
-	lines = append(lines, MutedStyle.Render(descLine))
+	lines = append(lines, utils.MutedStyle.Render(descLine))
 
 	// Expansion control
 	expandLine := fmt.Sprintf("  └─ %s Show Recommendations", expandIcon)
 	if isSelected {
-		expandLine = InfoStyle.Render(expandLine)
+		expandLine = utils.InfoStyle.Render(expandLine)
 	} else {
-		expandLine = MutedStyle.Render(expandLine)
+		expandLine = utils.MutedStyle.Render(expandLine)
 	}
 	lines = append(lines, expandLine)
 
 	// Expanded recommendations
 	if isExpanded && len(issue.Recommendation) > 0 {
 		lines = append(lines, "") // Spacing
-		lines = append(lines, InfoStyle.Render("     Recommendations:"))
+		lines = append(lines, utils.InfoStyle.Render("     Recommendations:"))
 
 		for _, rec := range issue.Recommendation {
 			bullet := "✓"
@@ -168,13 +169,13 @@ func renderIssueItem(issue gc.PerformanceIssue, isSelected, isExpanded bool, wid
 			}
 
 			// Wrap long recommendations
-			wrapped := WrapText(rec, width-8)
+			wrapped := utils.WrapText(rec, width-8)
 			for j, line := range wrapped {
 				prefix := fmt.Sprintf("     %s ", bullet)
 				if j > 0 {
 					prefix = "       " // Indent continuation lines
 				}
-				lines = append(lines, TextStyle.Render(prefix+line))
+				lines = append(lines, utils.TextStyle.Render(prefix+line))
 			}
 		}
 	}
@@ -195,7 +196,7 @@ func (m *Model) calculateSelectedStartLine(issues []gc.PerformanceIssue) int {
 		if m.IsIssueExpanded(selectedIssue) && len(issues[i].Recommendation) > 0 {
 			lineCount += 2 // Header and spacing
 			for _, rec := range issues[i].Recommendation {
-				wrapped := WrapText(rec, 72) // Approximate width for calculation
+				wrapped := utils.WrapText(rec, 72) // Approximate width for calculation
 				lineCount += len(wrapped)
 			}
 		}

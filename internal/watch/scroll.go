@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mabhi256/jdiag/internal/tui"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 func (m *Model) applyScrolling(content string, viewportHeight int) string {
@@ -38,11 +38,11 @@ func (m *Model) applyScrolling(content string, viewportHeight int) string {
 	if scrollPos > 0 || endPos < totalLines {
 		// Replace last line with scroll indicator
 		scrollInfo := fmt.Sprintf("%s (Line %d-%d of %d) %s",
-			tui.MutedStyle.Render("▲"),
+			utils.MutedStyle.Render("▲"),
 			scrollPos+1,
 			endPos,
 			totalLines,
-			tui.MutedStyle.Render("▼"))
+			utils.MutedStyle.Render("▼"))
 
 		if len(visibleLines) > 0 {
 			visibleLines[len(visibleLines)-1] = scrollInfo

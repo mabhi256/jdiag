@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mabhi256/jdiag/internal/tui"
 	"github.com/mabhi256/jdiag/utils"
 )
 
@@ -140,7 +139,7 @@ func renderHeapGraph(history []utils.TimeMap, width int) string {
 	}
 
 	// Set Used memory style (green)
-	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.GoodColor))
+	chart.SetStyle(lipgloss.NewStyle().Foreground(utils.GoodColor))
 
 	// Add Committed memory as named dataset
 	for _, point := range history {
@@ -149,13 +148,13 @@ func renderHeapGraph(history []utils.TimeMap, width int) string {
 			Value: point.GetOrDefault("committed_mb", 0),
 		})
 	}
-	chart.SetDataSetStyle("committed", lipgloss.NewStyle().Foreground(tui.InfoColor))
+	chart.SetDataSetStyle("committed", lipgloss.NewStyle().Foreground(utils.InfoColor))
 
 	chart.DrawBrailleAll()
 
 	// Create legend
-	usedLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("■ Used")
-	committedLegend := lipgloss.NewStyle().Foreground(tui.InfoColor).Render("■ Committed")
+	usedLegend := lipgloss.NewStyle().Foreground(utils.GoodColor).Render("■ Used")
+	committedLegend := lipgloss.NewStyle().Foreground(utils.InfoColor).Render("■ Committed")
 	legend := lipgloss.JoinHorizontal(lipgloss.Left, "Heap Memory ", usedLegend, "  ", committedLegend)
 
 	// Get the chart view
@@ -169,11 +168,11 @@ func renderMemorySection(title string, used, committed, max int64, percentage fl
 	var color lipgloss.Color
 	switch {
 	case percentage > 0.9:
-		color = tui.CriticalColor
+		color = utils.CriticalColor
 	case percentage > 0.7:
-		color = tui.WarningColor
+		color = utils.WarningColor
 	default:
-		color = tui.GoodColor
+		color = utils.GoodColor
 	}
 
 	// Create progress bar
@@ -181,11 +180,11 @@ func renderMemorySection(title string, used, committed, max int64, percentage fl
 	if barWidth < 20 {
 		barWidth = 20
 	}
-	progressBar := tui.CreateProgressBar(percentage, barWidth, color)
+	progressBar := utils.CreateProgressBar(percentage, barWidth, color)
 	percentStr := fmt.Sprintf("%.1f%%", percentage*100)
 
 	// Build the section
-	titleStyled := tui.InfoStyle.Render(title)
+	titleStyled := utils.InfoStyle.Render(title)
 	progressLine := fmt.Sprintf("%s %s", progressBar, percentStr)
 	detailLine := fmt.Sprintf("Used: %s | Committed: %s | Max: %s",
 		utils.MemorySize(used), utils.MemorySize(committed), utils.MemorySize(max))
@@ -193,7 +192,7 @@ func renderMemorySection(title string, used, committed, max int64, percentage fl
 	section := lipgloss.JoinVertical(lipgloss.Left,
 		titleStyled,
 		progressLine,
-		tui.MutedStyle.Render(detailLine),
+		utils.MutedStyle.Render(detailLine),
 		"", // Empty line for spacing
 	)
 
@@ -205,11 +204,11 @@ func renderMemorySectionWithGC(title string, gcInfo string, used, committed, max
 	var color lipgloss.Color
 	switch {
 	case percentage > 0.9:
-		color = tui.CriticalColor
+		color = utils.CriticalColor
 	case percentage > 0.7:
-		color = tui.WarningColor
+		color = utils.WarningColor
 	default:
-		color = tui.GoodColor
+		color = utils.GoodColor
 	}
 
 	// Create progress bar
@@ -217,12 +216,12 @@ func renderMemorySectionWithGC(title string, gcInfo string, used, committed, max
 	if barWidth < 20 {
 		barWidth = 20
 	}
-	progressBar := tui.CreateProgressBar(percentage, barWidth, color)
+	progressBar := utils.CreateProgressBar(percentage, barWidth, color)
 	percentStr := fmt.Sprintf("%.1f%%", percentage*100)
 
 	// Build the section with GC info
-	titleStyled := tui.InfoStyle.Render(title)
-	gcInfoStyled := tui.MutedStyle.Render(fmt.Sprintf("(%s)", gcInfo))
+	titleStyled := utils.InfoStyle.Render(title)
+	gcInfoStyled := utils.MutedStyle.Render(fmt.Sprintf("(%s)", gcInfo))
 	progressLine := fmt.Sprintf("%s %s", progressBar, percentStr)
 	detailLine := fmt.Sprintf("Used: %s | Committed: %s | Max: %s",
 		utils.MemorySize(used), utils.MemorySize(committed), utils.MemorySize(max))
@@ -231,7 +230,7 @@ func renderMemorySectionWithGC(title string, gcInfo string, used, committed, max
 	section := lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		progressLine,
-		tui.MutedStyle.Render(detailLine),
+		utils.MutedStyle.Render(detailLine),
 		"", // Empty line for spacing
 	)
 

@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mabhi256/jdiag/internal/jmx"
-	"github.com/mabhi256/jdiag/internal/tui"
+	"github.com/mabhi256/jdiag/utils"
 )
 
 // processItem represents a Java process in the selection list
@@ -99,7 +99,7 @@ func (m *Model) selectProcess(process *JavaProcess) (tea.Model, tea.Cmd) {
 
 // Renders the process selection UI
 func (m *Model) renderProcessSelectionView() string {
-	header := tui.HeaderStyle.Width(m.width).Render("🔍 Select Java Process to Monitor")
+	header := utils.HeaderStyle.Width(m.width).Render("🔍 Select Java Process to Monitor")
 
 	// Process list
 	listView := m.processList.View() // Triggers Title(), Description(), FilterValue()
@@ -109,13 +109,13 @@ func (m *Model) renderProcessSelectionView() string {
 	if m.showError {
 		statusText = m.errorMessage
 	}
-	statusView := tui.StatusBarStyle.Width(m.width).Render(statusText)
+	statusView := utils.StatusBarStyle.Width(m.width).Render(statusText)
 
 	separatorLine := strings.Repeat("─", m.width)
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		header,
-		tui.MutedStyle.Render(separatorLine),
+		utils.MutedStyle.Render(separatorLine),
 		listView,
 		statusView,
 	)
