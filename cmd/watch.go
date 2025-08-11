@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/mabhi256/jdiag/internal/jmx"
-	"github.com/mabhi256/jdiag/internal/monitor"
+	"github.com/mabhi256/jdiag/internal/watch"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +40,7 @@ Examples:
 		}
 
 		// Provide Java process completion
-		processes, err := monitor.DiscoverJavaProcesses()
+		processes, err := watch.DiscoverJavaProcesses()
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -74,7 +74,7 @@ Examples:
 		}
 
 		config.Debug = debug
-		err := monitor.StartTUI(config)
+		err := watch.StartTUI(config)
 		if err != nil {
 			return fmt.Errorf("unable to start TUI: %w", err)
 		}

@@ -1,4 +1,4 @@
-package monitor
+package watch
 
 import "github.com/charmbracelet/bubbles/key"
 
