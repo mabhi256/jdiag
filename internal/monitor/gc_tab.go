@@ -10,15 +10,22 @@ import (
 	"github.com/mabhi256/jdiag/utils"
 )
 
-func RenderGCTab(state *TabState, tracker *GCEventTracker) string {
+func RenderGCTab(state *TabState, tracker *GCEventTracker, width int) string {
 	var sections []string
 
 	// Analysis window for calculations
 	window := 5 * time.Minute
 
-	// Top section: Summary metrics in a clean grid
+	// Summary section: Summary metrics in a clean grid
 	summarySection := renderGCSummaryGrid(tracker, window)
 	sections = append(sections, summarySection)
+
+	// Top section: GC Events Chart
+	chartSection := renderGCEventsChart(tracker, width, state.GC.gcChartFilter)
+	if chartSection != "" {
+		sections = append(sections, chartSection)
+		sections = append(sections, "")
+	}
 
 	// Middle section: Generation stats and recent GC side by side
 	middleSection := renderMiddleSection(tracker, window)
@@ -36,6 +43,102 @@ func RenderGCTab(state *TabState, tracker *GCEventTracker) string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
+}
+
+// renderGCEventsChart creates a time series chart of GC events
+func renderGCEventsChart(tracker *GCEventTracker, width int, filter GCChartFilter) string {
+	tracker.mu.RLock()
+	events := make([]GCEvent, len(tracker.gcEvents))
+	copy(events, tracker.gcEvents)
+	tracker.mu.RUnlock()
+
+	if len(events) < 2 {
+		return ""
+	}
+
+	graphWidth := max(width-30, 40)
+	graphHeight := 12
+
+	chart := utils.NewChart(graphWidth, graphHeight)
+
+	// Separate events by generation for different colors
+	youngEvents := make([]GCEvent, 0)
+	oldEvents := make([]GCEvent, 0)
+
+	for _, event := range events {
+		switch event.Generation {
+		case "young":
+			youngEvents = append(youngEvents, event)
+		case "old":
+			oldEvents = append(oldEvents, event)
+		}
+	}
+
+	// Add young generation events (main dataset)
+	for _, event := range youngEvents {
+		var value float64
+		switch filter {
+		case GCFilterBefore:
+			value = utils.MemorySize(event.Before).MB()
+		case GCFilterAfter:
+			value = utils.MemorySize(event.After).MB()
+		case GCFilterCollected:
+			value = utils.MemorySize(event.Collected).MB()
+		}
+
+		chart.Push(utils.TimePoint{
+			Time:  event.Timestamp,
+			Value: value,
+		})
+	}
+
+	// Set young generation style (light green)
+	chart.SetStyle(lipgloss.NewStyle().Foreground(tui.GoodColor))
+
+	// Add old generation events as separate dataset
+	for _, event := range oldEvents {
+		var value float64
+		switch filter {
+		case GCFilterBefore:
+			value = utils.MemorySize(event.Before).MB()
+		case GCFilterAfter:
+			value = utils.MemorySize(event.After).MB()
+		case GCFilterCollected:
+			value = utils.MemorySize(event.Collected).MB()
+		}
+
+		chart.PushDataSet("old", utils.TimePoint{
+			Time:  event.Timestamp,
+			Value: value,
+		})
+	}
+
+	// Set old generation style (orange/warning color)
+	chart.SetDataSetStyle("old", lipgloss.NewStyle().Foreground(tui.WarningColor))
+
+	chart.DrawBrailleAll()
+
+	// Create title with current filter prominently displayed
+	currentFilter := lipgloss.NewStyle().
+		Foreground(tui.InfoColor).
+		Bold(true).
+		Render(fmt.Sprintf("Showing: %s Memory", filter.String()))
+	filterHint := lipgloss.NewStyle().
+		Foreground(tui.MutedStyle.GetForeground()).
+		Render("[Press 'f' to cycle filters]")
+
+	// Create legend with generation info
+	youngLegend := lipgloss.NewStyle().Foreground(tui.GoodColor).Render("🐣 Young Gen")
+	oldLegend := lipgloss.NewStyle().Foreground(tui.WarningColor).Render("👵 Old Gen")
+
+	// Build header and legend lines
+	legendCol := lipgloss.JoinVertical(lipgloss.Top, currentFilter, filterHint, "", youngLegend, oldLegend)
+
+	// Get the chart view
+	chartView := chart.View()
+	chartView = lipgloss.JoinHorizontal(lipgloss.Left, chartView, legendCol)
+
+	return lipgloss.JoinVertical(lipgloss.Left, "", chartView)
 }
 
 // renderGCSummaryGrid creates a clean, organized summary layout
@@ -398,8 +501,8 @@ func renderRecentEventsClean(events []GCEvent) string {
 
 		// Create a clean, readable event line
 		eventDetails := []string{
-			fmt.Sprintf("[%s] %s %5s", timeStr, generationIcon, event.Generation),
-			fmt.Sprintf("Duration: %s", lipgloss.NewStyle().Foreground(durationColor).Render(event.Duration.String())),
+			fmt.Sprintf("[%s] %s %5s - %-4v", timeStr, generationIcon, event.Generation, event.Id),
+			fmt.Sprintf("Duration: %5s", lipgloss.NewStyle().Foreground(durationColor).Render(event.Duration.String())),
 		}
 
 		if event.Collected > 0 {

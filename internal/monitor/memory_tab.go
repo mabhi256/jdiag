@@ -116,11 +116,8 @@ func getMostRecentGCInfo(state *TabState) (string, bool) {
 	// Format freed memory
 	freedStr := utils.MemorySize(recentEvent.Collected).MB()
 
-	// Format GC time
-	gcTimeStr := recentEvent.Duration.String()
-
 	// Create the formatted string
-	gcInfo := fmt.Sprintf("%s GC %s ago, freed %0.2f MB, %s", emoji, utils.FormatDuration(timeAgo), freedStr, gcTimeStr)
+	gcInfo := fmt.Sprintf("%s GC-%v, freed %0.2fM, %s ago", emoji, recentEvent.Id, freedStr, utils.FormatDuration(timeAgo))
 
 	return gcInfo, isYoungGen
 }

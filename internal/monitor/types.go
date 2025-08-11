@@ -47,6 +47,7 @@ func NewTabState() *TabState {
 		GC: &GCState{
 			GCPressureLevel: "low",
 			RecentGCEvents:  make([]GCEvent, 0),
+			gcChartFilter:   GCFilterAfter,
 		},
 		Threads: &ThreadState{},
 		System:  &SystemState{},
@@ -121,6 +122,8 @@ type GCState struct {
 	RecentGCEvents  []GCEvent
 	AvgGCPauseTime  time.Duration
 	LastGCEvent     *GCEvent
+
+	gcChartFilter GCChartFilter
 }
 
 type ThreadState struct {
@@ -180,4 +183,30 @@ type SystemState struct {
 	ConnectionUptime time.Duration
 	UpdateCount      int64
 	LastUpdateTime   time.Time
+}
+
+type GCChartFilter int
+
+const (
+	GCFilterAfter GCChartFilter = iota
+	GCFilterBefore
+	GCFilterCollected
+)
+
+func (f GCChartFilter) String() string {
+	switch f {
+	case GCFilterAfter:
+		return "After"
+	case GCFilterBefore:
+		return "Before"
+	case GCFilterCollected:
+		return "Collected"
+	default:
+		return "After"
+	}
+}
+
+// NextFilter cycles to the next filter (After -> Before -> Collected -> After)
+func (f GCChartFilter) Next() GCChartFilter {
+	return (f + 1) % 3
 }

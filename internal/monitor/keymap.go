@@ -16,6 +16,7 @@ type KeyMap struct {
 	Escape        key.Binding
 	PageUp        key.Binding
 	PageDown      key.Binding
+	GCFilter      key.Binding
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
@@ -42,4 +43,5 @@ var keys = KeyMap{
 	Escape:        key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "back")),
 	PageUp:        key.NewBinding(key.WithKeys("pgup"), key.WithHelp("pgup", "page up")),
 	PageDown:      key.NewBinding(key.WithKeys("pgdown"), key.WithHelp("pgdown", "page down")),
+	GCFilter:      key.NewBinding(key.WithKeys("f"), key.WithHelp("f", "gc filter")),
 }

@@ -75,6 +75,8 @@ func (m *Model) handleWindowResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleMetricsTick() (tea.Model, tea.Cmd) {
+	currentGCFilter := m.tabState.GC.gcChartFilter
+
 	metrics := m.collector.GetMetrics()
 	m.tabState = m.metricsProcessor.ProcessMetrics(metrics)
 
@@ -96,6 +98,7 @@ func (m *Model) handleMetricsTick() (tea.Model, tea.Cmd) {
 		m.updateCount++
 		m.tabState.System.ConnectionUptime = time.Since(m.startTime)
 		m.tabState.System.UpdateCount = m.updateCount
+		m.tabState.GC.gcChartFilter = currentGCFilter
 	}
 
 	// Always schedule the next tick
@@ -170,6 +173,13 @@ func (m *Model) handleMonitoringModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.setError(fmt.Sprintf("Reconnection failed: %v", err))
 		}
 		return m, triggerImmediateTick()
+
+	case key.Matches(msg, keys.GCFilter):
+		// Only cycle GC filter when on GC tab
+		if m.activeTab == TabGC {
+			m.tabState.GC.gcChartFilter = m.tabState.GC.gcChartFilter.Next()
+		}
+		return m, nil
 	}
 
 	return m, nil
