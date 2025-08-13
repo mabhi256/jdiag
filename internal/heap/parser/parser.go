@@ -24,6 +24,7 @@ type Parser struct {
 
 	header    *model.HprofHeader
 	stringReg *registry.StringRegistry
+	classReg  *registry.ClassRegistry
 
 	// Statistics
 	recordCount    int
@@ -53,6 +54,7 @@ func NewParser(filename string) (*Parser, error) {
 		reader:         NewBinaryReader(file),
 		outputFile:     outputFile,
 		stringReg:      registry.NewStringRegistry(),
+		classReg:       registry.NewClassRegistry(),
 		recordCountMap: make(map[model.HProfTagRecord]int),
 	}
 
@@ -102,25 +104,20 @@ func (p *Parser) parseHeader() error {
 func (p *Parser) parseRecord(record *model.HprofRecord) error {
 	switch record.Type {
 	case model.HPROF_UTF8:
-		utf8Body, err := ParseUTF8(p.reader, record.Length, p.stringReg)
-		if err != nil {
-			return fmt.Errorf("failed to parse UTF8 record: %w", err)
-		}
-		p.debugf("  String ID: 0x%x\n", uint64(utf8Body.StringID))
-		p.debugf("  Text: \"%s\" (%d chars)\n", utf8Body.Text, len(utf8Body.Text))
+		return p.parseUTF8Record(record.Length)
 
+	case model.HPROF_LOAD_CLASS:
+		return p.parseLoadClassRecord(record.Length)
+
+	case model.HPROF_UNLOAD_CLASS:
+		return p.parseUnloadClassRecord(record.Length)
 	default:
 		// For all other record types, skip the data for now
-		err := p.skipRecordData(record.Length)
-		if err != nil {
-			return fmt.Errorf("failed to skip record data: %w", err)
-		}
+		return p.skipRecordData(record.Length)
 	}
-
-	return nil
 }
 
-// parseUTF8Record parses a UTF8 record
+// parseUTF8Record parses a HPROF_UTF8 record
 func (p *Parser) parseUTF8Record(length uint32) error {
 	utf8Body, err := ParseUTF8(p.reader, length, p.stringReg)
 	if err != nil {
@@ -129,6 +126,34 @@ func (p *Parser) parseUTF8Record(length uint32) error {
 
 	p.debugf("  String ID: 0x%x\n", uint64(utf8Body.StringID))
 	p.debugf("  Text: \"%s\" (%d chars)\n", utf8Body.Text, len(utf8Body.Text))
+
+	return nil
+}
+
+// parseLoadClassRecord parses a HPROF_LOAD_CLASS record
+func (p *Parser) parseLoadClassRecord(length uint32) error {
+	loadClassBody, err := ParseLoadClass(p.reader, length, p.stringReg, p.classReg)
+	if err != nil {
+		return fmt.Errorf("failed to parse LOAD_CLASS record: %w", err)
+	}
+
+	className := p.stringReg.GetOrUnresolved(loadClassBody.ClassNameID)
+	p.debugf("  Class Serial: %d\n", loadClassBody.ClassSerialNumber)
+	p.debugf("  Object ID: 0x%x\n", uint64(loadClassBody.ObjectID))
+	p.debugf("  Stack Trace Serial: %d\n", loadClassBody.StackTraceSerialNumber)
+	p.debugf("  Class Name: \"%s\"\n", className)
+
+	return nil
+}
+
+// parseUnloadClassRecord parses an UNLOAD_CLASS record
+func (p *Parser) parseUnloadClassRecord(length uint32) error {
+	unloadClassBody, err := ParseUnloadClass(p.reader, length, p.classReg)
+	if err != nil {
+		return fmt.Errorf("failed to parse UNLOAD_CLASS record: %w", err)
+	}
+
+	p.debugf("  Class Serial: %d (unloaded)\n", unloadClassBody.ClassSerialNumber)
 
 	return nil
 }
@@ -210,6 +235,21 @@ func (p *Parser) printSummary() {
 	}
 
 	p.debugf("Total strings in table: %d\n", p.stringReg.Count())
+
+	p.debugf("\nSample loaded classes:\n")
+	loadedClasses := p.classReg.GetLoadedClasses()
+	maxClassSamples := 15
+	for i, classInfo := range loadedClasses {
+		if i >= maxClassSamples {
+			p.debugf("  ... and %d more classes\n", len(loadedClasses)-maxClassSamples)
+			break
+		}
+		p.debugf("  %d. %s (serial: %d, id: 0x%x)\n",
+			classInfo.LoadOrder,
+			classInfo.ClassName,
+			classInfo.LoadClassBody.ClassSerialNumber,
+			uint64(classInfo.LoadClassBody.ObjectID))
+	}
 }
 
 // ParseHprof parses an HPROF file completely
