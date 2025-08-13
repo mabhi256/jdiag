@@ -25,6 +25,7 @@ type Parser struct {
 	header    *model.HprofHeader
 	stringReg *registry.StringRegistry
 	classReg  *registry.ClassRegistry
+	stackReg  *registry.StackRegistry
 
 	// Statistics
 	recordCount    int
@@ -55,6 +56,7 @@ func NewParser(filename string) (*Parser, error) {
 		outputFile:     outputFile,
 		stringReg:      registry.NewStringRegistry(),
 		classReg:       registry.NewClassRegistry(),
+		stackReg:       registry.NewStackRegistry(),
 		recordCountMap: make(map[model.HProfTagRecord]int),
 	}
 
@@ -111,6 +113,13 @@ func (p *Parser) parseRecord(record *model.HprofRecord) error {
 
 	case model.HPROF_UNLOAD_CLASS:
 		return p.parseUnloadClassRecord(record.Length)
+
+	case model.HPROF_FRAME:
+		return p.parseFrameRecord(record.Length)
+
+	case model.HPROF_TRACE:
+		return p.parseTraceRecord(record.Length)
+
 	default:
 		// For all other record types, skip the data for now
 		return p.skipRecordData(record.Length)
@@ -154,6 +163,43 @@ func (p *Parser) parseUnloadClassRecord(length uint32) error {
 	}
 
 	p.debugf("  Class Serial: %d (unloaded)\n", unloadClassBody.ClassSerialNumber)
+
+	return nil
+}
+
+func (p *Parser) parseFrameRecord(length uint32) error {
+	frameBody, err := ParseStackFrame(p.reader, length, p.stackReg)
+	if err != nil {
+		return fmt.Errorf("failed to parse FRAME record: %w", err)
+	}
+
+	p.debugf("  Frame ID: 0x%x\n", uint64(frameBody.StackFrameID))
+	p.debugf("  Method: %s\n", p.stringReg.GetOrUnresolved(frameBody.MethodNameID))
+	p.debugf("  Signature: %s\n", p.stringReg.GetOrUnresolved(frameBody.MethodSignatureID))
+	p.debugf("  Source: %s\n", p.stringReg.GetOrUnresolved(frameBody.SourceFileNameID))
+	p.debugf("  Class Serial: %d\n", frameBody.ClassSerialNumber)
+	p.debugf("  Line: %d\n", frameBody.LineNumber)
+
+	return nil
+}
+
+func (p *Parser) parseTraceRecord(length uint32) error {
+	traceBody, err := ParseStackTrace(p.reader, length, p.stackReg)
+	if err != nil {
+		return fmt.Errorf("failed to parse TRACE record: %w", err)
+	}
+
+	p.debugf("  Trace Serial: %d\n", traceBody.StackTraceSerialNumber)
+	p.debugf("  Thread Serial: %d\n", traceBody.ThreadSerialNumber)
+	p.debugf("  Frame Count: %d\n", traceBody.NumFrames)
+	p.debugf("  Frame IDs: ")
+	for i, frameID := range traceBody.StackFrameIDs {
+		if i > 0 {
+			p.debugf(", ")
+		}
+		p.debugf("0x%x", uint64(frameID))
+	}
+	p.debugf("\n")
 
 	return nil
 }
@@ -220,10 +266,10 @@ func (p *Parser) printSummary() {
 
 	// Show some example strings
 	p.debugf("\nSample strings from table:\n")
-	sampleCount := 0
-	maxSamples := 10
+	stringSampleCount := 0
+	maxStringSamples := 10
 	for id, text := range p.stringReg.GetAll() {
-		if sampleCount >= maxSamples {
+		if stringSampleCount >= maxStringSamples {
 			break
 		}
 		if len(text) > 50 {
@@ -231,7 +277,7 @@ func (p *Parser) printSummary() {
 		} else {
 			p.debugf("  0x%x: \"%s\"\n", uint64(id), text)
 		}
-		sampleCount++
+		stringSampleCount++
 	}
 
 	p.debugf("Total strings in table: %d\n", p.stringReg.Count())
@@ -249,6 +295,38 @@ func (p *Parser) printSummary() {
 			classInfo.ClassName,
 			classInfo.LoadClassBody.ClassSerialNumber,
 			uint64(classInfo.LoadClassBody.ObjectID))
+	}
+
+	p.debugf("\nSample frames from registry:\n")
+	frameSampleCount := 0
+	maxFrameSamples := 5
+	for frameID, frame := range p.stackReg.GetAllFrames() {
+		if frameSampleCount >= maxFrameSamples {
+			break
+		}
+
+		methodName := p.stringReg.GetOrUnresolved(frame.MethodNameID)
+		sourceFile := p.stringReg.GetOrUnresolved(frame.SourceFileNameID)
+
+		p.debugf("  Frame 0x%x: %s (%s:%d)\n",
+			uint64(frameID), methodName, sourceFile, frame.LineNumber)
+		frameSampleCount++
+	}
+
+	p.debugf("\nSample traces from registry:\n")
+	traceSampleCount := 0
+	maxTraceSamples := 5
+	for frameID, frame := range p.stackReg.GetAllFrames() {
+		if traceSampleCount >= maxTraceSamples {
+			break
+		}
+
+		methodName := p.stringReg.GetOrUnresolved(frame.MethodNameID)
+		sourceFile := p.stringReg.GetOrUnresolved(frame.SourceFileNameID)
+
+		p.debugf("  Frame 0x%x: %s (%s:%d)\n",
+			uint64(frameID), methodName, sourceFile, frame.LineNumber)
+		traceSampleCount++
 	}
 }
 

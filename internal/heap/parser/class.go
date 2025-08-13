@@ -38,7 +38,7 @@ func ParseLoadClass(reader *BinaryReader, length uint32,
 		return nil, fmt.Errorf("failed to read class name ID: %w", err)
 	}
 
-	loadClassBody := model.LoadClassBody{
+	loadClassBody := &model.LoadClassBody{
 		ClassSerialNumber:      model.SerialNum(serialNum),
 		ObjectID:               objectID,
 		StackTraceSerialNumber: model.SerialNum(stackTraceSerialNum),
@@ -46,9 +46,9 @@ func ParseLoadClass(reader *BinaryReader, length uint32,
 	}
 
 	className := stringReg.GetOrUnresolved(nameId)
-	classReg.AddLoadedClass(&loadClassBody, className)
+	classReg.AddLoadedClass(loadClassBody, className)
 
-	return &loadClassBody, nil
+	return loadClassBody, nil
 }
 
 /*
@@ -64,12 +64,12 @@ func ParseUnloadClass(reader *BinaryReader, length uint32,
 		return nil, fmt.Errorf("failed to read class serial number: %w", err)
 	}
 
-	unloadClassBody := model.UnloadClassBody{
+	unloadClassBody := &model.UnloadClassBody{
 		ClassSerialNumber: model.SerialNum(serialNum),
 	}
 
 	// Mark the class as unloaded
 	classReg.UnloadClass(model.SerialNum(serialNum))
 
-	return &unloadClassBody, nil
+	return unloadClassBody, nil
 }

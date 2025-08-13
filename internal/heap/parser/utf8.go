@@ -10,10 +10,12 @@ import (
 /*
 ParseUTF8 parses a HPROF_UTF8 record
 
-id        - ID for this string
-[u1]*     - UTF-8 characters (no null terminator)
+id   		ID for this string
+[u1]*		UTF-8 characters (no null terminator)
 */
-func ParseUTF8(reader *BinaryReader, length uint32, stringReg *registry.StringRegistry) (*model.UTF8Body, error) {
+func ParseUTF8(reader *BinaryReader, length uint32,
+	stringReg *registry.StringRegistry,
+) (*model.UTF8Body, error) {
 	stringID, err := reader.ReadID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read string ID: %w", err)
