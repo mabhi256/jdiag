@@ -33,7 +33,7 @@ format:
 	@echo "[FORMAT] Code formatting and linting complete"
 
 # TypeScript compilation with change detection
-internal/html/dist/app.js: internal/html/templates/app.ts
+internal/gc/html/dist/app.js: internal/gc/html/templates/app.ts
 	@echo "[TS] Source changed, compiling TypeScript..."
 	@npm run build
 	@echo "[TS] TypeScript compiled successfully"
@@ -50,7 +50,7 @@ build-go:
 	@go build -o $(BINARY_NAME) .
 
 # Full build process (optimized - only compiles TS if changed)
-build: internal/html/dist/app.js build-go
+build: internal/gc/html/dist/app.js build-go
 	@echo "[DONE] Build complete!"
 
 # Clean generated files
@@ -62,7 +62,7 @@ ifeq ($(OS),Windows_NT)
 	@if exist $(BINARY_NAME) $(RM_CMD) $(BINARY_NAME)
 	@if exist node_modules $(RM_DIR_CMD) node_modules
 else
-	@$(RM_CMD) internal/html/dist/app.js internal/html/dist/app.js.map
+	@$(RM_CMD) internal/gc/html/dist/app.js internal/gc/html/dist/app.js.map
 	@$(RM_CMD) $(BINARY_NAME)
 	@$(RM_DIR_CMD) node_modules
 endif
@@ -70,7 +70,7 @@ endif
 # Development mode with TypeScript watching
 dev:
 	@echo "🔧 Starting development mode..."
-	@tsc internal/html/templates/app.ts --outDir internal/html/dist/ --target ES2017 --lib ES2017,DOM --strict --watch &
+	@tsc internal/gc/html/templates/app.ts --outDir internal/gc/html/dist/ --target ES2017 --lib ES2017,DOM --strict --watch &
 	@echo "TypeScript compiler watching for changes..."
 
 # Test the application

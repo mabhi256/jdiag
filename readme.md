@@ -386,3 +386,22 @@ File Descriptor Usage - Open file handles (Unix systems)
 Process Memory Details - RSS, Virtual memory size
 Code Cache Utilization - Detailed code cache pool metrics
 Safepoint Statistics - JVM pause information
+
+----------
+
+// todo
+
+- watch
+  - handle process end
+  - press p to go back to process lists
+  - open an interactive tab (react) in browser - choose process and see data in browser
+  - run jmx client as a long running process, sending mbean response to go server via Socket IPC
+- heap
+  - jdiag heap \<PID>
+  - jdiag heap --gc \<PID>
+  - jdiag heap : show process list similar to watch
+  - choose process, create dump and open analysis tui
+  - choose process, call system.gc(), create dump and open analysis tui
+  - press p to go back to process lists
+  - streaming heap analyzer because many times dump files are larger than available RAM - protobuf + embedded key-value db
+  - < 500mb use direct method, larger file use streaming

@@ -34,7 +34,11 @@ go.work.sum
 # Added by goreleaser init:
 /jdiag_completion.ps1
 /internal/html/dist
+/internal/gc/html/dist
 /*.html
 /node_modules
 /java_sample/*.class
 /jmx*.log
+/*.hprof
+/*.debug
+/*.tdump
