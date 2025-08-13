@@ -40,5 +40,6 @@ go.work.sum
 /java_sample/*.class
 /jmx*.log
 /*.hprof
+/*.hwcache
 /*.debug
 /*.tdump
