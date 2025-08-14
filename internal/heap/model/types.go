@@ -116,6 +116,39 @@ const (
 	HPROF_GC_PRIM_ARRAY_DUMP                     = 0x23
 )
 
+func (h HProfTagSubRecord) String() string {
+	switch h {
+	case HPROF_GC_ROOT_UNKNOWN:
+		return "GC_ROOT_UNKNOWN"
+	case HPROF_GC_ROOT_JNI_GLOBAL:
+		return "GC_ROOT_JNI_GLOBAL"
+	case HPROF_GC_ROOT_JNI_LOCAL:
+		return "GC_ROOT_JNI_LOCAL"
+	case HPROF_GC_ROOT_JAVA_FRAME:
+		return "GC_ROOT_JAVA_FRAME"
+	case HPROF_GC_ROOT_NATIVE_STACK:
+		return "GC_ROOT_NATIVE_STACK"
+	case HPROF_GC_ROOT_STICKY_CLASS:
+		return "GC_ROOT_STICKY_CLASS"
+	case HPROF_GC_ROOT_THREAD_BLOCK:
+		return "GC_ROOT_THREAD_BLOCK"
+	case HPROF_GC_ROOT_MONITOR_USED:
+		return "GC_ROOT_MONITOR_USED"
+	case HPROF_GC_ROOT_THREAD_OBJ:
+		return "GC_ROOT_THREAD_OBJ"
+	case HPROF_GC_CLASS_DUMP:
+		return "GC_CLASS_DUMP"
+	case HPROF_GC_INSTANCE_DUMP:
+		return "GC_INSTANCE_DUMP"
+	case HPROF_GC_OBJ_ARRAY_DUMP:
+		return "GC_OBJ_ARRAY_DUMP"
+	case HPROF_GC_PRIM_ARRAY_DUMP:
+		return "GC_PRIM_ARRAY_DUMP"
+	default:
+		return fmt.Sprintf("HProfTagSubRecord(0x%02X)", byte(h))
+	}
+}
+
 func ReadID(data []byte, offset int, identifierSize uint32) (ID, int) {
 	if identifierSize == 4 {
 		return ID(binary.BigEndian.Uint32(data[offset:])), offset + 4
