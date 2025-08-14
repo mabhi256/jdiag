@@ -26,6 +26,7 @@ type Parser struct {
 	stringReg       *registry.StringRegistry
 	classReg        *registry.ClassRegistry
 	stackReg        *registry.StackRegistry
+	threadReg       *registry.ThreadRegistry
 	controlSettings *model.ControlSettings
 
 	// Statistics
@@ -58,6 +59,7 @@ func NewParser(filename string) (*Parser, error) {
 		stringReg:      registry.NewStringRegistry(),
 		classReg:       registry.NewClassRegistry(),
 		stackReg:       registry.NewStackRegistry(),
+		threadReg:      registry.NewThreadRegistry(),
 		recordCountMap: make(map[model.HProfTagRecord]int),
 	}
 
@@ -110,19 +112,25 @@ func (p *Parser) parseRecord(record *model.HprofRecord) error {
 		return p.parseUTF8Record(record.Length)
 
 	case model.HPROF_LOAD_CLASS:
-		return p.parseLoadClassRecord(record.Length)
+		return p.parseLoadClassRecord()
 
 	case model.HPROF_UNLOAD_CLASS:
-		return p.parseUnloadClassRecord(record.Length)
+		return p.parseUnloadClassRecord()
 
 	case model.HPROF_FRAME:
-		return p.parseFrameRecord(record.Length)
+		return p.parseFrameRecord()
 
 	case model.HPROF_TRACE:
-		return p.parseTraceRecord(record.Length)
+		return p.parseTraceRecord()
+
+	case model.HPROF_START_THREAD:
+		return p.parseStartThreadRecord()
+
+	case model.HPROF_END_THREAD:
+		return p.parseEndThreadRecord()
 
 	case model.HPROF_CONTROL_SETTINGS:
-		return p.parseControlSettingsRecord(record.Length)
+		return p.parseControlSettingsRecord()
 
 	default:
 		// For all other record types, skip the data for now
@@ -144,8 +152,8 @@ func (p *Parser) parseUTF8Record(length uint32) error {
 }
 
 // parseLoadClassRecord parses a HPROF_LOAD_CLASS record
-func (p *Parser) parseLoadClassRecord(length uint32) error {
-	loadClassBody, err := ParseLoadClass(p.reader, length, p.stringReg, p.classReg)
+func (p *Parser) parseLoadClassRecord() error {
+	loadClassBody, err := ParseLoadClass(p.reader, p.stringReg, p.classReg)
 	if err != nil {
 		return fmt.Errorf("failed to parse LOAD_CLASS record: %w", err)
 	}
@@ -160,8 +168,8 @@ func (p *Parser) parseLoadClassRecord(length uint32) error {
 }
 
 // parseUnloadClassRecord parses an UNLOAD_CLASS record
-func (p *Parser) parseUnloadClassRecord(length uint32) error {
-	unloadClassBody, err := ParseUnloadClass(p.reader, length, p.classReg)
+func (p *Parser) parseUnloadClassRecord() error {
+	unloadClassBody, err := ParseUnloadClass(p.reader, p.classReg)
 	if err != nil {
 		return fmt.Errorf("failed to parse UNLOAD_CLASS record: %w", err)
 	}
@@ -171,8 +179,8 @@ func (p *Parser) parseUnloadClassRecord(length uint32) error {
 	return nil
 }
 
-func (p *Parser) parseFrameRecord(length uint32) error {
-	frameBody, err := ParseStackFrame(p.reader, length, p.stackReg)
+func (p *Parser) parseFrameRecord() error {
+	frameBody, err := ParseStackFrame(p.reader, p.stackReg)
 	if err != nil {
 		return fmt.Errorf("failed to parse FRAME record: %w", err)
 	}
@@ -187,8 +195,8 @@ func (p *Parser) parseFrameRecord(length uint32) error {
 	return nil
 }
 
-func (p *Parser) parseTraceRecord(length uint32) error {
-	traceBody, err := ParseStackTrace(p.reader, length, p.stackReg)
+func (p *Parser) parseTraceRecord() error {
+	traceBody, err := ParseStackTrace(p.reader, p.stackReg)
 	if err != nil {
 		return fmt.Errorf("failed to parse TRACE record: %w", err)
 	}
@@ -208,8 +216,35 @@ func (p *Parser) parseTraceRecord(length uint32) error {
 	return nil
 }
 
-func (p *Parser) parseControlSettingsRecord(length uint32) error {
-	controlSettings, err := ParseControlSettings(p.reader, length)
+func (p *Parser) parseStartThreadRecord() error {
+	startThread, err := ParseStartThread(p.reader, p.threadReg, p.stringReg)
+	if err != nil {
+		return fmt.Errorf("failed to parse START_THREAD record: %w", err)
+	}
+
+	p.debugf("  Thread serial: %d\n", startThread.ThreadSerialNumber)
+	p.debugf("  Thread object ID: 0x%x\n", uint64(startThread.ThreadObjectID))
+	p.debugf("  Stack trace serial: %d\n", startThread.StackTraceSerialNumber)
+	p.debugf("  Thread name: %s\n", p.stringReg.GetOrUnresolved(startThread.ThreadNameID))
+	p.debugf("  Thread group: %s\n", p.stringReg.GetOrUnresolved(startThread.ThreadGroupNameID))
+	p.debugf("  Parent group: %s\n", p.stringReg.GetOrUnresolved(startThread.ParentThreadGroupNameID))
+
+	return nil
+}
+
+func (p *Parser) parseEndThreadRecord() error {
+	endThread, err := ParseEndThread(p.reader, p.threadReg)
+	if err != nil {
+		return fmt.Errorf("failed to parse END_THREAD record: %w", err)
+	}
+
+	p.debugf("  Thread serial: %d\n", endThread.ThreadSerialNumber)
+
+	return nil
+}
+
+func (p *Parser) parseControlSettingsRecord() error {
+	controlSettings, err := ParseControlSettings(p.reader)
 	if err != nil {
 		return fmt.Errorf("failed to parse CONTROL_SETTINGS record: %w", err)
 	}
@@ -310,10 +345,9 @@ func (p *Parser) printSummary() {
 			p.debugf("  ... and %d more classes\n", len(loadedClasses)-maxClassSamples)
 			break
 		}
-		p.debugf("  %d. %s (serial: %d, id: 0x%x)\n",
-			classInfo.LoadOrder,
-			classInfo.ClassName,
+		p.debugf("  %d. %s (id: 0x%x)\n",
 			classInfo.LoadClassBody.ClassSerialNumber,
+			classInfo.ClassName,
 			uint64(classInfo.LoadClassBody.ObjectID))
 	}
 
@@ -347,6 +381,24 @@ func (p *Parser) printSummary() {
 		p.debugf("  Frame 0x%x: %s (%s:%d)\n",
 			uint64(frameID), methodName, sourceFile, frame.LineNumber)
 		traceSampleCount++
+	}
+
+	p.debugf("\nSample threads:\n")
+	sampleCount := 0
+	maxSamples := 5
+	for _, threadInfo := range p.threadReg.GetAllThreads() {
+		if sampleCount >= maxSamples {
+			break
+		}
+		status := "active"
+		if !threadInfo.IsActive {
+			status = "ended"
+		}
+		p.debugf("  Thread %d: \"%s\" (%s)\n", threadInfo.StartRecord.ThreadSerialNumber, threadInfo.ThreadName, status)
+		if threadInfo.ThreadGroupName != "" && threadInfo.ThreadGroupName != threadInfo.ThreadName {
+			p.debugf("    Group: \"%s\"\n", threadInfo.ThreadGroupName)
+		}
+		sampleCount++
 	}
 
 	if p.controlSettings != nil {

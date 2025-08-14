@@ -20,7 +20,7 @@ import (
 *							-2: compiled method
 *							-3: native method
  */
-func ParseStackFrame(reader *BinaryReader, length uint32,
+func ParseStackFrame(reader *BinaryReader,
 	stackReg *registry.StackRegistry,
 ) (*model.FrameBody, error) {
 	stackFrameID, err := reader.ReadID()
@@ -76,7 +76,7 @@ u4          Thread serial number that produced this trace
 u4          Number of frames
 [id]*       Array of stack frame IDs (references HPROF_FRAME records)
 */
-func ParseStackTrace(reader *BinaryReader, length uint32,
+func ParseStackTrace(reader *BinaryReader,
 	stackReg *registry.StackRegistry,
 ) (*model.TraceBody, error) {
 	stackTraceSerialNumber, err := reader.ReadU4()

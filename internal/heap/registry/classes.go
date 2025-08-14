@@ -10,7 +10,6 @@ type ClassInfo struct {
 	LoadClassBody *model.LoadClassBody
 	ClassName     string
 	IsLoaded      bool
-	LoadOrder     int // Order in which class was loaded
 }
 
 type ClassRegistry struct {
@@ -24,7 +23,6 @@ type ClassRegistry struct {
 	classesByName map[string]*ClassInfo
 
 	// Statistics
-	loadOrder     int
 	loadedCount   int
 	unloadedCount int
 }
@@ -38,13 +36,10 @@ func NewClassRegistry() *ClassRegistry {
 }
 
 func (cr *ClassRegistry) AddLoadedClass(loadClassBody *model.LoadClassBody, className string) {
-	cr.loadOrder++
-
 	classInfo := &ClassInfo{
 		LoadClassBody: loadClassBody,
 		ClassName:     className,
 		IsLoaded:      true,
-		LoadOrder:     cr.loadOrder,
 	}
 
 	// Store in all lookup maps
@@ -81,7 +76,7 @@ func (cr *ClassRegistry) GetByName(className string) (*ClassInfo, bool) {
 
 func sortByLoadOrder(classes []*ClassInfo) []*ClassInfo {
 	sort.Slice(classes, func(i, j int) bool {
-		return classes[i].LoadOrder < classes[j].LoadOrder
+		return classes[i].LoadClassBody.ClassSerialNumber < classes[j].LoadClassBody.ClassSerialNumber
 	})
 
 	return classes
@@ -98,31 +93,10 @@ func (cr *ClassRegistry) GetLoadedClasses() []*ClassInfo {
 	return sortByLoadOrder(loaded)
 }
 
-func (cr *ClassRegistry) GetUnloadedClasses() []*ClassInfo {
-	var unloaded []*ClassInfo
-	for _, classInfo := range cr.classesBySerial {
-		if !classInfo.IsLoaded {
-			unloaded = append(unloaded, classInfo)
-		}
-	}
-
-	return sortByLoadOrder(unloaded)
-}
-
-func (cr *ClassRegistry) GetAllClasses() []*ClassInfo {
-	classes := make([]*ClassInfo, 0, len(cr.classesBySerial))
-	for _, classInfo := range cr.classesBySerial {
-		classes = append(classes, classInfo)
-	}
-
-	return sortByLoadOrder(classes)
-}
-
 func (cr *ClassRegistry) Clear() {
 	cr.classesBySerial = make(map[model.SerialNum]*ClassInfo)
 	cr.classesByObjectID = make(map[model.ID]*ClassInfo)
 	cr.classesByName = make(map[string]*ClassInfo)
-	cr.loadOrder = 0
 	cr.loadedCount = 0
 	cr.unloadedCount = 0
 }

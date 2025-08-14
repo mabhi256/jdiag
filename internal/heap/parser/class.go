@@ -15,7 +15,7 @@ import (
 *	u4      Stack trace serial number when loaded
 *	id      class name ID - reference to UTF8 string
  */
-func ParseLoadClass(reader *BinaryReader, length uint32,
+func ParseLoadClass(reader *BinaryReader,
 	stringReg *registry.StringRegistry, classReg *registry.ClassRegistry,
 ) (*model.LoadClassBody, error) {
 	serialNum, err := reader.ReadU4()
@@ -56,7 +56,7 @@ ParseUnloadClass parses a HPROF_UNLOAD_CLASS record:
 
 u4      Serial number of unloaded class
 */
-func ParseUnloadClass(reader *BinaryReader, length uint32,
+func ParseUnloadClass(reader *BinaryReader,
 	classReg *registry.ClassRegistry,
 ) (*model.UnloadClassBody, error) {
 	serialNum, err := reader.ReadU4()
