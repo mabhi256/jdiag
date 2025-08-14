@@ -27,6 +27,7 @@ type Parser struct {
 	classReg        *registry.ClassRegistry
 	stackReg        *registry.StackRegistry
 	threadReg       *registry.ThreadRegistry
+	heapSummary     *model.HeapSummary
 	controlSettings *model.ControlSettings
 
 	// Statistics
@@ -106,6 +107,10 @@ func (p *Parser) parseHeader() error {
 }
 
 // parseRecord parses a single record based on its type
+
+// START_THREAD/END_THREAD is typically not present in a heap dump, which is a snapshot data.
+// This was used in the now deprecated continuous profiling done using hprof. Continuous profiling
+// is now done by JFR. We are parsing START_THREAD/END_THREAD only for the sake of completeness.
 func (p *Parser) parseRecord(record *model.HprofRecord) error {
 	switch record.Type {
 	case model.HPROF_UTF8:
@@ -128,6 +133,9 @@ func (p *Parser) parseRecord(record *model.HprofRecord) error {
 
 	case model.HPROF_END_THREAD:
 		return p.parseEndThreadRecord()
+
+	case model.HPROF_HEAP_SUMMARY:
+		return p.parseHeapSummaryRecord()
 
 	case model.HPROF_CONTROL_SETTINGS:
 		return p.parseControlSettingsRecord()
@@ -239,6 +247,22 @@ func (p *Parser) parseEndThreadRecord() error {
 	}
 
 	p.debugf("  Thread serial: %d\n", endThread.ThreadSerialNumber)
+
+	return nil
+}
+
+func (p *Parser) parseHeapSummaryRecord() error {
+	heapSummary, err := ParseHeapSummary(p.reader)
+	if err != nil {
+		return fmt.Errorf("failed to parse HEAP_SUMMARY record: %w", err)
+	}
+
+	p.heapSummary = heapSummary
+
+	p.debugf("  Live bytes: %d\n", heapSummary.LiveBytes)
+	p.debugf("  Live instances: %d\n", heapSummary.LiveInstances)
+	p.debugf("  Bytes allocated: %d\n", heapSummary.BytesAlloc)
+	p.debugf("  Instances allocated: %d\n", heapSummary.InstancesAlloc)
 
 	return nil
 }
@@ -399,6 +423,18 @@ func (p *Parser) printSummary() {
 			p.debugf("    Group: \"%s\"\n", threadInfo.ThreadGroupName)
 		}
 		sampleCount++
+	}
+
+	if p.heapSummary != nil {
+		p.debugf("\n--- Heap Summary ---\n")
+		p.debugf("Live bytes: %d (%.2f MB)\n", p.heapSummary.LiveBytes, float64(p.heapSummary.LiveBytes)/1024/1024)
+		p.debugf("Live instances: %d\n", p.heapSummary.LiveInstances)
+		p.debugf("Total bytes allocated: %d (%.2f MB)\n", p.heapSummary.BytesAlloc, float64(p.heapSummary.BytesAlloc)/1024/1024)
+		p.debugf("Total instances allocated: %d\n", p.heapSummary.InstancesAlloc)
+		if p.heapSummary.BytesAlloc > 0 {
+			gcEfficiency := float64(p.heapSummary.LiveBytes) / float64(p.heapSummary.BytesAlloc) * 100
+			p.debugf("GC efficiency: %.2f%% (live/allocated)\n", gcEfficiency)
+		}
 	}
 
 	if p.controlSettings != nil {
