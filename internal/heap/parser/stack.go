@@ -8,19 +8,18 @@ import (
 )
 
 /*
-ParseStackFame parses a HPROF_FRAME record:
-
-id      stack frame ID
-id      Method name ID (UTF8 reference)
-id      Method signature ID (UTF8 reference)
-id      Source file name ID (UTF8 reference)
-u4      Class serial number
-i4      Line number. 	>0: normal line
-
-	-1: unknown
-	-2: compiled method
-	-3: native method
-*/
+*	ParseStackFame parses a HPROF_FRAME record:
+*
+*	id      stack frame ID
+*	id      Method name ID (UTF8 reference)
+*	id      Method signature ID (UTF8 reference)
+*	id      Source file name ID (UTF8 reference)
+*	u4      Class serial number
+*	i4      Line number. 	>0: normal line
+*							-1: unknown
+*							-2: compiled method
+*							-3: native method
+ */
 func ParseStackFrame(reader *BinaryReader, length uint32,
 	stackReg *registry.StackRegistry,
 ) (*model.FrameBody, error) {

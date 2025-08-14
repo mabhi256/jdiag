@@ -8,13 +8,13 @@ import (
 )
 
 /*
-ParseHeader parses the HPROF file header
-Header format:
-"JAVA PROFILE 1.0.2\0"	- Null-terminated string
-u4                      - Size of IDs (usually pointer size)
-u4                      - High word of timestamp
-u4                      - Low word of timestamp (ms since 1/1/70)
-*/
+*	ParseHeader parses the HPROF file header
+*
+*	"JAVA PROFILE 1.0.2\0"		Null-terminated string
+*	u4                    		Size of IDs (usually pointer size)
+*	u4                    		High word of timestamp
+*	u4                    		Low word of timestamp (ms since 1/1/70)
+ */
 func ParseHeader(reader *BinaryReader) (*model.HprofHeader, error) {
 	// Read magic string
 	hprofFormat, err := reader.ReadString()

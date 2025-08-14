@@ -8,13 +8,13 @@ import (
 )
 
 /*
-ParseLoadClass parses a HPROF_LOAD_CLASS record:
-
-u4      Unique class serial number
-id      Object ID of the Class object
-u4      Stack trace serial number when loaded
-id      class name ID - reference to UTF8 string
-*/
+*	ParseLoadClass parses a HPROF_LOAD_CLASS record:
+*
+*	u4      Unique class serial number
+*	id      Object ID of the Class object
+*	u4      Stack trace serial number when loaded
+*	id      class name ID - reference to UTF8 string
+ */
 func ParseLoadClass(reader *BinaryReader, length uint32,
 	stringReg *registry.StringRegistry, classReg *registry.ClassRegistry,
 ) (*model.LoadClassBody, error) {

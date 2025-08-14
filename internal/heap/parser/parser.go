@@ -22,10 +22,11 @@ type Parser struct {
 	reader     *BinaryReader
 	outputFile *os.File // For debugging output
 
-	header    *model.HprofHeader
-	stringReg *registry.StringRegistry
-	classReg  *registry.ClassRegistry
-	stackReg  *registry.StackRegistry
+	header          *model.HprofHeader
+	stringReg       *registry.StringRegistry
+	classReg        *registry.ClassRegistry
+	stackReg        *registry.StackRegistry
+	controlSettings *model.ControlSettings
 
 	// Statistics
 	recordCount    int
@@ -120,6 +121,9 @@ func (p *Parser) parseRecord(record *model.HprofRecord) error {
 	case model.HPROF_TRACE:
 		return p.parseTraceRecord(record.Length)
 
+	case model.HPROF_CONTROL_SETTINGS:
+		return p.parseControlSettingsRecord(record.Length)
+
 	default:
 		// For all other record types, skip the data for now
 		return p.skipRecordData(record.Length)
@@ -200,6 +204,22 @@ func (p *Parser) parseTraceRecord(length uint32) error {
 		p.debugf("0x%x", uint64(frameID))
 	}
 	p.debugf("\n")
+
+	return nil
+}
+
+func (p *Parser) parseControlSettingsRecord(length uint32) error {
+	controlSettings, err := ParseControlSettings(p.reader, length)
+	if err != nil {
+		return fmt.Errorf("failed to parse CONTROL_SETTINGS record: %w", err)
+	}
+
+	p.controlSettings = controlSettings
+
+	p.debugf("  Flags: 0x%08x\n", controlSettings.Flags)
+	p.debugf("  Allocation traces: %t\n", controlSettings.IsAllocTracesEnabled())
+	p.debugf("  CPU sampling: %t\n", controlSettings.IsCPUSamplingEnabled())
+	p.debugf("  Stack trace depth: %d\n", controlSettings.StackTraceDepth)
 
 	return nil
 }
@@ -327,6 +347,14 @@ func (p *Parser) printSummary() {
 		p.debugf("  Frame 0x%x: %s (%s:%d)\n",
 			uint64(frameID), methodName, sourceFile, frame.LineNumber)
 		traceSampleCount++
+	}
+
+	if p.controlSettings != nil {
+		p.debugf("\n--- Control Settings ---\n")
+		p.debugf("Flags: 0x%08x\n", p.controlSettings.Flags)
+		p.debugf("Allocation traces enabled: %t\n", p.controlSettings.IsAllocTracesEnabled())
+		p.debugf("CPU sampling enabled: %t\n", p.controlSettings.IsCPUSamplingEnabled())
+		p.debugf("Stack trace depth: %d\n", p.controlSettings.StackTraceDepth)
 	}
 }
 
