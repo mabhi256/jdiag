@@ -38,20 +38,6 @@ import (
 * 	u2							Number of instance fields
 * 	[instance_field]*           Instance field definitions (no values)
 *
-* Constant pool entry format:
-* 	u2                          Constant pool index
-* 	u1                          Value type (HProfTagFieldType)
-* 	[value]                     Value data (size depends on type)
-*
-* Static field format:
-* 	id                         	Field name string ID
-* 	u1                         	Field type (HProfTagFieldType)
-* 	[value]                     Field value (size depends on type)
-*
-* Instance field format:
-* 	id                         	Field name string ID
-* 	u1                          Field type (HProfTagFieldType)
-*                               (No value - values are in INSTANCE_DUMP records)
  */
 func parseClassDump(reader *BinaryReader, classDumpReg *registry.ClassDumpRegistry) error {
 	classDump := &model.ClassDump{}
@@ -155,7 +141,13 @@ func parseClassDump(reader *BinaryReader, classDumpReg *registry.ClassDumpRegist
 	return nil
 }
 
-// parseConstantPoolEntry parses a single constant pool entry
+/* parseConstantPoolEntry parses a single constant pool entry
+*
+* Constant pool entry format:
+* 	u2                          Constant pool index
+* 	u1                          Value type (HProfTagFieldType)
+* 	[value]                     Value data (size depends on type)
+ */
 func parseConstantPoolEntry(reader *BinaryReader) (*model.ConstantPoolEntry, error) {
 	entry := &model.ConstantPoolEntry{}
 
@@ -186,7 +178,13 @@ func parseConstantPoolEntry(reader *BinaryReader) (*model.ConstantPoolEntry, err
 	return entry, nil
 }
 
-// parseStaticField parses a single static field definition with value
+/* parseStaticField parses a single static field definition with value
+*
+* Static field format:
+* 	id                         	Field name string ID
+* 	u1                         	Field type (HProfTagFieldType)
+* 	[value]                     Field value (size depends on type)
+ */
 func parseStaticField(reader *BinaryReader) (*model.StaticField, error) {
 	field := &model.StaticField{}
 
@@ -217,7 +215,13 @@ func parseStaticField(reader *BinaryReader) (*model.StaticField, error) {
 	return field, nil
 }
 
-// parseInstanceField parses a single instance field definition (no value)
+/* parseInstanceField parses a single instance field definition (no value)
+*
+* Instance field format:
+* 	id                         	Field name string ID
+* 	u1                          Field type (HProfTagFieldType)
+*   -                           (No value - values are in INSTANCE_DUMP records)
+ */
 func parseInstanceField(reader *BinaryReader) (*model.InstanceField, error) {
 	field := &model.InstanceField{}
 

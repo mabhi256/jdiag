@@ -30,7 +30,7 @@ type Parser struct {
 	rootReg      *registry.GCRootRegistry
 	classDumpReg *registry.ClassDumpRegistry
 	objectReg    *registry.InstanceRegistry
-	arrayReg     *registry.ArrayRegistry // Phase 10: Array registry // Phase 9: Object instances
+	arrayReg     *registry.ArrayRegistry
 
 	// Statistics
 	recordCount          int
@@ -256,7 +256,7 @@ func (p *Parser) parseHeapDumpSegmentRecord(length uint32) error {
 	p.heapDumpSegmentCount++
 
 	subRecordCount, subRecordCountMap, err := ParseHeapDumpSegment(p.reader, length,
-		p.rootReg, p.classDumpReg, p.objectReg, p.stringReg, p.arrayReg) // Phase 10: Pass array registry
+		p.rootReg, p.classDumpReg, p.objectReg, p.stringReg, p.arrayReg)
 	if err != nil {
 		return fmt.Errorf("failed to parse HEAP_DUMP_SEGMENT record: %w", err)
 	}
@@ -507,28 +507,28 @@ func (p *Parser) printSummary() {
 		}
 	}
 
-	// Show Thread instances (Phase 9.4)
-	threadInstanceCount := p.objectReg.GetThreadCount()
-	if threadInstanceCount > 0 {
-		p.debugf("\nThread Object Instances: %d\n", threadInstanceCount)
-		threadInstances := p.objectReg.GetAllThreadInstances()
-		maxThreadInstanceSamples := 5
-		count := 0
-		for objectID, threadData := range threadInstances {
-			if count >= maxThreadInstanceSamples {
-				p.debugf("  ... and %d more thread instances\n", len(threadInstances)-maxThreadInstanceSamples)
-				break
-			}
+	// // Show Thread instances (Phase 9.4)
+	// threadInstanceCount := p.objectReg.GetThreadCount()
+	// if threadInstanceCount > 0 {
+	// 	p.debugf("\nThread Object Instances: %d\n", threadInstanceCount)
+	// 	threadInstances := p.objectReg.GetAllThreadInstances()
+	// 	maxThreadInstanceSamples := 5
+	// 	count := 0
+	// 	for objectID, threadData := range threadInstances {
+	// 		if count >= maxThreadInstanceSamples {
+	// 			p.debugf("  ... and %d more thread instances\n", len(threadInstances)-maxThreadInstanceSamples)
+	// 			break
+	// 		}
 
-			name := threadData.Name
-			if name == "" {
-				name = "<unknown>"
-			}
-			p.debugf("  Thread 0x%x (TID: %d): Name=\"%s\", Priority=%d, Daemon=%t\n",
-				uint64(objectID), threadData.ThreadID, name, threadData.Priority, threadData.Daemon)
-			count++
-		}
-	}
+	// 		name := threadData.Name
+	// 		if name == "" {
+	// 			name = "<unknown>"
+	// 		}
+	// 		p.debugf("  Thread 0x%x (TID: %d): Name=\"%s\", Priority=%d, Daemon=%t\n",
+	// 			uint64(objectID), threadData.ThreadID, name, threadData.Priority, threadData.Daemon)
+	// 		count++
+	// 	}
+	// }
 
 	// Show object statistics
 	stats := p.objectReg.Statistics()
@@ -540,7 +540,6 @@ func (p *Parser) printSummary() {
 		}
 	}
 
-	// Phase 10: Array Summary
 	p.debugf("\n--- Array Summary ---\n")
 	p.debugf("Total arrays: %d\n", p.arrayReg.GetCount())
 	p.debugf("Object arrays: %d\n", p.arrayReg.GetObjectArrayCount())

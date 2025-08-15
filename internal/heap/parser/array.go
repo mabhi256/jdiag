@@ -1,9 +1,7 @@
 package parser
 
 import (
-	"encoding/binary"
 	"fmt"
-	"strings"
 
 	"github.com/mabhi256/jdiag/internal/heap/model"
 	"github.com/mabhi256/jdiag/internal/heap/registry"
@@ -149,102 +147,4 @@ func parsePrimitiveArrayDump(reader *BinaryReader, arrayReg *registry.ArrayRegis
 	// Add to registry
 	arrayReg.AddPrimitiveArray(array)
 	return nil
-}
-
-/*
-* resolveStringFromArrays resolves a String object's actual content using array data
-*
-* String objects in Java heap dumps reference char[] or byte[] arrays containing
-* the actual character data. This function:
-*
-* 1. Extracts the String object's fields (value array reference, coder, etc.)
-* 2. Looks up the referenced array in the array registry
-* 3. Converts the array data to a readable string
-*
-* Handles both legacy (char[]) and modern compact strings (byte[]):
-* - Java 8 and earlier: String.value is char[]
-* - Java 9+: String.value is byte[], with coder field indicating encoding
-*   - coder = 0: Latin1 (1 byte per character)
-*   - coder = 1: UTF16 (2 bytes per character)
-*
-* NOTE: This function requires all objects and arrays to be parsed first,
-* so it should be called during post-processing, not during initial parsing.
- */
-func resolveStringFromArrays(stringObjectID model.ID, objectReg *registry.InstanceRegistry,
-	classDumpReg *registry.ClassDumpRegistry, stringReg *registry.StringRegistry,
-	arrayReg *registry.ArrayRegistry, identifierSize uint32) string {
-
-	if stringObjectID == 0 {
-		return ""
-	}
-
-	// Get the String object instance
-	stringInstance, exists := objectReg.GetInstance(stringObjectID)
-	if !exists {
-		return fmt.Sprintf("<string object not found: 0x%x>", uint64(stringObjectID))
-	}
-
-	// Get the String class definition
-	stringClassDump, hasClass := classDumpReg.GetClassDump(stringInstance.ClassObjectID)
-	if !hasClass {
-		return fmt.Sprintf("<string class not found: 0x%x>", uint64(stringInstance.ClassObjectID))
-	}
-
-	// Extract String object fields - use the function from instance parser
-	// Note: This requires the extractFieldValues function to be exported/accessible
-	// For now, we'll implement a simplified version here to avoid circular dependencies
-
-	// Look for the value array field and coder field in the raw instance data
-	// This is a simplified approach - in a full implementation, we'd properly parse all fields
-	valueArrayID := extractStringValueArrayID(stringInstance, stringClassDump, stringReg, identifierSize)
-	if valueArrayID == 0 {
-		return fmt.Sprintf("<no value array found in string 0x%x>", uint64(stringObjectID))
-	}
-
-	// Try to get the array from array registry
-	// First try as char array (traditional strings)
-	if stringValue, found := arrayReg.GetCharArray(valueArrayID); found {
-		return stringValue
-	}
-
-	// Then try as byte array (compact strings)
-	if stringValue, found := arrayReg.GetByteArray(valueArrayID); found {
-		return stringValue
-	}
-
-	return fmt.Sprintf("<array not found: 0x%x>", uint64(valueArrayID))
-}
-
-// extractStringValueArrayID extracts the value array ID from a String object
-// This is a simplified version that looks for the first object reference field
-// A full implementation would properly parse all fields by name
-func extractStringValueArrayID(stringInstance *model.GCInstanceDump,
-	stringClassDump *model.ClassDump, stringReg *registry.StringRegistry,
-	identifierSize uint32) model.ID {
-
-	data := stringInstance.InstanceData
-	offset := 0
-
-	// Walk through instance fields looking for object references
-	for _, field := range stringClassDump.InstanceFields {
-		if offset >= len(data) {
-			break
-		}
-
-		fieldName := strings.ToLower(stringReg.GetOrUnresolved(field.NameID))
-		fieldSize := field.Type.Size(identifierSize)
-
-		// If this is the "value" field and it's an object reference
-		if fieldName == "value" && (field.Type == model.HPROF_NORMAL_OBJECT || field.Type == model.HPROF_ARRAY_OBJECT) {
-			if fieldSize == 4 {
-				return model.ID(binary.BigEndian.Uint32(data[offset:]))
-			} else if fieldSize == 8 {
-				return model.ID(binary.BigEndian.Uint64(data[offset:]))
-			}
-		}
-
-		offset += fieldSize
-	}
-
-	return 0
 }
