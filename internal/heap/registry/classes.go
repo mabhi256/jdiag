@@ -13,29 +13,22 @@ type ClassInfo struct {
 }
 
 type ClassRegistry struct {
-	// Maps serial number to class info
-	classesBySerial map[model.SerialNum]*ClassInfo
-
-	// Maps object ID to class info
+	*BaseRegistry[model.SerialNum, *ClassInfo]
 	classesByObjectID map[model.ID]*ClassInfo
-
-	// Maps class name to class info
-	classesByName map[string]*ClassInfo
-
-	// Statistics
-	loadedCount   int
-	unloadedCount int
+	classesByName     map[string]*ClassInfo
+	loadedCount       int
+	unloadedCount     int
 }
 
 func NewClassRegistry() *ClassRegistry {
 	return &ClassRegistry{
-		classesBySerial:   make(map[model.SerialNum]*ClassInfo),
+		BaseRegistry:      NewBaseRegistry[model.SerialNum, *ClassInfo](),
 		classesByObjectID: make(map[model.ID]*ClassInfo),
 		classesByName:     make(map[string]*ClassInfo),
 	}
 }
 
-func (cr *ClassRegistry) AddLoadedClass(loadClassBody *model.LoadClassBody, className string) {
+func (r *ClassRegistry) AddLoadedClass(loadClassBody *model.LoadClassBody, className string) {
 	classInfo := &ClassInfo{
 		LoadClassBody: loadClassBody,
 		ClassName:     className,
@@ -43,35 +36,60 @@ func (cr *ClassRegistry) AddLoadedClass(loadClassBody *model.LoadClassBody, clas
 	}
 
 	// Store in all lookup maps
-	cr.classesBySerial[loadClassBody.ClassSerialNumber] = classInfo
-	cr.classesByObjectID[loadClassBody.ObjectID] = classInfo
-	cr.classesByName[className] = classInfo
-
-	cr.loadedCount++
+	r.Add(loadClassBody.ClassSerialNumber, classInfo)
+	r.classesByObjectID[loadClassBody.ObjectID] = classInfo
+	r.classesByName[className] = classInfo
+	r.loadedCount++
 }
 
-func (cr *ClassRegistry) UnloadClass(serialNumber model.SerialNum) {
-	classInfo, exists := cr.classesBySerial[serialNumber]
-	if exists && classInfo.IsLoaded {
+func (r *ClassRegistry) UnloadClass(serialNumber model.SerialNum) {
+	if classInfo, exists := r.Get(serialNumber); exists && classInfo.IsLoaded {
 		classInfo.IsLoaded = false
-		cr.loadedCount--
-		cr.unloadedCount++
+		r.loadedCount--
+		r.unloadedCount++
 	}
 }
 
-func (cr *ClassRegistry) GetBySerial(serialNumber model.SerialNum) (*ClassInfo, bool) {
-	classInfo, exists := cr.classesBySerial[serialNumber]
+func (r *ClassRegistry) GetByObjectID(objectID model.ID) (*ClassInfo, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	classInfo, exists := r.classesByObjectID[objectID]
 	return classInfo, exists
 }
 
-func (cr *ClassRegistry) GetByObjectID(objectID model.ID) (*ClassInfo, bool) {
-	classInfo, exists := cr.classesByObjectID[objectID]
+func (r *ClassRegistry) GetByName(className string) (*ClassInfo, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	classInfo, exists := r.classesByName[className]
 	return classInfo, exists
 }
 
-func (cr *ClassRegistry) GetByName(className string) (*ClassInfo, bool) {
-	classInfo, exists := cr.classesByName[className]
-	return classInfo, exists
+func (r *ClassRegistry) GetLoadedClasses() []*ClassInfo {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var loaded []*ClassInfo
+	for _, classInfo := range r.data {
+		if classInfo.IsLoaded {
+			loaded = append(loaded, classInfo)
+		}
+	}
+
+	// Sort by load order
+	sort.Slice(loaded, func(i, j int) bool {
+		return loaded[i].LoadClassBody.ClassSerialNumber < loaded[j].LoadClassBody.ClassSerialNumber
+	})
+	return loaded
+}
+
+func (r *ClassRegistry) Clear() {
+	r.BaseRegistry.Clear()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.classesByObjectID = make(map[model.ID]*ClassInfo)
+	r.classesByName = make(map[string]*ClassInfo)
+	r.loadedCount = 0
+	r.unloadedCount = 0
 }
 
 func sortByLoadOrder(classes []*ClassInfo) []*ClassInfo {
@@ -80,23 +98,4 @@ func sortByLoadOrder(classes []*ClassInfo) []*ClassInfo {
 	})
 
 	return classes
-}
-
-func (cr *ClassRegistry) GetLoadedClasses() []*ClassInfo {
-	var loaded []*ClassInfo
-	for _, classInfo := range cr.classesBySerial {
-		if classInfo.IsLoaded {
-			loaded = append(loaded, classInfo)
-		}
-	}
-
-	return sortByLoadOrder(loaded)
-}
-
-func (cr *ClassRegistry) Clear() {
-	cr.classesBySerial = make(map[model.SerialNum]*ClassInfo)
-	cr.classesByObjectID = make(map[model.ID]*ClassInfo)
-	cr.classesByName = make(map[string]*ClassInfo)
-	cr.loadedCount = 0
-	cr.unloadedCount = 0
 }

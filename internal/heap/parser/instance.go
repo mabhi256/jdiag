@@ -32,7 +32,7 @@ import (
 * - Handle both legacy and modern Java Thread structures
 * - Store parsed Thread data for later analysis
  */
-func parseInstanceDump(reader *BinaryReader, objectReg *registry.ObjectRegistry,
+func parseInstanceDump(reader *BinaryReader, objectReg *registry.InstanceRegistry,
 	classDumpReg *registry.ClassDumpRegistry, stringReg *registry.StringRegistry,
 	arrayReg *registry.ArrayRegistry) error {
 
@@ -112,7 +112,7 @@ func hasThreadFields(classDump *model.ClassDump, stringReg *registry.StringRegis
 
 // parseThreadInstance parses a Thread object instance and extracts thread-specific data
 func parseThreadInstance(instance *model.GCInstanceDump, classDumpReg *registry.ClassDumpRegistry,
-	stringReg *registry.StringRegistry, objectReg *registry.ObjectRegistry,
+	stringReg *registry.StringRegistry, objectReg *registry.InstanceRegistry,
 	arrayReg *registry.ArrayRegistry, identifierSize uint32) *registry.ThreadInstanceData { // Phase 10: Add array registry
 
 	threadData := &registry.ThreadInstanceData{
@@ -203,7 +203,7 @@ func extractThreadFields(threadData *registry.ThreadInstanceData, fieldValues ma
 
 // extractHolderFields extracts fields from holder object (modern Java virtual threads)
 func extractHolderFields(threadData *registry.ThreadInstanceData, holderObjID model.ID,
-	objectReg *registry.ObjectRegistry, classDumpReg *registry.ClassDumpRegistry,
+	objectReg *registry.InstanceRegistry, classDumpReg *registry.ClassDumpRegistry,
 	stringReg *registry.StringRegistry, arrayReg *registry.ArrayRegistry, identifierSize uint32) { // Phase 10: Add array registry
 
 	// Get the holder object

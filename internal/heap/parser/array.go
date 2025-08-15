@@ -170,7 +170,7 @@ func parsePrimitiveArrayDump(reader *BinaryReader, arrayReg *registry.ArrayRegis
 * NOTE: This function requires all objects and arrays to be parsed first,
 * so it should be called during post-processing, not during initial parsing.
  */
-func resolveStringFromArrays(stringObjectID model.ID, objectReg *registry.ObjectRegistry,
+func resolveStringFromArrays(stringObjectID model.ID, objectReg *registry.InstanceRegistry,
 	classDumpReg *registry.ClassDumpRegistry, stringReg *registry.StringRegistry,
 	arrayReg *registry.ArrayRegistry, identifierSize uint32) string {
 
@@ -247,22 +247,4 @@ func extractStringValueArrayID(stringInstance *model.GCInstanceDump,
 	}
 
 	return 0
-}
-
-// convertUTF16BytesToString converts UTF16-encoded byte data to string
-func convertUTF16BytesToString(data string) string {
-	if len(data)%2 != 0 {
-		return data // Return as-is if not valid UTF16 length
-	}
-
-	chars := make([]rune, len(data)/2)
-	for i := 0; i < len(chars); i++ {
-		// Convert pairs of bytes to UTF16 characters
-		b1 := data[i*2]
-		b2 := data[i*2+1]
-		charValue := (uint16(b1) << 8) | uint16(b2)
-		chars[i] = rune(charValue)
-	}
-
-	return string(chars)
 }

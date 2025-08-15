@@ -22,14 +22,14 @@ type Parser struct {
 	reader     *BinaryReader
 	outputFile *os.File // For debugging output
 
-	header       *model.HprofHeader
-	stringReg    *registry.StringRegistry
-	classReg     *registry.ClassRegistry
-	stackReg     *registry.StackRegistry
-	threadReg    *registry.ThreadRegistry
+	header    *model.HprofHeader
+	stringReg *registry.StringRegistry
+	classReg  *registry.ClassRegistry
+	stackReg  *registry.StackRegistry
+	// threadReg    *registry.ThreadRegistry
 	rootReg      *registry.GCRootRegistry
 	classDumpReg *registry.ClassDumpRegistry
-	objectReg    *registry.ObjectRegistry
+	objectReg    *registry.InstanceRegistry
 	arrayReg     *registry.ArrayRegistry // Phase 10: Array registry // Phase 9: Object instances
 
 	// Statistics
@@ -58,16 +58,16 @@ func NewParser(filename string) (*Parser, error) {
 	}
 
 	parser := &Parser{
-		file:           file,
-		reader:         NewBinaryReader(file),
-		outputFile:     outputFile,
-		stringReg:      registry.NewStringRegistry(),
-		classReg:       registry.NewClassRegistry(),
-		stackReg:       registry.NewStackRegistry(),
-		threadReg:      registry.NewThreadRegistry(),
+		file:       file,
+		reader:     NewBinaryReader(file),
+		outputFile: outputFile,
+		stringReg:  registry.NewStringRegistry(),
+		classReg:   registry.NewClassRegistry(),
+		stackReg:   registry.NewStackRegistry(),
+		// threadReg:      registry.NewThreadRegistry(),
 		rootReg:        registry.NewGCRootRegistry(),
 		classDumpReg:   registry.NewClassDumpRegistry(),
-		objectReg:      registry.NewObjectRegistry(),
+		objectReg:      registry.NewInstanceRegistry(),
 		arrayReg:       registry.NewArrayRegistry(),
 		recordCountMap: make(map[model.HProfTagRecord]int),
 	}
@@ -608,7 +608,7 @@ func (p *Parser) GetStringRegistry() *registry.StringRegistry {
 }
 
 // GetObjectRegistry returns the object registry
-func (p *Parser) GetObjectRegistry() *registry.ObjectRegistry {
+func (p *Parser) GetObjectRegistry() *registry.InstanceRegistry {
 	return p.objectReg
 }
 

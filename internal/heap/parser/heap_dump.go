@@ -28,7 +28,7 @@ import (
  */
 func ParseHeapDumpSegment(reader *BinaryReader, length uint32,
 	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
-	objectReg *registry.ObjectRegistry, stringReg *registry.StringRegistry,
+	objectReg *registry.InstanceRegistry, stringReg *registry.StringRegistry,
 	arrayReg *registry.ArrayRegistry,
 ) (int, map[model.HProfTagSubRecord]int, error) {
 	if length == 0 {
@@ -116,7 +116,7 @@ func ParseHeapDumpEnd(length uint32) error {
 // parseSubRecord parses a specific heap dump sub-record
 func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
 	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
-	objectReg *registry.ObjectRegistry, stringReg *registry.StringRegistry,
+	objectReg *registry.InstanceRegistry, stringReg *registry.StringRegistry,
 	arrayReg *registry.ArrayRegistry,
 ) error {
 	startPos := reader.BytesRead() - 1
