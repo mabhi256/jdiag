@@ -191,3 +191,180 @@ func (r *GCRootRegistry) Clear() {
 	r.totalRoots = 0
 	r.rootTypeCounts = make(map[model.HProfTagSubRecord]int)
 }
+
+// GCRootInfo represents a unified view of any GC root with its type information
+type GCRootInfo struct {
+	ObjectID model.ID
+	RootType model.HProfTagSubRecord
+	Root     interface{} // The actual root struct (GCRootUnknown, GCRootJniGlobal, etc.)
+}
+
+// GetAllRoots returns all GC roots regardless of type as a unified collection
+func (r *GCRootRegistry) GetAllRoots() []GCRootInfo {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var allRoots []GCRootInfo
+
+	// Add unknown roots
+	for _, root := range r.unknownRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_UNKNOWN,
+			Root:     root,
+		})
+	}
+
+	// Add JNI global roots
+	for _, root := range r.jniGlobalRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_JNI_GLOBAL,
+			Root:     root,
+		})
+	}
+
+	// Add JNI local roots
+	for _, root := range r.jniLocalRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_JNI_LOCAL,
+			Root:     root,
+		})
+	}
+
+	// Add Java frame roots
+	for _, root := range r.javaFrameRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_JAVA_FRAME,
+			Root:     root,
+		})
+	}
+
+	// Add native stack roots
+	for _, root := range r.nativeStackRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_NATIVE_STACK,
+			Root:     root,
+		})
+	}
+
+	// Add sticky class roots
+	for _, root := range r.stickyClassRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_STICKY_CLASS,
+			Root:     root,
+		})
+	}
+
+	// Add thread block roots
+	for _, root := range r.threadBlockRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_THREAD_BLOCK,
+			Root:     root,
+		})
+	}
+
+	// Add monitor used roots
+	for _, root := range r.monitorUsedRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ObjectID,
+			RootType: model.HPROF_GC_ROOT_MONITOR_USED,
+			Root:     root,
+		})
+	}
+
+	// Add thread object roots
+	for _, root := range r.threadObjectRoots {
+		allRoots = append(allRoots, GCRootInfo{
+			ObjectID: root.ThreadObjectID, // Note: ThreadObjectID, not ObjectID
+			RootType: model.HPROF_GC_ROOT_THREAD_OBJ,
+			Root:     root,
+		})
+	}
+
+	return allRoots
+}
+
+// GetAllRootObjectIDs returns just the object IDs of all GC roots (convenient for existence checking)
+func (r *GCRootRegistry) GetAllRootObjectIDs() []model.ID {
+	allRoots := r.GetAllRoots()
+	objectIDs := make([]model.ID, 0, len(allRoots))
+
+	for _, root := range allRoots {
+		if root.ObjectID != 0 { // Skip null references
+			objectIDs = append(objectIDs, root.ObjectID)
+		}
+	}
+
+	return objectIDs
+}
+
+// GetRootsByType returns all roots of a specific type
+func (r *GCRootRegistry) GetRootsByType(rootType model.HProfTagSubRecord) []GCRootInfo {
+	allRoots := r.GetAllRoots()
+	var filteredRoots []GCRootInfo
+
+	for _, root := range allRoots {
+		if root.RootType == rootType {
+			filteredRoots = append(filteredRoots, root)
+		}
+	}
+
+	return filteredRoots
+}
+
+// Additional convenience getters for individual root types
+// (These expose the private slices safely)
+
+func (r *GCRootRegistry) GetUnknownRoots() []model.GCRootUnknown {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootUnknown(nil), r.unknownRoots...)
+}
+
+func (r *GCRootRegistry) GetJniGlobalRoots() []model.GCRootJniGlobal {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootJniGlobal(nil), r.jniGlobalRoots...)
+}
+
+func (r *GCRootRegistry) GetJniLocalRoots() []model.GCRootJniLocal {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootJniLocal(nil), r.jniLocalRoots...)
+}
+
+func (r *GCRootRegistry) GetJavaFrameRoots() []model.GCRootJavaFrame {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootJavaFrame(nil), r.javaFrameRoots...)
+}
+
+func (r *GCRootRegistry) GetNativeStackRoots() []model.GCRootNativeStack {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootNativeStack(nil), r.nativeStackRoots...)
+}
+
+func (r *GCRootRegistry) GetStickyClassRoots() []model.GCRootStickyClass {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootStickyClass(nil), r.stickyClassRoots...)
+}
+
+func (r *GCRootRegistry) GetThreadBlockRoots() []model.GCRootThreadBlock {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootThreadBlock(nil), r.threadBlockRoots...)
+}
+
+func (r *GCRootRegistry) GetMonitorUsedRoots() []model.GCRootMonitorUsed {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]model.GCRootMonitorUsed(nil), r.monitorUsedRoots...)
+}

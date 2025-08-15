@@ -40,7 +40,7 @@ import (
 *
  */
 func parseClassDump(reader *BinaryReader, classDumpReg *registry.ClassDumpRegistry) error {
-	classDump := &model.ClassDump{}
+	classDump := &model.GCClassDump{}
 
 	// Parse class header
 	var err error

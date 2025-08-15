@@ -606,9 +606,19 @@ func (p *Parser) GetStringRegistry() *registry.StringRegistry {
 	return p.stringReg
 }
 
+// GetClassDumpRegistry returns the class dump registry
+func (p *Parser) GetClassDumpRegistry() *registry.ClassDumpRegistry {
+	return p.classDumpReg
+}
+
 // GetObjectRegistry returns the object registry
 func (p *Parser) GetObjectRegistry() *registry.InstanceRegistry {
 	return p.objectReg
+}
+
+// GetGCRootRegistry returns the gc root registry
+func (p *Parser) GetGCRootRegistry() *registry.GCRootRegistry {
+	return p.rootReg
 }
 
 // GetArrayRegistry returns the array registry

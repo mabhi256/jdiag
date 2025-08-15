@@ -5,24 +5,24 @@ import (
 )
 
 type ClassDumpRegistry struct {
-	*BaseRegistry[model.ID, *model.ClassDump]
+	*BaseRegistry[model.ID, *model.GCClassDump]
 }
 
 func NewClassDumpRegistry() *ClassDumpRegistry {
 	return &ClassDumpRegistry{
-		BaseRegistry: NewBaseRegistry[model.ID, *model.ClassDump](),
+		BaseRegistry: NewBaseRegistry[model.ID, *model.GCClassDump](),
 	}
 }
 
-func (r *ClassDumpRegistry) AddClassDump(classDump *model.ClassDump) {
+func (r *ClassDumpRegistry) AddClassDump(classDump *model.GCClassDump) {
 	r.Add(classDump.ClassObjectID, classDump)
 }
 
-func (r *ClassDumpRegistry) GetClassDump(classObjectID model.ID) (*model.ClassDump, bool) {
+func (r *ClassDumpRegistry) GetClassDump(classObjectID model.ID) (*model.GCClassDump, bool) {
 	return r.Get(classObjectID)
 }
 
-func (r *ClassDumpRegistry) GetAllClassDumps() map[model.ID]*model.ClassDump {
+func (r *ClassDumpRegistry) GetAllClassDumps() map[model.ID]*model.GCClassDump {
 	return r.GetAll()
 }
 
