@@ -33,7 +33,8 @@ import (
 * - Store parsed Thread data for later analysis
  */
 func parseInstanceDump(reader *BinaryReader, objectReg *registry.ObjectRegistry,
-	classDumpReg *registry.ClassDumpRegistry, stringReg *registry.StringRegistry) error {
+	classDumpReg *registry.ClassDumpRegistry, stringReg *registry.StringRegistry,
+	arrayReg *registry.ArrayRegistry) error {
 
 	instance := &model.GCInstanceDump{}
 
@@ -69,7 +70,7 @@ func parseInstanceDump(reader *BinaryReader, objectReg *registry.ObjectRegistry,
 
 	// Check if this is a Thread object and handle specially
 	if isThreadObject(instance, classDumpReg, stringReg) {
-		threadData := parseThreadInstance(instance, classDumpReg, stringReg, objectReg, reader.Header().IdentifierSize)
+		threadData := parseThreadInstance(instance, classDumpReg, stringReg, objectReg, arrayReg, reader.Header().IdentifierSize)
 		objectReg.AddThreadInstance(threadData)
 	} else {
 		// Add regular instance to registry
@@ -111,7 +112,8 @@ func hasThreadFields(classDump *model.ClassDump, stringReg *registry.StringRegis
 
 // parseThreadInstance parses a Thread object instance and extracts thread-specific data
 func parseThreadInstance(instance *model.GCInstanceDump, classDumpReg *registry.ClassDumpRegistry,
-	stringReg *registry.StringRegistry, objectReg *registry.ObjectRegistry, identifierSize uint32) *registry.ThreadInstanceData {
+	stringReg *registry.StringRegistry, objectReg *registry.ObjectRegistry,
+	arrayReg *registry.ArrayRegistry, identifierSize uint32) *registry.ThreadInstanceData { // Phase 10: Add array registry
 
 	threadData := &registry.ThreadInstanceData{
 		ObjectID:     instance.ObjectID,
@@ -137,20 +139,24 @@ func parseThreadInstance(instance *model.GCInstanceDump, classDumpReg *registry.
 	threadData.ParsedFieldValues = fieldValues
 
 	// Extract thread fields from the main Thread object
-	extractThreadFields(threadData, fieldValues, stringReg)
+	extractThreadFields(threadData, fieldValues, stringReg, arrayReg)
 
 	// Check for holder object (Java 19+ virtual threads)
 	if holderID, hasHolder := fieldValues["holder"]; hasHolder {
 		if holderObjID, ok := holderID.(model.ID); ok && holderObjID != 0 {
-			extractHolderFields(threadData, holderObjID, objectReg, classDumpReg, stringReg, identifierSize)
+			extractHolderFields(threadData, holderObjID, objectReg, classDumpReg, stringReg, arrayReg, identifierSize)
 		}
 	}
+
+	// NOTE: Full string resolution will be implemented in post-processing
+	// since arrays and String objects may be parsed in any order
 
 	return threadData
 }
 
 // extractThreadFields extracts basic thread fields from field values
-func extractThreadFields(threadData *registry.ThreadInstanceData, fieldValues map[string]interface{}, stringReg *registry.StringRegistry) {
+func extractThreadFields(threadData *registry.ThreadInstanceData, fieldValues map[string]interface{},
+	stringReg *registry.StringRegistry, arrayReg *registry.ArrayRegistry) { // Phase 10: Add array registry
 	for fieldName, value := range fieldValues {
 		lowerFieldName := strings.ToLower(fieldName)
 
@@ -163,13 +169,15 @@ func extractThreadFields(threadData *registry.ThreadInstanceData, fieldValues ma
 			}
 		case lowerFieldName == "name":
 			if nameID, ok := value.(model.ID); ok && nameID != 0 {
-				// For now, we can't fully resolve String objects without array parsing (Phase 10)
-				// So we'll use a placeholder that shows the String object ID
+				// Phase 10: Now we can actually resolve String objects!
+				// Note: We need to defer this until after all objects are parsed
+				// For now, store the name ID and show a placeholder
 				if threadData.ThreadID != 0 {
 					threadData.Name = fmt.Sprintf("Thread-%d@String[0x%x]", threadData.ThreadID, uint64(nameID))
 				} else {
 					threadData.Name = fmt.Sprintf("Thread@String[0x%x]", uint64(nameID))
 				}
+				// TODO: Add post-processing step to resolve actual string content
 			}
 		case lowerFieldName == "priority":
 			if priority, ok := value.(int32); ok {
@@ -196,7 +204,7 @@ func extractThreadFields(threadData *registry.ThreadInstanceData, fieldValues ma
 // extractHolderFields extracts fields from holder object (modern Java virtual threads)
 func extractHolderFields(threadData *registry.ThreadInstanceData, holderObjID model.ID,
 	objectReg *registry.ObjectRegistry, classDumpReg *registry.ClassDumpRegistry,
-	stringReg *registry.StringRegistry, identifierSize uint32) {
+	stringReg *registry.StringRegistry, arrayReg *registry.ArrayRegistry, identifierSize uint32) { // Phase 10: Add array registry
 
 	// Get the holder object
 	holderInstance, exists := objectReg.GetInstance(holderObjID)

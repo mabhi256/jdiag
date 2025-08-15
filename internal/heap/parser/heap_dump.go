@@ -29,6 +29,7 @@ import (
 func ParseHeapDumpSegment(reader *BinaryReader, length uint32,
 	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
 	objectReg *registry.ObjectRegistry, stringReg *registry.StringRegistry,
+	arrayReg *registry.ArrayRegistry,
 ) (int, map[model.HProfTagSubRecord]int, error) {
 	if length == 0 {
 		return 0, make(map[model.HProfTagSubRecord]int), nil
@@ -60,7 +61,7 @@ func ParseHeapDumpSegment(reader *BinaryReader, length uint32,
 		subRecordCountMap[subRecordType]++
 
 		// Parse or skip the specific sub-record type
-		err = parseSubRecord(reader, subRecordType, rootReg, classDumpReg, objectReg, stringReg)
+		err = parseSubRecord(reader, subRecordType, rootReg, classDumpReg, objectReg, stringReg, arrayReg)
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to parse sub-record %s at offset %d: %w",
 				subRecordType, beforeSubRecord, err)
@@ -116,6 +117,7 @@ func ParseHeapDumpEnd(length uint32) error {
 func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
 	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
 	objectReg *registry.ObjectRegistry, stringReg *registry.StringRegistry,
+	arrayReg *registry.ArrayRegistry,
 ) error {
 	startPos := reader.BytesRead() - 1
 
@@ -141,106 +143,13 @@ func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
 	case model.HPROF_GC_CLASS_DUMP:
 		return parseClassDump(reader, classDumpReg)
 	case model.HPROF_GC_INSTANCE_DUMP:
-		return parseInstanceDump(reader, objectReg, classDumpReg, stringReg)
+		return parseInstanceDump(reader, objectReg, classDumpReg, stringReg, arrayReg)
 	case model.HPROF_GC_OBJ_ARRAY_DUMP:
-		return skipObjectArrayDump(reader)
+		return parseObjectArrayDump(reader, arrayReg)
 	case model.HPROF_GC_PRIM_ARRAY_DUMP:
-		return skipPrimitiveArrayDump(reader)
+		return parsePrimitiveArrayDump(reader, arrayReg)
 
 	default:
 		return fmt.Errorf("unknown sub-record type: 0x%02x at offset %d", subRecordType, startPos)
 	}
-}
-
-// skipObjectArrayDump skips an OBJ_ARRAY_DUMP sub-record
-func skipObjectArrayDump(reader *BinaryReader) error {
-	// OBJ_ARRAY_DUMP format:
-	// id    array_object_id
-	// u4    stack_trace_serial_number
-	// u4    array_length
-	// id    array_class_id
-	// [id]* elements
-
-	// Skip header (2 IDs + 2 u4s)
-
-	// Skip array_object_id (ID)
-	if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-		return fmt.Errorf("failed to skip array_object_id: %w", err)
-	}
-
-	// Skip stack_trace_serial_number (u4)
-	if err := reader.Skip(4); err != nil {
-		return fmt.Errorf("failed to skip stack_trace_serial_number: %w", err)
-	}
-
-	// Read array_length (u4)
-	arrayLength, err := reader.ReadU4()
-	if err != nil {
-		return fmt.Errorf("failed to read array length: %w", err)
-	}
-
-	// Skip array_class_id (ID)
-	if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-		return fmt.Errorf("failed to skip array_class_id: %w", err)
-	}
-
-	// fmt.Printf("        [DEBUG] Object array length: %d elements\n", arrayLength)
-
-	// Skip array elements (each is an ID)
-	elementsSize := int(arrayLength) * int(reader.Header().IdentifierSize)
-	if err := reader.Skip(elementsSize); err != nil {
-		return fmt.Errorf("failed to skip array elements: %w", err)
-	}
-
-	return nil
-}
-
-// skipPrimitiveArrayDump skips a PRIM_ARRAY_DUMP sub-record
-func skipPrimitiveArrayDump(reader *BinaryReader) error {
-	// PRIM_ARRAY_DUMP format:
-	// id    array_object_id
-	// u4    stack_trace_serial_number
-	// u4    array_length
-	// u1    element_type
-	// [u1]* elements
-
-	// Skip header (1 ID + 2 u4s)
-
-	// Format: id array_object_id, u4 stack_trace_serial_number, u4 array_length, u1 element_type, [u1]* elements
-
-	// Skip array_object_id (ID)
-	if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-		return fmt.Errorf("failed to skip array_object_id: %w", err)
-	}
-
-	// Skip stack_trace_serial_number (u4)
-	if err := reader.Skip(4); err != nil {
-		return fmt.Errorf("failed to skip stack_trace_serial_number: %w", err)
-	}
-
-	// Read array_length (u4)
-	arrayLength, err := reader.ReadU4()
-	if err != nil {
-		return fmt.Errorf("failed to read array length: %w", err)
-	}
-
-	// Read element_type (u1)
-	elementType, err := reader.ReadU1()
-	if err != nil {
-		return fmt.Errorf("failed to read element type: %w", err)
-	}
-
-	// Calculate element size
-	elementSize := model.HProfTagFieldType(elementType).Size(reader.Header().IdentifierSize)
-	if elementSize == 0 {
-		return fmt.Errorf("unknown element type: 0x%02x", elementType)
-	}
-
-	// Skip array elements
-	elementsSize := int(arrayLength) * elementSize
-	if err := reader.Skip(elementsSize); err != nil {
-		return fmt.Errorf("failed to skip array elements: %w", err)
-	}
-
-	return nil
 }

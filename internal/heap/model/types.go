@@ -98,6 +98,33 @@ func (ft HProfTagFieldType) Size(identifierSize uint32) int {
 	}
 }
 
+func (ft HProfTagFieldType) String() string {
+	switch ft {
+	case HPROF_ARRAY_OBJECT:
+		return "array_object"
+	case HPROF_NORMAL_OBJECT:
+		return "object"
+	case HPROF_BOOLEAN:
+		return "boolean"
+	case HPROF_CHAR:
+		return "char"
+	case HPROF_FLOAT:
+		return "float"
+	case HPROF_DOUBLE:
+		return "double"
+	case HPROF_BYTE:
+		return "byte"
+	case HPROF_SHORT:
+		return "short"
+	case HPROF_INT:
+		return "int"
+	case HPROF_LONG:
+		return "long"
+	default:
+		return fmt.Sprintf("unknown_type_%d", ft)
+	}
+}
+
 type HProfTagSubRecord byte
 
 const (
