@@ -28,6 +28,7 @@ import (
  */
 func ParseHeapDumpSegment(reader *BinaryReader, length uint32,
 	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
+	objectReg *registry.ObjectRegistry, stringReg *registry.StringRegistry,
 ) (int, map[model.HProfTagSubRecord]int, error) {
 	if length == 0 {
 		return 0, make(map[model.HProfTagSubRecord]int), nil
@@ -59,7 +60,7 @@ func ParseHeapDumpSegment(reader *BinaryReader, length uint32,
 		subRecordCountMap[subRecordType]++
 
 		// Parse or skip the specific sub-record type
-		err = parseSubRecord(reader, subRecordType, rootReg, classDumpReg)
+		err = parseSubRecord(reader, subRecordType, rootReg, classDumpReg, objectReg, stringReg)
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to parse sub-record %s at offset %d: %w",
 				subRecordType, beforeSubRecord, err)
@@ -114,6 +115,7 @@ func ParseHeapDumpEnd(length uint32) error {
 // parseSubRecord parses a specific heap dump sub-record
 func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
 	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
+	objectReg *registry.ObjectRegistry, stringReg *registry.StringRegistry,
 ) error {
 	startPos := reader.BytesRead() - 1
 
@@ -139,7 +141,7 @@ func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
 	case model.HPROF_GC_CLASS_DUMP:
 		return parseClassDump(reader, classDumpReg)
 	case model.HPROF_GC_INSTANCE_DUMP:
-		return skipInstanceDump(reader)
+		return parseInstanceDump(reader, objectReg, classDumpReg, stringReg)
 	case model.HPROF_GC_OBJ_ARRAY_DUMP:
 		return skipObjectArrayDump(reader)
 	case model.HPROF_GC_PRIM_ARRAY_DUMP:
@@ -148,46 +150,6 @@ func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
 	default:
 		return fmt.Errorf("unknown sub-record type: 0x%02x at offset %d", subRecordType, startPos)
 	}
-}
-
-// skipInstanceDump skips an INSTANCE_DUMP sub-record
-func skipInstanceDump(reader *BinaryReader) error {
-	// INSTANCE_DUMP format:
-	// id    object_id
-	// u4    stack_trace_serial_number
-	// id    class_object_id
-	// u4    instance_data_size
-	// [u1]* instance_data
-
-	// Skip header (2 IDs + 2 u4s)
-
-	// Skip object_id (ID)
-	if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-		return fmt.Errorf("failed to skip object_id: %w", err)
-	}
-
-	// Skip stack_trace_serial_number (u4)
-	if err := reader.Skip(4); err != nil {
-		return fmt.Errorf("failed to skip stack_trace_serial_number: %w", err)
-	}
-
-	// Skip class_object_id (ID)
-	if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-		return fmt.Errorf("failed to skip class_object_id: %w", err)
-	}
-
-	// Read instance_data_size (u4)
-	dataSize, err := reader.ReadU4()
-	if err != nil {
-		return fmt.Errorf("failed to read instance data size: %w", err)
-	}
-
-	// Skip instance data
-	if err := reader.Skip(int(dataSize)); err != nil {
-		return fmt.Errorf("failed to skip instance data: %w", err)
-	}
-
-	return nil
 }
 
 // skipObjectArrayDump skips an OBJ_ARRAY_DUMP sub-record
