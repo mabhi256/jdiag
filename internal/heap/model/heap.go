@@ -55,7 +55,7 @@ type GCRootThreadObject struct {
 }
 
 // HPROF_GC_CLASS_DUMP
-type ClassDump struct {
+type GCClassDump struct {
 	ClassObjectID            ID
 	StackTraceSerialNumber   SerialNum
 	SuperClassObjectID       ID
