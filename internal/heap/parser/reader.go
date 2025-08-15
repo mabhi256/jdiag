@@ -121,6 +121,16 @@ func (br *BinaryReader) ReadID() (model.ID, error) {
 	}
 }
 
+// ReadBytes reads exactly len(buf) bytes into buf
+func (br *BinaryReader) ReadBytes(buf []byte) error {
+	n, err := io.ReadFull(br.reader, buf)
+	if err != nil {
+		return err
+	}
+	br.bytesRead += int64(n)
+	return nil
+}
+
 // Skip skips n bytes in the stream
 func (br *BinaryReader) Skip(n int) error {
 	_, err := br.ReadNBytes(n) // Just discard the data

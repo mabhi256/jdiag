@@ -26,7 +26,9 @@ import (
 *
 * The segment ends when we've consumed exactly 'length' bytes.
  */
-func ParseHeapDumpSegment(reader *BinaryReader, length uint32, rootReg *registry.GCRootRegistry) (int, map[model.HProfTagSubRecord]int, error) {
+func ParseHeapDumpSegment(reader *BinaryReader, length uint32,
+	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
+) (int, map[model.HProfTagSubRecord]int, error) {
 	if length == 0 {
 		return 0, make(map[model.HProfTagSubRecord]int), nil
 	}
@@ -45,20 +47,22 @@ func ParseHeapDumpSegment(reader *BinaryReader, length uint32, rootReg *registry
 			break
 		}
 
-		subRecordType, err := reader.ReadU1()
+		subRecordRaw, err := reader.ReadU1()
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to read sub-record type at offset %d (remaining: %d): %w",
 				beforeSubRecord, remaining, err)
 		}
 
+		subRecordType := model.HProfTagSubRecord(subRecordRaw)
+
 		subRecordCount++
-		subRecordCountMap[model.HProfTagSubRecord(subRecordType)]++
+		subRecordCountMap[subRecordType]++
 
 		// Parse or skip the specific sub-record type
-		err = parseSubRecord(reader, model.HProfTagSubRecord(subRecordType), rootReg)
+		err = parseSubRecord(reader, subRecordType, rootReg, classDumpReg)
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to parse sub-record %s at offset %d: %w",
-				model.HProfTagSubRecord(subRecordType), beforeSubRecord, err)
+				subRecordType, beforeSubRecord, err)
 		}
 
 		afterSubRecord := reader.BytesRead()
@@ -67,13 +71,13 @@ func ParseHeapDumpSegment(reader *BinaryReader, length uint32, rootReg *registry
 		// Verify we haven't exceeded segment boundary
 		if afterSubRecord > segmentEnd {
 			return 0, nil, fmt.Errorf("sub-record %s exceeded segment boundary: at %d, segment ends at %d",
-				model.HProfTagSubRecord(subRecordType), afterSubRecord, segmentEnd)
+				subRecordType, afterSubRecord, segmentEnd)
 		}
 
 		// Safety check for infinite loops
 		if bytesConsumed <= 0 {
 			return 0, nil, fmt.Errorf("no progress made parsing sub-record %s at offset %d",
-				model.HProfTagSubRecord(subRecordType), beforeSubRecord)
+				subRecordType, beforeSubRecord)
 		}
 	}
 
@@ -107,12 +111,13 @@ func ParseHeapDumpEnd(length uint32) error {
 	return nil
 }
 
-// parseSubRecord parses a specific heap dump sub-record (Phase 7: GC roots implemented)
-func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord, rootReg *registry.GCRootRegistry) error {
-	startPos := reader.BytesRead() - 1 // -1 because we already read the type byte
+// parseSubRecord parses a specific heap dump sub-record
+func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
+	rootReg *registry.GCRootRegistry, classDumpReg *registry.ClassDumpRegistry,
+) error {
+	startPos := reader.BytesRead() - 1
 
 	switch subRecordType {
-	// GC Root records - fixed size, already working
 	case model.HPROF_GC_ROOT_UNKNOWN:
 		return parseGCRootUnknown(reader, rootReg)
 	case model.HPROF_GC_ROOT_JNI_GLOBAL:
@@ -131,146 +136,22 @@ func parseSubRecord(reader *BinaryReader, subRecordType model.HProfTagSubRecord,
 		return parseGCRootMonitorUsed(reader, rootReg)
 	case model.HPROF_GC_ROOT_THREAD_OBJ:
 		return parseGCRootThreadObj(reader, rootReg)
-
-	// Complex records - corrected skipping logic
 	case model.HPROF_GC_CLASS_DUMP:
-		return skipClassDump(reader, startPos)
+		return parseClassDump(reader, classDumpReg)
 	case model.HPROF_GC_INSTANCE_DUMP:
-		return skipInstanceDump(reader, startPos)
+		return skipInstanceDump(reader)
 	case model.HPROF_GC_OBJ_ARRAY_DUMP:
-		return skipObjectArrayDump(reader, startPos)
+		return skipObjectArrayDump(reader)
 	case model.HPROF_GC_PRIM_ARRAY_DUMP:
-		return skipPrimitiveArrayDump(reader, startPos)
+		return skipPrimitiveArrayDump(reader)
 
 	default:
 		return fmt.Errorf("unknown sub-record type: 0x%02x at offset %d", subRecordType, startPos)
 	}
 }
 
-// skipClassDump skips a CLASS_DUMP sub-record by parsing its structure
-func skipClassDump(reader *BinaryReader, startPos int64) error {
-	// CLASS_DUMP format:
-	// id    class_object_id
-	// u4    stack_trace_serial_number
-	// id    super_class_object_id
-	// id    class_loader_object_id
-	// id    signers_object_id
-	// id    protection_domain_object_id
-	// id    reserved
-	// id    reserved
-	// u4    instance_size
-	// u2    constant_pool_size
-	// [constant_pool_entry]*
-	// u2    static_fields_count
-	// [static_field]*
-	// u2    instance_fields_count
-	// [instance_field]*
-
-	// Skip header (8 IDs + 1 u4)
-
-	// Skip class_object_id (ID)
-	if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-		return fmt.Errorf("failed to skip class_object_id: %w", err)
-	}
-
-	// Skip stack_trace_serial_number (u4)
-	if err := reader.Skip(4); err != nil {
-		return fmt.Errorf("failed to skip stack_trace_serial_number: %w", err)
-	}
-
-	// Skip remaining header fields (6 more IDs + instance_size)
-	remainingHeaderSize := 6*int(reader.Header().IdentifierSize) + 4
-	if err := reader.Skip(remainingHeaderSize); err != nil {
-		return fmt.Errorf("failed to skip remaining header: %w", err)
-	}
-
-	// Read and skip constant pool
-	constantPoolSize, err := reader.ReadU2()
-	if err != nil {
-		return fmt.Errorf("failed to read constant pool size: %w", err)
-	}
-
-	for i := uint16(0); i < constantPoolSize; i++ {
-		// beforeEntry := reader.BytesRead()
-
-		// Skip constant pool index (u2)
-		if err := reader.Skip(2); err != nil {
-			return fmt.Errorf("failed to skip CP entry %d index: %w", i, err)
-		}
-
-		// Read value type (u1)
-		valueType, err := reader.ReadU1()
-		if err != nil {
-			return fmt.Errorf("failed to read CP entry %d type: %w", i, err)
-		}
-
-		// Skip value based on type
-		valueSize := model.HProfTagFieldType(valueType).Size(reader.Header().IdentifierSize)
-		if valueSize == 0 {
-			return fmt.Errorf("unknown constant pool value type: 0x%02x at entry %d", valueType, i)
-		}
-
-		if err := reader.Skip(valueSize); err != nil {
-			return fmt.Errorf("failed to skip CP entry %d value: %w", i, err)
-		}
-	}
-
-	// Read and skip static fields
-	staticFieldsCount, err := reader.ReadU2()
-	if err != nil {
-		return fmt.Errorf("failed to read static fields count: %w", err)
-	}
-
-	for i := uint16(0); i < staticFieldsCount; i++ {
-		beforeField := reader.BytesRead()
-
-		// Skip name ID
-		if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-			return fmt.Errorf("failed to skip static field %d name ID: %w", i, err)
-		}
-
-		// Read field type
-		fieldType, err := reader.ReadU1()
-		if err != nil {
-			return fmt.Errorf("failed to read static field %d type: %w", i, err)
-		}
-
-		// Check field type validity
-		fieldSize := model.HProfTagFieldType(fieldType).Size(reader.Header().IdentifierSize)
-		if fieldSize == 0 {
-			return fmt.Errorf("unknown static field type: 0x%02x at field %d (offset %d)", fieldType, i, beforeField)
-		}
-
-		// Skip field value
-		if err := reader.Skip(fieldSize); err != nil {
-			return fmt.Errorf("failed to skip static field %d value: %w", i, err)
-		}
-	}
-
-	// Read and skip instance fields
-	instanceFieldsCount, err := reader.ReadU2()
-	if err != nil {
-		return fmt.Errorf("failed to read instance fields count: %w", err)
-	}
-
-	for i := uint16(0); i < instanceFieldsCount; i++ {
-		// Skip name ID
-		if err := reader.Skip(int(reader.Header().IdentifierSize)); err != nil {
-			return fmt.Errorf("failed to skip instance field %d name ID: %w", i, err)
-		}
-
-		// Read field type (but don't skip value - instance fields don't store values)
-		_, err := reader.ReadU1()
-		if err != nil {
-			return fmt.Errorf("failed to read instance field %d type: %w", i, err)
-		}
-	}
-
-	return nil
-}
-
 // skipInstanceDump skips an INSTANCE_DUMP sub-record
-func skipInstanceDump(reader *BinaryReader, startPos int64) error {
+func skipInstanceDump(reader *BinaryReader) error {
 	// INSTANCE_DUMP format:
 	// id    object_id
 	// u4    stack_trace_serial_number
@@ -310,7 +191,7 @@ func skipInstanceDump(reader *BinaryReader, startPos int64) error {
 }
 
 // skipObjectArrayDump skips an OBJ_ARRAY_DUMP sub-record
-func skipObjectArrayDump(reader *BinaryReader, startPos int64) error {
+func skipObjectArrayDump(reader *BinaryReader) error {
 	// OBJ_ARRAY_DUMP format:
 	// id    array_object_id
 	// u4    stack_trace_serial_number
@@ -353,7 +234,7 @@ func skipObjectArrayDump(reader *BinaryReader, startPos int64) error {
 }
 
 // skipPrimitiveArrayDump skips a PRIM_ARRAY_DUMP sub-record
-func skipPrimitiveArrayDump(reader *BinaryReader, startPos int64) error {
+func skipPrimitiveArrayDump(reader *BinaryReader) error {
 	// PRIM_ARRAY_DUMP format:
 	// id    array_object_id
 	// u4    stack_trace_serial_number

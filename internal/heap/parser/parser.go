@@ -22,12 +22,13 @@ type Parser struct {
 	reader     *BinaryReader
 	outputFile *os.File // For debugging output
 
-	header    *model.HprofHeader
-	stringReg *registry.StringRegistry
-	classReg  *registry.ClassRegistry
-	stackReg  *registry.StackRegistry
-	threadReg *registry.ThreadRegistry
-	rootReg   *registry.GCRootRegistry
+	header       *model.HprofHeader
+	stringReg    *registry.StringRegistry
+	classReg     *registry.ClassRegistry
+	stackReg     *registry.StackRegistry
+	threadReg    *registry.ThreadRegistry
+	rootReg      *registry.GCRootRegistry
+	classDumpReg *registry.ClassDumpRegistry
 
 	// Statistics
 	recordCount          int
@@ -63,6 +64,7 @@ func NewParser(filename string) (*Parser, error) {
 		stackReg:       registry.NewStackRegistry(),
 		threadReg:      registry.NewThreadRegistry(),
 		rootReg:        registry.NewGCRootRegistry(),
+		classDumpReg:   registry.NewClassDumpRegistry(),
 		recordCountMap: make(map[model.HProfTagRecord]int),
 	}
 
@@ -249,7 +251,7 @@ func (p *Parser) parseTraceRecord() error {
 func (p *Parser) parseHeapDumpSegmentRecord(length uint32) error {
 	p.heapDumpSegmentCount++
 
-	subRecordCount, subRecordCountMap, err := ParseHeapDumpSegment(p.reader, length, p.rootReg)
+	subRecordCount, subRecordCountMap, err := ParseHeapDumpSegment(p.reader, length, p.rootReg, p.classDumpReg)
 	if err != nil {
 		return fmt.Errorf("failed to parse HEAP_DUMP_SEGMENT record: %w", err)
 	}
@@ -401,7 +403,7 @@ func (p *Parser) printSummary() {
 		traceSampleCount++
 	}
 
-	p.debugf("\n--- GC Root Summary (Phase 7) ---\n")
+	p.debugf("\n--- GC Root Summary ---\n")
 	p.debugf("Total GC roots: %d\n", p.rootReg.GetTotalRoots())
 
 	rootTypeCounts := p.rootReg.GetRootTypeCounts()
@@ -449,6 +451,30 @@ func (p *Parser) printSummary() {
 
 			stackRoots := p.rootReg.GetThreadStackRoots(threadSerial)
 			p.debugf("  Thread %d: %d stack root objects\n", threadSerial, len(stackRoots))
+		}
+	}
+
+	p.debugf("\n--- Class Dump Summary ---\n")
+	p.debugf("Total class dumps: %d\n", p.classDumpReg.GetCount())
+
+	// Show sample class dumps
+	allClassDumps := p.classDumpReg.GetAllClassDumps()
+	if len(allClassDumps) > 0 {
+		p.debugf("\nSample class dumps:\n")
+		maxClassDumpSamples := 10
+		count := 0
+		for classID, classDump := range allClassDumps {
+			if count >= maxClassDumpSamples {
+				p.debugf("  ... and %d more classes\n", len(allClassDumps)-maxClassDumpSamples)
+				break
+			}
+
+			p.debugf("  Class 0x%x: Instance size %d bytes, %d static fields, %d instance fields\n",
+				uint64(classID),
+				classDump.InstanceSize,
+				len(classDump.StaticFields),
+				len(classDump.InstanceFields))
+			count++
 		}
 	}
 }
